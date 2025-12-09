@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Verberg de scrollbar voor een strakker design in de app-container */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Standaard achtergrond en tekstkleur voor de hele app (licht & donker) */
+body {
+  @apply bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100;
+}

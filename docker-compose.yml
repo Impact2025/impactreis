@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=7d
+      - PORT=3001
+      - FRONTEND_URL=http://localhost:5173
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  # Optional: Local PostgreSQL for development
+  # Uncomment if you want to use local DB instead of Neon
+  # postgres:
+  #   image: postgres:15-alpine
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     POSTGRES_USER: ondernemeros
+  #     POSTGRES_PASSWORD: changeme
+  #     POSTGRES_DB: ondernemeros
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+# volumes:
+#   postgres_data:

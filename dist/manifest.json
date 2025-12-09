@@ -1,0 +1,41 @@
+{
+  "name": "Mijn Ondernemers OS",
+  "short_name": "Ondernemers OS",
+  "description": "Personal Operating System voor hoogbegaafde ondernemers",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "lifestyle"],
+  "shortcuts": [
+    {
+      "name": "Morning Wizard",
+      "short_name": "Morning",
+      "description": "Start je dag",
+      "url": "/?action=morning",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Focus Timer",
+      "short_name": "Focus",
+      "description": "Start 90-min focus sessie",
+      "url": "/?action=focus",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
