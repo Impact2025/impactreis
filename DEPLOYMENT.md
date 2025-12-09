@@ -30,10 +30,12 @@ This will install:
 Create a `.env.local` file for local development (already exists):
 
 ```env
-DATABASE_URL=postgresql://neondb_owner:npg_GY6xN4JXhzTa@ep-fragrant-waterfall-agn026b8-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
-JWT_SECRET=ea56a4707560658b88e46b665ad2eee2ce4dacf724ac62c1319d4fdafcc81cfeaab4e1872a0cb42206215fc401bd67f0527d2e58337cc7522a96da3fb15f7ff9
+DATABASE_URL=your-neon-database-connection-string-here
+JWT_SECRET=your-jwt-secret-generate-with-crypto-randomBytes
 JWT_EXPIRES_IN=7d
 ```
+
+**IMPORTANT:** Never commit real credentials to your repository. Use the values from your actual `.env.local` file.
 
 ---
 
