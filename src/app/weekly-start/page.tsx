@@ -74,6 +74,31 @@ export default function WeeklyStartPage() {
     createdAt: new Date().toISOString(),
   });
 
+  // Content Marketing Template
+  const loadContentTemplate = () => {
+    setFormData(prev => ({
+      ...prev,
+      weekIntention: '7 dagen consistent content posten - geen uitzonderingen. Marketing > nieuwe ideeën.',
+      mainGoals: [
+        'Ma: Instagram Story + Post (08:00) - Motivatie & Mindset',
+        'Di: LinkedIn + Nieuwsbrief (10:00) - Autoriteit & Leads',
+        'Wo: TikTok/Reel (19:30) - Viraal & Herkenbaar',
+        'Do: Blog Post (09:00) - SEO & Educatie',
+        'Vr: Instagram Poll/Q&A (12:00-16:00) - Community Engagement'
+      ],
+      focusAreas: {
+        work: 8,  // Marketing is werk #1
+        health: 6,
+        relationships: 4,
+        personal: 5,
+      },
+      learningGoal: 'Welke content formats werken het best voor leads? Test & meet!',
+      supportNetwork: 'Accountability buddy voor dagelijkse content check-ins',
+      obstacles: 'Verveling, nieuwe ideeën, perfectionism. → Reminder: Done > Perfect',
+      successMetrics: '7/7 dagen gepost, 5+ nieuwe leads, 1 klantgesprek'
+    }));
+  };
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -261,6 +286,14 @@ export default function WeeklyStartPage() {
                 <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Belangrijkste Doelen Deze Week</h3>
                 <p className="text-sm text-slate-500">3-5 concrete doelen die je wilt bereiken</p>
               </div>
+              <button
+                type="button"
+                onClick={loadContentTemplate}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl text-sm font-medium hover:shadow-lg transition-all active:scale-95"
+              >
+                <Rocket size={16} />
+                Content Template
+              </button>
             </div>
             <div className="space-y-3">
               {formData.mainGoals.map((goal, index) => (
