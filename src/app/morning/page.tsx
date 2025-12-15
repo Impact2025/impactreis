@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Sunrise, Star, Target, Zap, Heart, TrendingUp, ArrowLeft, CheckCircle, Coffee } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
+import { isMorningRitualComplete } from '@/lib/weekflow.service';
 
 interface MorningRitualData {
   wakeTime: string;
@@ -131,6 +132,8 @@ export default function MorningPage() {
     );
   }
 
+  const isAlreadyComplete = isMorningRitualComplete();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
       {/* Header */}
@@ -157,6 +160,17 @@ export default function MorningPage() {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-6 py-8">
+        {/* Completion Banner */}
+        {isAlreadyComplete && (
+          <div className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-2xl p-4 mb-6 border-2 border-emerald-200 dark:border-emerald-800 flex items-center gap-3">
+            <CheckCircle className="text-emerald-600 dark:text-emerald-400" size={24} />
+            <div className="flex-1">
+              <p className="text-slate-800 dark:text-white font-semibold">Je hebt dit ritueel al voltooid vandaag</p>
+              <p className="text-emerald-700 dark:text-emerald-300 text-sm">Je kunt het opnieuw doen om te overschrijven</p>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Wake Time & Sleep Quality */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-orange-100 dark:border-slate-700">

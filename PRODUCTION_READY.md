@@ -109,11 +109,13 @@ npm run db:wins
 ### **Core Features**
 - ✅ User Authentication (JWT)
 - ✅ Morning Ritual ☀️
-- ✅ Evening Ritual 🌙
+- ✅ Evening Ritual 🌙 (Time-gated: 17:00+)
 - ✅ Focus Timer ⏱️
 - ✅ Goals Management 🎯
 - ✅ Weekly Reviews 📝
+- ✅ Weekly Start 🚀
 - ✅ **Wall of Wins** 🏆 (NEW!)
+- ✅ **Weekflow Automation** ⚡ (NEW!)
 
 ### **Mastermind Edition Features**
 - ✅ Wall of Wins (Cookie Jar)
@@ -122,6 +124,15 @@ npm run db:wins
 - ✅ Category-based Win Tracking
 - ✅ Impact Level System
 - ✅ Timeline View
+
+### **Weekflow Automation**
+- ✅ Auto-redirect op basis van dag en tijd
+- ✅ Ma-Vr: Morning → Evening (na 17:00)
+- ✅ Za-Zo: Weekly Review
+- ✅ Maandag: Weekly Start
+- ✅ Time gates (Evening alleen na 17:00)
+- ✅ Completion tracking met overschrijf optie
+- ✅ Context-aware dashboard layout
 
 ---
 

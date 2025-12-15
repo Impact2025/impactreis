@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
+import { isWeeklyReviewComplete } from '@/lib/weekflow.service';
 
 interface WeeklyReviewData {
   wins: string[];
@@ -191,6 +192,8 @@ export default function WeeklyReviewPage() {
     );
   }
 
+  const isAlreadyComplete = isWeeklyReviewComplete();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-pink-800 to-orange-700">
       {/* Header */}
@@ -236,6 +239,19 @@ export default function WeeklyReviewPage() {
 
       {/* Main Content */}
       <main className="p-6 pb-12">
+        <div className="max-w-4xl mx-auto">
+          {/* Completion Banner */}
+          {isAlreadyComplete && (
+            <div className="backdrop-blur-md bg-emerald-500/20 rounded-2xl p-4 mb-6 border-2 border-emerald-400/50 flex items-center gap-3">
+              <CheckCircle2 className="text-emerald-300" size={24} />
+              <div className="flex-1">
+                <p className="text-white font-semibold">Je hebt deze week review al voltooid</p>
+                <p className="text-emerald-200 text-sm">Je kunt het opnieuw doen om te overschrijven</p>
+              </div>
+            </div>
+          )}
+        </div>
+
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
 
           {/* Biggest Wins */}

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
+import { isWeeklyStartComplete } from '@/lib/weekflow.service';
 
 interface WeeklyStartData {
   weekNumber: number;
@@ -155,6 +156,8 @@ export default function WeeklyStartPage() {
     );
   }
 
+  const isAlreadyComplete = isWeeklyStartComplete();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-green-50 to-cyan-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       {/* Header */}
@@ -214,6 +217,19 @@ export default function WeeklyStartPage() {
 
       {/* Main Content */}
       <main className="p-6">
+        <div className="max-w-5xl mx-auto">
+          {/* Completion Banner */}
+          {isAlreadyComplete && (
+            <div className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-2xl p-4 mb-6 border-2 border-emerald-200 dark:border-emerald-800 flex items-center gap-3">
+              <CheckCircle className="text-emerald-600 dark:text-emerald-400" size={24} />
+              <div className="flex-1">
+                <p className="text-slate-800 dark:text-white font-semibold">Je hebt deze week start al voltooid</p>
+                <p className="text-emerald-700 dark:text-emerald-300 text-sm">Je kunt het opnieuw doen om te overschrijven</p>
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="max-w-5xl mx-auto space-y-6">
           {/* Week Intention */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-blue-200 dark:border-slate-700 shadow-lg">

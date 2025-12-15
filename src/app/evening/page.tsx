@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { Moon, Star, BookOpen, Lightbulb, TrendingDown, Calendar, Heart, ArrowLeft, CheckCircle } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
+import { TimeGateScreen } from '@/components/weekflow/time-gate-screen';
+import { isAfter5PM, isEveningRitualComplete } from '@/lib/weekflow.service';
 
 interface EveningRitualData {
   whatWentWell: string;
@@ -109,6 +111,17 @@ export default function EveningPage() {
     );
   }
 
+  // Check time gate - evening ritual only available after 17:00
+  if (!isAfter5PM()) {
+    return (
+      <TimeGateScreen
+        title="Avond Ritueel"
+        message="Het avond ritueel is beschikbaar na 17:00 uur"
+        availableTime="17:00"
+      />
+    );
+  }
+
   if (showSuccess) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 flex items-center justify-center">
@@ -122,6 +135,8 @@ export default function EveningPage() {
       </div>
     );
   }
+
+  const isAlreadyComplete = isEveningRitualComplete();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950">
@@ -153,6 +168,17 @@ export default function EveningPage() {
       {/* Main Content */}
       <main className="p-6">
         <div className="max-w-4xl mx-auto">
+          {/* Completion Banner */}
+          {isAlreadyComplete && (
+            <div className="bg-gradient-to-r from-emerald-900/40 to-green-900/40 backdrop-blur-sm rounded-2xl p-4 mb-6 border border-emerald-700/30 flex items-center gap-3">
+              <CheckCircle className="text-emerald-400" size={24} />
+              <div className="flex-1">
+                <p className="text-white font-semibold">Je hebt dit ritueel al voltooid vandaag</p>
+                <p className="text-emerald-200 text-sm">Je kunt het opnieuw doen om te overschrijven</p>
+              </div>
+            </div>
+          )}
+
           {/* Intro Card */}
           <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 backdrop-blur-sm rounded-2xl p-8 mb-8 border border-purple-700/30 shadow-2xl">
             <div className="text-center">
