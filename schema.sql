@@ -70,8 +70,35 @@ CREATE TABLE IF NOT EXISTS focus_sessions (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Wins/Achievements table (Wall of Wins / Cookie Jar)
+CREATE TABLE IF NOT EXISTS wins (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  category TEXT NOT NULL, -- 'business', 'personal', 'health', 'learning'
+  impact_level INTEGER DEFAULT 1, -- 1-5 (hoe belangrijk was deze win)
+  date DATE NOT NULL,
+  tags JSONB, -- array of tags
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- User context table (voor Quantum Leap Coach)
+CREATE TABLE IF NOT EXISTS user_context (
+  user_id TEXT PRIMARY KEY,
+  current_energy_level INTEGER DEFAULT 5, -- 1-10
+  current_stress_level INTEGER DEFAULT 5, -- 1-10
+  recent_mood TEXT DEFAULT 'neutral', -- 'energized', 'stressed', 'focused', 'overwhelmed', 'neutral'
+  last_major_win_date DATE,
+  current_focus_area TEXT, -- 'growth', 'consolidation', 'recovery'
+  coaching_style TEXT DEFAULT 'balanced', -- 'tough_love', 'supportive', 'balanced'
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_habits_user_id ON habits(user_id);
 CREATE INDEX IF NOT EXISTS idx_daily_logs_user_id ON daily_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_daily_logs_timestamp ON daily_logs(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_weekly_reviews_user_id ON weekly_reviews(user_id);
+CREATE INDEX IF NOT EXISTS idx_wins_user_id ON wins(user_id);
+CREATE INDEX IF NOT EXISTS idx_wins_date ON wins(date DESC);

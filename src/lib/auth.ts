@@ -31,10 +31,10 @@ export function generateToken(userId: number, email: string): string {
 export class AuthService {
   private static readonly TOKEN_KEY = 'token';
   private static readonly USER_KEY = 'user';
-  private static readonly API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  private static readonly API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
   static async login(email: string, password: string): Promise<void> {
-    const response = await fetch(`${this.API_URL}/login`, {
+    const response = await fetch(`${this.API_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -57,7 +57,7 @@ export class AuthService {
   }
 
   static async register(email: string, password: string): Promise<void> {
-    const response = await fetch(`${this.API_URL}/register`, {
+    const response = await fetch(`${this.API_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),

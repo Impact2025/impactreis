@@ -94,3 +94,24 @@ export interface Book {
   category: string;
   coachTip: string;
 }
+
+export interface Win {
+  id: number;
+  user_id: string;
+  title: string;
+  description?: string;
+  category: 'business' | 'personal' | 'health' | 'learning';
+  impact_level: 1 | 2 | 3 | 4 | 5;
+  date: string;
+  tags?: string[];
+  created_at: string;
+}
+
+export interface CreateWinData {
+  title: string;
+  description?: string;
+  category: 'business' | 'personal' | 'health' | 'learning';
+  impactLevel: 1 | 2 | 3 | 4 | 5;
+  date: string;
+  tags?: string[];
+}

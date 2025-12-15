@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Brain, Target, Calendar, TrendingUp, Users, LogOut, LucideIcon, Sunrise, Moon, CalendarDays, BookOpen } from 'lucide-react';
+import { Brain, Target, Calendar, TrendingUp, Users, LogOut, LucideIcon, Sunrise, Moon, CalendarDays, BookOpen, Trophy } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
+import { Win } from '@/types';
 
 interface ActivityItem {
   id: number;
@@ -20,6 +21,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(false);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
+  const [recentWins, setRecentWins] = useState<Win[]>([]);
   const [stats, setStats] = useState({
     activeGoals: 0,
     weeklyProgress: 0,
@@ -85,10 +87,11 @@ export default function DashboardPage() {
         ]);
       };
 
-      const [goalsResponse, focusResponse, logsResponse] = await Promise.allSettled([
+      const [goalsResponse, focusResponse, logsResponse, winsResponse] = await Promise.allSettled([
         fetchWithTimeout(api.goals.getAll()),
         fetchWithTimeout(api.focus.getAll()),
-        fetchWithTimeout(api.logs.getAll())
+        fetchWithTimeout(api.logs.getAll()),
+        fetchWithTimeout(api.wins.getAll())
       ]);
 
       // Process goals
@@ -115,6 +118,14 @@ export default function DashboardPage() {
       // Process recent activity
       if (logsResponse.status === 'fulfilled') {
         setRecentActivity(processRecentActivity(logsResponse.value));
+      }
+
+      // Process recent wins (top 3 most recent)
+      if (winsResponse.status === 'fulfilled') {
+        const sortedWins = winsResponse.value
+          .sort((a: Win, b: Win) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 3);
+        setRecentWins(sortedWins);
       }
 
     } catch (err) {
@@ -255,6 +266,66 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Recent Wins */}
+          {recentWins.length > 0 && (
+            <div className="mb-8">
+              <div className="bg-gradient-to-br from-amber-50 to-gold-50 dark:from-amber-950/30 dark:to-gold-950/30 rounded-2xl p-6 border border-amber-200 dark:border-amber-800">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gold-500 rounded-xl flex items-center justify-center">
+                      <Trophy className="text-white" size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Recente Wins</h3>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">Jouw laatste successen</p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/wins"
+                    className="text-sm font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+                  >
+                    Bekijk alle →
+                  </Link>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {recentWins.map((win) => {
+                    const categoryConfig = {
+                      business: { icon: '💼', color: 'emerald' },
+                      personal: { icon: '⭐', color: 'amber' },
+                      health: { icon: '❤️', color: 'rose' },
+                      learning: { icon: '📚', color: 'indigo' },
+                    };
+                    const config = categoryConfig[win.category];
+
+                    return (
+                      <div
+                        key={win.id}
+                        className="bg-white/80 dark:bg-slate-800/80 rounded-xl p-4 hover:shadow-md transition-all"
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="text-2xl">{config.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-slate-800 dark:text-white text-sm truncate">
+                              {win.title}
+                            </h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                              {new Date(win.date).toLocaleDateString('nl-NL')}
+                            </p>
+                            <div className="flex gap-0.5 mt-2">
+                              {Array.from({ length: win.impact_level }).map((_, i) => (
+                                <span key={i} className="text-xs">⭐</span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Main Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Recent Activity */}
@@ -316,6 +387,10 @@ export default function DashboardPage() {
                 <Link href="/weekly-review" className="p-4 bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-xl font-medium hover:shadow-lg transition-all active:scale-95 block text-center">
                   <BookOpen size={20} className="mb-2 mx-auto" />
                   Week Review
+                </Link>
+                <Link href="/wins" className="p-4 bg-gradient-to-br from-amber-500 to-gold-600 text-white rounded-xl font-medium hover:shadow-lg transition-all active:scale-95 block text-center col-span-2">
+                  <Trophy size={20} className="mb-2 mx-auto" />
+                  Wall of Wins
                 </Link>
               </div>
             </div>

@@ -106,13 +106,13 @@ class ApiClient {
 
   // Focus Sessions
   focus = {
-    getAll: () => this.request('/focus-sessions'),
-    create: (data: any) => this.request('/focus-sessions', {
+    getAll: () => this.request('/focus'),
+    create: (data: any) => this.request('/focus', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-    getByDate: (date: string) => this.request(`/focus-sessions?date=${date}`),
-    update: (id: string, data: any) => this.request(`/focus-sessions/${id}`, {
+    getByDate: (date: string) => this.request(`/focus?date=${date}`),
+    update: (id: string, data: any) => this.request(`/focus/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
@@ -120,6 +120,50 @@ class ApiClient {
 
   // Alias for backwards compatibility
   focusSessions = this.focus;
+
+  // Wins
+  wins = {
+    getAll: (params?: {
+      category?: string;
+      startDate?: string;
+      endDate?: string;
+      impactLevel?: number;
+      search?: string;
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            queryParams.append(key, value.toString());
+          }
+        });
+      }
+      const queryString = queryParams.toString();
+      return this.request<any[]>(
+        `/wins${queryString ? `?${queryString}` : ''}`
+      );
+    },
+
+    getById: (id: number) =>
+      this.request<any>(`/wins/${id}`),
+
+    create: (data: any) =>
+      this.request<any>('/wins', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    update: (id: number, data: Partial<any>) =>
+      this.request<any>(`/wins/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+
+    delete: (id: number) =>
+      this.request<{ message: string }>(`/wins/${id}`, {
+        method: 'DELETE',
+      }),
+  };
 }
 
 export const api = new ApiClient();
