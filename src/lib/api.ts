@@ -89,11 +89,36 @@ class ApiClient {
 
   // Logs
   logs = {
-    getAll: () => this.request('/logs'),
+    getAll: () => this.request<any[]>('/logs'),
+    getByTypeAndDate: (type: string, date: string) =>
+      this.request<any[]>(`/logs?type=${type}&date=${date}`),
     create: (data: any) => this.request('/logs', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  };
+
+  // Ritual status check
+  rituals = {
+    checkStatus: async (type: 'morning' | 'evening' | 'weeklyStart' | 'weeklyReview', date: string) => {
+      try {
+        const logs = await this.request<any[]>(`/logs?type=${type}&date=${date}`);
+        return logs.length > 0;
+      } catch {
+        return false;
+      }
+    },
+    getTodayStatus: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const [morning, evening] = await Promise.all([
+        this.request<any[]>(`/logs?type=morning&date=${today}`).catch(() => []),
+        this.request<any[]>(`/logs?type=evening&date=${today}`).catch(() => []),
+      ]);
+      return {
+        morning: morning.length > 0,
+        evening: evening.length > 0,
+      };
+    },
   };
 
   // Weekly Reviews

@@ -30,7 +30,12 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(sessions);
-  } catch (error) {
+  } catch (error: any) {
+    // If table doesn't exist, return empty array
+    if (error?.code === '42P01') {
+      console.log('Focus sessions table not found, returning empty array');
+      return NextResponse.json([]);
+    }
     console.error('Get focus sessions error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
