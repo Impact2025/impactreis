@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Brain, Target, Calendar, LogOut, Sunrise, Moon, CalendarDays, BookOpen, Trophy, BarChart3, Settings, ChevronRight } from 'lucide-react';
+import { Brain, Target, Calendar, LogOut, Sunrise, Moon, CalendarDays, BookOpen, Trophy, BarChart3, Settings, ChevronRight, Shield, Zap } from 'lucide-react';
 import { VisionCard } from '@/components/dashboard/vision-card';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -386,6 +386,35 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium text-slate-900 dark:text-white">Insights</p>
               </Link>
             </div>
+          </section>
+
+          {/* Identity Section */}
+          <section className="mb-8">
+            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">
+              Identiteit & State
+            </h2>
+            <Link
+              href="/identity"
+              className="block p-4 bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-800 dark:to-slate-700 rounded-xl border border-slate-700 hover:shadow-lg transition-all group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
+                    <Shield className="text-amber-400" size={20} />
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">Mijn Identiteit</p>
+                    <p className="text-sm text-white/70">Claim wie je bent. Bewijs het.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="px-3 py-1 bg-white/10 rounded-full text-xs text-white/80">
+                    Tony Robbins
+                  </div>
+                  <ChevronRight className="text-white/50 group-hover:text-white/80 transition-colors" size={18} />
+                </div>
+              </div>
+            </Link>
           </section>
         </main>
       </div>

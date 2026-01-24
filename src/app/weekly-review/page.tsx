@@ -14,7 +14,10 @@ import {
   ArrowLeft,
   Plus,
   X,
-  Sparkles
+  Sparkles,
+  HelpCircle,
+  Gift,
+  BookOpen
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -33,6 +36,11 @@ interface WeeklyReviewData {
   weekNumber: number;
   weekStart: string;
   weekEnd: string;
+  // Tony Robbins Quality Questions
+  whatGave: string;
+  whatLearned: string;
+  howContributed: string;
+  howMakeBetter: string;
 }
 
 export default function WeeklyReviewPage() {
@@ -82,7 +90,12 @@ export default function WeeklyReviewPage() {
     gratitude: '',
     weekNumber: weekInfo.weekNumber,
     weekStart: weekInfo.weekStartISO,
-    weekEnd: weekInfo.weekEndISO
+    weekEnd: weekInfo.weekEndISO,
+    // Quality Questions
+    whatGave: '',
+    whatLearned: '',
+    howContributed: '',
+    howMakeBetter: ''
   });
 
   const [stats, setStats] = useState({
@@ -489,6 +502,86 @@ export default function WeeklyReviewPage() {
               rows={4}
               className="w-full p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 outline-none focus:border-white/40 transition-all resize-none"
             />
+          </div>
+
+          {/* Quality Questions - Tony Robbins */}
+          <div className="backdrop-blur-md bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-3xl p-8 border border-amber-400/30 shadow-2xl">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center">
+                <HelpCircle className="text-white" size={24} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">Quality Questions</h2>
+                <p className="text-white/70">Tony Robbins Evening Power Questions</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* What Gave */}
+              <div>
+                <label className="flex items-center gap-2 text-white font-medium mb-2">
+                  <Gift size={16} className="text-amber-300" />
+                  Wat heb ik deze week GEGEVEN?
+                </label>
+                <textarea
+                  value={formData.whatGave}
+                  onChange={(e) => setFormData({ ...formData, whatGave: e.target.value })}
+                  placeholder="Welke waarde, liefde, hulp of inspiratie heb je anderen gegeven?"
+                  rows={2}
+                  className="w-full p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 outline-none focus:border-amber-400/50 transition-all resize-none"
+                />
+              </div>
+
+              {/* What Learned */}
+              <div>
+                <label className="flex items-center gap-2 text-white font-medium mb-2">
+                  <BookOpen size={16} className="text-amber-300" />
+                  Wat heb ik deze week GELEERD?
+                </label>
+                <textarea
+                  value={formData.whatLearned}
+                  onChange={(e) => setFormData({ ...formData, whatLearned: e.target.value })}
+                  placeholder="Nieuwe inzichten, vaardigheden of perspectieven?"
+                  rows={2}
+                  className="w-full p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 outline-none focus:border-amber-400/50 transition-all resize-none"
+                />
+              </div>
+
+              {/* How Contributed */}
+              <div>
+                <label className="flex items-center gap-2 text-white font-medium mb-2">
+                  <TrendingUp size={16} className="text-amber-300" />
+                  Hoe heeft deze week bijgedragen aan mijn leven?
+                </label>
+                <textarea
+                  value={formData.howContributed}
+                  onChange={(e) => setFormData({ ...formData, howContributed: e.target.value })}
+                  placeholder="In welke gebieden ben je gegroeid of vooruitgegaan?"
+                  rows={2}
+                  className="w-full p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 outline-none focus:border-amber-400/50 transition-all resize-none"
+                />
+              </div>
+
+              {/* How Make Better */}
+              <div>
+                <label className="flex items-center gap-2 text-white font-medium mb-2">
+                  <Sparkles size={16} className="text-amber-300" />
+                  Hoe kan ik volgende week nog beter maken?
+                </label>
+                <textarea
+                  value={formData.howMakeBetter}
+                  onChange={(e) => setFormData({ ...formData, howMakeBetter: e.target.value })}
+                  placeholder="Welke kleine aanpassing zou een groot verschil maken?"
+                  rows={2}
+                  className="w-full p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 outline-none focus:border-amber-400/50 transition-all resize-none"
+                />
+              </div>
+            </div>
+
+            <p className="text-center text-amber-200/70 text-sm mt-6 italic">
+              "Quality questions create a quality life. Successful people ask better questions."
+              <span className="block text-xs mt-1">— Tony Robbins</span>
+            </p>
           </div>
 
           {/* Submit Button */}

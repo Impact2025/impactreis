@@ -3,23 +3,46 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Brain, Play, Pause, RotateCcw, ArrowLeft, Timer, Coffee, CheckCircle, Clock } from 'lucide-react';
+import {
+  Brain, Play, Pause, RotateCcw, ArrowLeft, Timer, Coffee,
+  CheckCircle, Clock, Zap, HelpCircle, Flame
+} from 'lucide-react';
 import { AuthService } from '@/lib/auth';
+import { MovementBreakMini } from '@/components/robbins/movement-break';
+import { Celebration } from '@/components/robbins/celebration';
 
 interface FocusSession {
   id: string;
   duration: number;
   completedAt: string;
   type: 'work' | 'break';
+  energyBefore?: number;
+  energyAfter?: number;
 }
 
+const powerQuestions = [
+  "Hoe kan ik dit proces leuk maken?",
+  "Wat is de kleinste eerste stap die ik nu kan zetten?",
+  "Wat zou een expert anders doen?",
+  "Waar word ik enthousiast van aan dit project?",
+  "Hoe kan ik hiermee waarde creëren?",
+];
+
 export default function FocusPage() {
-  const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
   const [sessions, setSessions] = useState<FocusSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentSession, setCurrentSession] = useState<'work' | 'break'>('work');
+  const [showMovementBreak, setShowMovementBreak] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [showPowerQuestion, setShowPowerQuestion] = useState(false);
+  const [currentPowerQuestion, setCurrentPowerQuestion] = useState('');
+  const [energyBefore, setEnergyBefore] = useState(7);
+  const [energyAfter, setEnergyAfter] = useState(7);
+  const [sessionGoal, setSessionGoal] = useState('');
+  const [showGoalInput, setShowGoalInput] = useState(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
@@ -31,7 +54,6 @@ export default function FocusPage() {
           router.push('/auth/login');
           return;
         }
-        // Load sessions from localStorage
         const savedSessions = localStorage.getItem('focusSessions');
         if (savedSessions) {
           setSessions(JSON.parse(savedSessions));
@@ -74,29 +96,48 @@ export default function FocusPage() {
   const handleSessionComplete = () => {
     setIsActive(false);
 
-    const session: FocusSession = {
-      id: Date.now().toString(),
-      duration: currentSession === 'work' ? 25 : 5,
-      completedAt: new Date().toISOString(),
-      type: currentSession
-    };
-
-    const updatedSessions = [...sessions, session];
-    saveSessions(updatedSessions);
-
-    // Auto-switch between work and break
     if (currentSession === 'work') {
-      setIsBreak(true);
-      setCurrentSession('break');
-      setTimeLeft(5 * 60); // 5 minute break
+      // Show celebration for work session
+      setShowCelebration(true);
+
+      const session: FocusSession = {
+        id: Date.now().toString(),
+        duration: 25,
+        completedAt: new Date().toISOString(),
+        type: 'work',
+        energyBefore,
+        energyAfter
+      };
+
+      const updatedSessions = [...sessions, session];
+      saveSessions(updatedSessions);
+
+      // After celebration, show movement break
+      setTimeout(() => {
+        setShowCelebration(false);
+        setShowMovementBreak(true);
+      }, 3000);
     } else {
+      // Break complete, back to work
       setIsBreak(false);
       setCurrentSession('work');
-      setTimeLeft(25 * 60); // 25 minute work session
+      setTimeLeft(25 * 60);
+      setShowGoalInput(true);
     }
   };
 
+  const handleMovementComplete = () => {
+    setShowMovementBreak(false);
+    setIsBreak(true);
+    setCurrentSession('break');
+    setTimeLeft(5 * 60);
+  };
+
   const startTimer = () => {
+    if (showGoalInput && !sessionGoal.trim()) {
+      return; // Require goal
+    }
+    setShowGoalInput(false);
     setIsActive(true);
   };
 
@@ -107,6 +148,8 @@ export default function FocusPage() {
   const resetTimer = () => {
     setIsActive(false);
     setTimeLeft(currentSession === 'work' ? 25 * 60 : 5 * 60);
+    setShowGoalInput(true);
+    setSessionGoal('');
   };
 
   const switchToWork = () => {
@@ -114,6 +157,7 @@ export default function FocusPage() {
     setIsBreak(false);
     setCurrentSession('work');
     setTimeLeft(25 * 60);
+    setShowGoalInput(true);
   };
 
   const switchToBreak = () => {
@@ -121,6 +165,13 @@ export default function FocusPage() {
     setIsBreak(true);
     setCurrentSession('break');
     setTimeLeft(5 * 60);
+    setShowGoalInput(false);
+  };
+
+  const showRandomPowerQuestion = () => {
+    const randomIndex = Math.floor(Math.random() * powerQuestions.length);
+    setCurrentPowerQuestion(powerQuestions[randomIndex]);
+    setShowPowerQuestion(true);
   };
 
   const formatTime = (seconds: number) => {
@@ -139,6 +190,7 @@ export default function FocusPage() {
     .reduce((total, session) => total + session.duration, 0);
 
   const completedSessions = todaySessions.filter(session => session.type === 'work').length;
+  const progress = (1 - timeLeft / (currentSession === 'work' ? 25 * 60 : 5 * 60)) * 100;
 
   if (loading) {
     return (
@@ -148,11 +200,50 @@ export default function FocusPage() {
     );
   }
 
+  if (showCelebration) {
+    return (
+      <Celebration
+        type="focus"
+        message="Focus Sessie Voltooid!"
+        subMessage={`${completedSessions + 1} sessies vandaag - ${totalFocusTime + 25} minuten deep work`}
+        autoCloseDelay={3000}
+      />
+    );
+  }
+
+  if (showMovementBreak) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-500 via-red-500 to-pink-600 flex items-center justify-center p-6">
+        <div className="max-w-md w-full">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white mb-4">
+              <Flame className="w-5 h-5 animate-pulse" />
+              <span className="font-medium">Bewegings Pauze</span>
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-2">
+              "Emotion is created by motion"
+            </h1>
+            <p className="text-white/80">
+              Beweeg je lichaam om je energie te resetten voor de volgende sessie
+            </p>
+          </div>
+
+          <MovementBreakMini onComplete={handleMovementComplete} />
+
+          <p className="text-center text-white/60 text-sm mt-6 italic">
+            "Change your physiology, change your state"
+            <span className="block text-xs mt-1">— Tony Robbins</span>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       {/* Header */}
       <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between max-w-2xl mx-auto">
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
@@ -165,15 +256,24 @@ export default function FocusPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-800 dark:text-white">Focus Sessies</h1>
-              <p className="text-sm text-slate-500">Blijf gefocust met Pomodoro</p>
+              <p className="text-sm text-slate-500">State-first deep work</p>
             </div>
           </div>
+
+          {/* Power Question Button */}
+          <button
+            onClick={showRandomPowerQuestion}
+            className="p-2 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+            title="Stuck? Get a Power Question"
+          >
+            <HelpCircle size={20} />
+          </button>
         </div>
       </header>
 
       {/* Stats */}
       <div className="px-6 py-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="max-w-2xl mx-auto grid grid-cols-3 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-slate-800 dark:text-white">{completedSessions}</div>
             <div className="text-sm text-slate-500">Sessies</div>
@@ -189,71 +289,171 @@ export default function FocusPage() {
         </div>
       </div>
 
+      {/* Power Question Modal */}
+      {showPowerQuestion && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 max-w-md w-full text-center">
+            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <HelpCircle className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+              Power Question
+            </h3>
+            <p className="text-xl text-slate-700 dark:text-slate-300 mb-6 italic">
+              "{currentPowerQuestion}"
+            </p>
+            <button
+              onClick={() => setShowPowerQuestion(false)}
+              className="px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-medium"
+            >
+              Doorgaan met focus
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="p-6">
         <div className="max-w-2xl mx-auto">
+          {/* Goal Input */}
+          {showGoalInput && currentSession === 'work' && (
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 mb-6 border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-3 mb-4">
+                <Zap className="text-amber-500" size={20} />
+                <h3 className="font-semibold text-slate-800 dark:text-white">Wat ga je focussen deze sessie?</h3>
+              </div>
+              <input
+                type="text"
+                value={sessionGoal}
+                onChange={(e) => setSessionGoal(e.target.value)}
+                placeholder="Bijv: Hoofdstuk 3 schrijven, emails beantwoorden..."
+                className="w-full p-4 bg-slate-50 dark:bg-slate-700 rounded-xl border-none text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+
+              {/* Energy Before */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-slate-500">Energie nu</span>
+                  <span className="font-medium text-slate-900 dark:text-white">{energyBefore}/10</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={energyBefore}
+                  onChange={(e) => setEnergyBefore(parseInt(e.target.value))}
+                  className="w-full h-2 bg-slate-200 dark:bg-slate-600 rounded-full appearance-none cursor-pointer accent-orange-500"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Current Goal Display */}
+          {!showGoalInput && sessionGoal && currentSession === 'work' && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 mb-6 border border-amber-200 dark:border-amber-800">
+              <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+                <Zap size={16} />
+                <span className="font-medium">Focus: {sessionGoal}</span>
+              </div>
+            </div>
+          )}
+
           {/* Timer */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 mb-6 border border-slate-200 dark:border-slate-700 text-center">
-            <div className="mb-6">
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
-                currentSession === 'work'
-                  ? 'bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300'
-                  : 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
-              }`}>
-                {currentSession === 'work' ? <Timer size={16} /> : <Coffee size={16} />}
-                {currentSession === 'work' ? 'Focus Tijd' : 'Pauze'}
+            {/* Progress Ring */}
+            <div className="relative w-48 h-48 mx-auto mb-6">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle
+                  cx="96"
+                  cy="96"
+                  r="88"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  className="text-slate-200 dark:text-slate-700"
+                />
+                <circle
+                  cx="96"
+                  cy="96"
+                  r="88"
+                  fill="none"
+                  stroke="url(#timerGradient)"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={553}
+                  strokeDashoffset={553 - (553 * progress) / 100}
+                  className="transition-all duration-1000"
+                />
+                <defs>
+                  <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor={currentSession === 'work' ? '#f97316' : '#22c55e'} />
+                    <stop offset="100%" stopColor={currentSession === 'work' ? '#ef4444' : '#10b981'} />
+                  </linearGradient>
+                </defs>
+              </svg>
+
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium mb-2 ${
+                  currentSession === 'work'
+                    ? 'bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300'
+                    : 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                }`}>
+                  {currentSession === 'work' ? <Timer size={12} /> : <Coffee size={12} />}
+                  {currentSession === 'work' ? 'Focus' : 'Pauze'}
+                </div>
+                <div className="text-5xl font-bold text-slate-800 dark:text-white font-mono">
+                  {formatTime(timeLeft)}
+                </div>
               </div>
             </div>
 
-            <div className="text-6xl font-bold text-slate-800 dark:text-white mb-8 font-mono">
-              {formatTime(timeLeft)}
-            </div>
-
+            {/* Controls */}
             <div className="flex items-center justify-center gap-4 mb-6">
               {!isActive ? (
                 <button
                   onClick={startTimer}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-medium hover:shadow-lg transition-all active:scale-95"
+                  disabled={showGoalInput && !sessionGoal.trim() && currentSession === 'work'}
+                  className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-medium hover:shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Play size={20} />
+                  <Play size={24} />
                   Start
                 </button>
               ) : (
                 <button
                   onClick={pauseTimer}
-                  className="flex items-center gap-2 px-6 py-3 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                  className="flex items-center gap-2 px-8 py-4 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                 >
-                  <Pause size={20} />
+                  <Pause size={24} />
                   Pauzeer
                 </button>
               )}
 
               <button
                 onClick={resetTimer}
-                className="flex items-center gap-2 px-6 py-3 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                className="p-4 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
               >
-                <RotateCcw size={20} />
-                Reset
+                <RotateCcw size={24} />
               </button>
             </div>
 
+            {/* Session Type Switcher */}
             <div className="flex items-center justify-center gap-3">
               <button
                 onClick={switchToWork}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   currentSession === 'work'
                     ? 'bg-orange-500 text-white'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                 }`}
               >
-                Werk (25min)
+                Focus (25min)
               </button>
               <button
                 onClick={switchToBreak}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   currentSession === 'break'
                     ? 'bg-green-500 text-white'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                 }`}
               >
                 Pauze (5min)
@@ -261,33 +461,12 @@ export default function FocusPage() {
             </div>
           </div>
 
-          {/* Session Switcher */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <button
-              onClick={switchToWork}
-              className={`p-4 rounded-xl border transition-all ${
-                currentSession === 'work'
-                  ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
-                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:shadow-md'
-              }`}
-            >
-              <Timer size={24} className={`mb-2 ${currentSession === 'work' ? 'text-orange-600' : 'text-slate-400'}`} />
-              <div className="font-semibold text-slate-800 dark:text-white">Focus Sessie</div>
-              <div className="text-sm text-slate-500">25 minuten</div>
-            </button>
-
-            <button
-              onClick={switchToBreak}
-              className={`p-4 rounded-xl border transition-all ${
-                currentSession === 'break'
-                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:shadow-md'
-              }`}
-            >
-              <Coffee size={24} className={`mb-2 ${currentSession === 'break' ? 'text-green-600' : 'text-slate-400'}`} />
-              <div className="font-semibold text-slate-800 dark:text-white">Korte Pauze</div>
-              <div className="text-sm text-slate-500">5 minuten</div>
-            </button>
+          {/* Tony Quote */}
+          <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-4 mb-6">
+            <p className="text-sm text-slate-600 dark:text-slate-400 italic text-center">
+              "Where focus goes, energy flows."
+              <span className="block text-xs text-slate-400 mt-1">— Tony Robbins</span>
+            </p>
           </div>
 
           {/* Today's Sessions */}
@@ -322,7 +501,7 @@ export default function FocusPage() {
                         {session.type === 'work' ? 'Focus Sessie' : 'Pauze'}
                       </p>
                       <p className="text-sm text-slate-500">
-                        {session.duration} minuten • {new Date(session.completedAt).toLocaleTimeString('nl-NL', {
+                        {session.duration} min • {new Date(session.completedAt).toLocaleTimeString('nl-NL', {
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
