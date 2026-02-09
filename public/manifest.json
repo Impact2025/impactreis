@@ -9,7 +9,9 @@
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "nl",
-  "categories": ["productivity", "lifestyle"],
+  "dir": "ltr",
+  "categories": ["productivity", "lifestyle", "business"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -60,7 +62,22 @@
       "purpose": "maskable any"
     }
   ],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "/screenshots/dashboard-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Dashboard met rituelen en doelen"
+    },
+    {
+      "src": "/screenshots/dashboard-narrow.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Dashboard op mobiel"
+    }
+  ],
   "shortcuts": [
     {
       "name": "Ochtend Ritueel",
@@ -82,6 +99,45 @@
       "description": "Bekijk je successen",
       "url": "/wins",
       "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Doelen",
+      "short_name": "Doelen",
+      "description": "Beheer je doelen",
+      "url": "/goals",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+ondernemeros",
+      "url": "/protocol?type=%s"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/import",
+      "accept": {
+        "application/json": [".json"],
+        "text/csv": [".csv"]
+      }
     }
   ]
 }
