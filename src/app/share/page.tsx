@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Share2, Trophy, Target, CheckCircle2, X } from 'lucide-react';
+import { Share2, Trophy, Target, CheckCircle2, X, Loader2 } from 'lucide-react';
 
 type ShareType = 'win' | 'goal' | 'note';
 
-export default function SharePage() {
+function ShareContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [shareType, setShareType] = useState<ShareType>('win');
@@ -202,5 +202,24 @@ export default function SharePage() {
         )}
       </button>
     </div>
+  );
+}
+
+function ShareLoading() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
+      <div className="text-center">
+        <Loader2 className="w-8 h-8 text-indigo-400 animate-spin mx-auto mb-4" />
+        <p className="text-slate-400">Laden...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function SharePage() {
+  return (
+    <Suspense fallback={<ShareLoading />}>
+      <ShareContent />
+    </Suspense>
   );
 }
