@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Brain, Target, Calendar, LogOut, Sunrise, Moon, CalendarDays, BookOpen, Trophy, BarChart3, Settings, ChevronRight, Shield, Zap } from 'lucide-react';
+import { Brain, Target, Calendar, LogOut, Sunrise, Moon, CalendarDays, BookOpen, Trophy, BarChart3, Settings, ChevronRight, Shield, Zap, Flame, GraduationCap } from 'lucide-react';
 import { VisionCard } from '@/components/dashboard/vision-card';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -386,6 +386,36 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium text-slate-900 dark:text-white">Insights</p>
               </Link>
             </div>
+          </section>
+
+          {/* Courses Section */}
+          <section className="mb-8">
+            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">
+              Leren & Groeien
+            </h2>
+            <Link
+              href="/courses"
+              className="block p-4 bg-gradient-to-r from-orange-600 via-red-600 to-orange-600 rounded-xl hover:shadow-lg hover:shadow-orange-500/20 transition-all group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Flame className="text-white" size={20} />
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">Tony Robbins Cursussen</p>
+                    <p className="text-sm text-white/80">Unleash Your Power - Transformeer je leven</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="px-3 py-1 bg-white/20 rounded-full text-xs text-white">
+                    <GraduationCap size={14} className="inline mr-1" />
+                    12 weken
+                  </div>
+                  <ChevronRight className="text-white/70 group-hover:text-white transition-colors" size={18} />
+                </div>
+              </div>
+            </Link>
           </section>
 
           {/* Identity Section */}

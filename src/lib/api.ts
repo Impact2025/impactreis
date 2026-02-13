@@ -373,6 +373,70 @@ class ApiClient {
   // Alias for backwards compatibility
   focusSessions = this.focus;
 
+  // Courses
+  courses = {
+    getAll: () => this.request<any[]>('/courses'),
+
+    getBySlug: (slug: string) => this.request<any>(`/courses/${slug}`),
+
+    enroll: (courseId: number) =>
+      this.request<any>('/courses', {
+        method: 'POST',
+        body: JSON.stringify({ courseId }),
+      }),
+
+    getLesson: (slug: string, lessonId: number) =>
+      this.request<any>(`/courses/${slug}/lessons/${lessonId}`),
+
+    completeLesson: (slug: string, lessonId: number, timeSpentMinutes?: number) =>
+      this.request<any>(`/courses/${slug}/lessons/${lessonId}`, {
+        method: 'POST',
+        body: JSON.stringify({ timeSpentMinutes }),
+      }),
+
+    getAnswers: (slug: string, lessonId?: number) => {
+      const params = lessonId ? `?lessonId=${lessonId}` : '';
+      return this.request<any[]>(`/courses/${slug}/answers${params}`);
+    },
+
+    saveAnswers: (slug: string, lessonId: number, answers: Record<string, string>) =>
+      this.request<any>(`/courses/${slug}/answers`, {
+        method: 'POST',
+        body: JSON.stringify({ lessonId, answers }),
+      }),
+  };
+
+  // Daily Practice
+  practice = {
+    get: (type?: string, days?: number) => {
+      const params = new URLSearchParams();
+      if (type) params.append('type', type);
+      if (days) params.append('days', days.toString());
+      const query = params.toString();
+      return this.request<any>(`/practice${query ? `?${query}` : ''}`);
+    },
+
+    log: (practiceType: string, durationMinutes?: number, notes?: string, date?: string) =>
+      this.request<any>('/practice', {
+        method: 'POST',
+        body: JSON.stringify({ practiceType, durationMinutes, notes, date }),
+      }),
+  };
+
+  // Assessments
+  assessments = {
+    getAll: (type?: string) => {
+      const params = type ? `?type=${type}` : '';
+      return this.request<any>(`/assessments${params}`);
+    },
+
+    save: (assessmentType: string, results: Record<string, any>) =>
+      this.request<any>('/assessments', {
+        method: 'POST',
+        body: JSON.stringify({ assessmentType, results }),
+      }),
+  };
+
   // Wins (offline-first)
   wins = {
     getAll: async (params?: {

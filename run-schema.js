@@ -7,35 +7,71 @@ const schema = fs.readFileSync('schema.sql', 'utf8');
 
 async function runSchema() {
   try {
-    // Execute the entire schema
-    // Note: Neon requires tagged template literals, so we'll execute statement by statement
-    const statements = schema
+    // Remove comments and split by semicolon
+    const cleanSchema = schema
+      .replace(/--.*$/gm, '') // Remove single line comments
+      .replace(/\/\*[\s\S]*?\*\//g, ''); // Remove multi-line comments
+
+    const statements = cleanSchema
       .split(';')
       .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.startsWith('--'));
+      .filter(s => s.length > 0);
 
-    console.log(`📝 Executing ${statements.length} SQL statements...`);
+    console.log(`📝 Found ${statements.length} SQL statements to execute...`);
+    console.log('');
+
+    let success = 0;
+    let skipped = 0;
 
     for (let i = 0; i < statements.length; i++) {
       const statement = statements[i];
+
+      // Extract table/index name for logging
+      const match = statement.match(/(?:TABLE|INDEX)\s+(?:IF\s+NOT\s+EXISTS\s+)?([^\s(]+)/i);
+      const objectName = match ? match[1] : `statement ${i + 1}`;
+
       try {
-        // Use the query method for raw SQL
-        await sql.query(statement);
-        console.log(`✅ Statement ${i + 1}/${statements.length} executed`);
+        await sql([statement]);
+        console.log(`✅ Created: ${objectName}`);
+        success++;
       } catch (error) {
-        // Skip if table already exists
-        if (error.message.includes('already exists')) {
-          console.log(`⚠️  Statement ${i + 1}/${statements.length}: Already exists (skipped)`);
+        if (error.message && (
+          error.message.includes('already exists') ||
+          error.message.includes('duplicate')
+        )) {
+          console.log(`⏭️  Exists:  ${objectName}`);
+          skipped++;
         } else {
+          console.error(`❌ Failed:  ${objectName}`);
+          console.error(`   Error: ${error.message}`);
           throw error;
         }
       }
     }
 
-    console.log('\n✅ Schema executed successfully');
-    console.log('✅ New tables: wins, user_context');
+    console.log('');
+    console.log('═══════════════════════════════════════');
+    console.log(`✅ Schema migration complete!`);
+    console.log(`   Created: ${success} | Skipped: ${skipped} | Total: ${statements.length}`);
+    console.log('═══════════════════════════════════════');
+    console.log('');
+    console.log('📊 New tables for Tony Robbins Courses:');
+    console.log('   • courses');
+    console.log('   • course_modules');
+    console.log('   • course_lessons');
+    console.log('   • course_exercises');
+    console.log('   • course_enrollments');
+    console.log('   • lesson_completions');
+    console.log('   • course_answers');
+    console.log('   • exercise_completions');
+    console.log('   • daily_practice_log');
+    console.log('   • user_assessments');
+    console.log('   • course_achievements');
+    console.log('');
+    console.log('🚀 Next step: Run the app and POST to /api/courses/seed');
+
   } catch (error) {
-    console.error('\n❌ Error executing schema:', error.message);
+    console.error('\n❌ Migration failed:', error.message);
     process.exit(1);
   }
 }
