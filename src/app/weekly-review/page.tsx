@@ -145,6 +145,14 @@ export default function WeeklyReviewPage() {
     try {
       await api.weeklyReviews.create(formData);
 
+      // Mark weekly review as complete in localStorage
+      const year = new Date().getFullYear();
+      const key = `weeklyReview_${year}_${weekInfo.weekNumber}`;
+      localStorage.setItem(key, JSON.stringify({
+        completedAt: new Date().toISOString(),
+        weekNumber: weekInfo.weekNumber
+      }));
+
       // Show celebration animation
       setShowCelebration(true);
 
