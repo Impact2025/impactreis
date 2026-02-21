@@ -1,8 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Flame, Trophy, AlertTriangle } from 'lucide-react';
-import { getStreakData, getStreakMilestone, type StreakData } from '@/lib/streak.service';
+import { Flame, Trophy, AlertTriangle, Zap, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+import {
+  getStreakData,
+  getStreakMilestone,
+  wasStreakBroken,
+  recordStreakBreak,
+  getSpeedOfReturn,
+  type StreakData,
+} from '@/lib/streak.service';
 
 interface StreakBadgeProps {
   compact?: boolean;
@@ -12,10 +20,23 @@ interface StreakBadgeProps {
 export function StreakBadge({ compact = false, showMilestone = true }: StreakBadgeProps) {
   const [streakData, setStreakData] = useState<StreakData | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [streakWasBroken, setStreakWasBroken] = useState(false);
+  const [speedOfReturn, setSpeedOfReturn] = useState<'lightning' | 'fast' | 'steady' | null>(null);
 
   useEffect(() => {
     setIsClient(true);
-    setStreakData(getStreakData());
+    const data = getStreakData();
+    setStreakData(data);
+
+    const broken = wasStreakBroken();
+    setStreakWasBroken(broken);
+
+    // If today's streak is 0 but there was a previous streak, record the break
+    if (data.currentStreak === 0 && broken) {
+      recordStreakBreak();
+    }
+
+    setSpeedOfReturn(getSpeedOfReturn());
   }, []);
 
   if (!isClient || !streakData) {
@@ -26,19 +47,51 @@ export function StreakBadge({ compact = false, showMilestone = true }: StreakBad
   const milestone = getStreakMilestone(currentStreak);
   const isRecord = currentStreak > 0 && currentStreak === longestStreak;
 
-  // No streak yet
+  // No streak yet — compassionate reset UI
   if (currentStreak === 0) {
     if (compact) return null;
 
+    const isComeback = streakWasBroken;
+
     return (
-      <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl">
-        <Flame className="text-slate-400" size={18} />
-        <span className="text-sm text-slate-500 dark:text-slate-400">
-          Start je streak!
-        </span>
+      <div className="flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+            <Flame className="text-indigo-500" size={20} />
+          </div>
+          <div className="flex-1">
+            {isComeback ? (
+              <>
+                <p className="font-medium text-slate-900 dark:text-white">Welkom terug.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Elke dag is een nieuwe kans. Jouw comeback begint nu.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-medium text-slate-900 dark:text-white">Start je streak!</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Voltooi ochtend & avond ritueel om te beginnen.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+        {isComeback && (
+          <Link
+            href="/morning"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+          >
+            Begin de dag opnieuw
+            <ArrowRight size={14} />
+          </Link>
+        )}
       </div>
     );
   }
+
+  // Returned after a break — show Speed of Return badge
+  const showSpeedOfReturn = speedOfReturn && currentStreak >= 1;
 
   // Compact version for headers
   if (compact) {
@@ -111,6 +164,16 @@ export function StreakBadge({ compact = false, showMilestone = true }: StreakBad
             <p className="text-xs text-amber-700 dark:text-amber-400">
               Maak vandaag af om je streak te behouden!
             </p>
+          )}
+
+          {/* Speed of Return badge */}
+          {showSpeedOfReturn && !isAtRisk && (
+            <div className="flex items-center gap-1 mt-0.5">
+              <Zap size={12} className="text-amber-500" />
+              <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                {speedOfReturn === 'lightning' ? 'Terug! Direct opgepakt ⚡' : speedOfReturn === 'fast' ? 'Terug! Snelle comeback ⚡' : 'Terug! Goed gedaan ⚡'}
+              </span>
+            </div>
           )}
 
           {/* Milestone progress */}

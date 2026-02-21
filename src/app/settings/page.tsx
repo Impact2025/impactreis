@@ -28,6 +28,8 @@ export default function SettingsPage() {
     morningTime: '06:30',
     eveningTime: '21:30',
     weeklyStartEnabled: true,
+    createBeforeConsumeTime: '06:30',
+    createBeforeConsumeEnabled: true,
   });
   const [streakData, setStreakData] = useState({ currentStreak: 0, longestStreak: 0, totalDaysCompleted: 0 });
   const [isPWAInstalled, setIsPWAInstalled] = useState(false);

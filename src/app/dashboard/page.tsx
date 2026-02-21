@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Brain, Target, Calendar, LogOut, Sunrise, Moon, CalendarDays, BookOpen, Trophy, BarChart3, Settings, ChevronRight, Shield, Zap, Flame, GraduationCap } from 'lucide-react';
+import { Brain, Target, Calendar, LogOut, Sunrise, Moon, CalendarDays, BookOpen, Trophy, BarChart3, Settings, ChevronRight, Shield, Zap, Flame, GraduationCap, Filter, Circle } from 'lucide-react';
 import { VisionCard } from '@/components/dashboard/vision-card';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -384,6 +384,20 @@ export default function DashboardPage() {
               >
                 <BarChart3 className="mx-auto text-slate-600 dark:text-slate-400 mb-2" size={20} />
                 <p className="text-sm font-medium text-slate-900 dark:text-white">Insights</p>
+              </Link>
+              <Link
+                href="/reflectie"
+                className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors text-center"
+              >
+                <Filter className="mx-auto text-indigo-500 dark:text-indigo-400 mb-2" size={20} />
+                <p className="text-sm font-medium text-slate-900 dark:text-white">Reflectie</p>
+              </Link>
+              <Link
+                href="/controle-cirkel"
+                className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors text-center"
+              >
+                <Circle className="mx-auto text-emerald-500 dark:text-emerald-400 mb-2" size={20} />
+                <p className="text-sm font-medium text-slate-900 dark:text-white">Controle</p>
               </Link>
             </div>
           </section>

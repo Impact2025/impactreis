@@ -205,6 +205,50 @@ export function wasStreakBroken(): boolean {
   return isDayCompleted(twoDaysAgo) && !isDayCompleted(yesterday);
 }
 
+const BREAK_KEY = 'streak_last_break_date';
+
+/**
+ * Get the date when the last streak break occurred
+ */
+export function getLastBreakDate(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(BREAK_KEY);
+}
+
+/**
+ * Record that a streak break occurred today
+ */
+export function recordStreakBreak(): void {
+  if (typeof window === 'undefined') return;
+  const today = getToday();
+  localStorage.setItem(BREAK_KEY, today);
+}
+
+/**
+ * Get number of days since the last streak break
+ */
+export function getDaysSinceBreak(): number | null {
+  const breakDate = getLastBreakDate();
+  if (!breakDate) return null;
+
+  const today = new Date();
+  const breakDay = new Date(breakDate);
+  const diff = Math.floor((today.getTime() - breakDay.getTime()) / (1000 * 60 * 60 * 24));
+  return diff;
+}
+
+/**
+ * Get speed-of-return category based on how fast user came back after a break
+ * Returns: "lightning" (same day) | "fast" (1 day) | "steady" (2-3 days) | null (no break)
+ */
+export function getSpeedOfReturn(): 'lightning' | 'fast' | 'steady' | null {
+  const days = getDaysSinceBreak();
+  if (days === null) return null;
+  if (days === 0) return 'lightning';
+  if (days === 1) return 'fast';
+  return 'steady';
+}
+
 /**
  * Get motivational message based on streak status
  */

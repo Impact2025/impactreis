@@ -14,7 +14,7 @@ import { VisualizationWins } from '@/components/robbins/visualization-wins';
 import { IdentityStatement } from '@/components/robbins/identity-statement';
 import { Celebration } from '@/components/robbins/celebration';
 
-type Step = 'status' | 'state-before' | 'breathwork' | 'gratitude' | 'visualization' | 'identity' | 'state-after' | 'complete';
+type Step = 'intentie' | 'status' | 'state-before' | 'breathwork' | 'gratitude' | 'visualization' | 'identity' | 'state-after' | 'complete';
 
 interface MorningRitualData {
   wakeTime: string;
@@ -30,9 +30,11 @@ interface MorningRitualData {
   todayTop3: string[];
   intention: string;
   affirmation: string;
+  dagIntentie: string;
 }
 
 const steps: { id: Step; label: string }[] = [
+  { id: 'intentie', label: 'Intentie' },
   { id: 'status', label: 'Status' },
   { id: 'state-before', label: 'State' },
   { id: 'breathwork', label: 'Adem' },
@@ -45,7 +47,7 @@ const steps: { id: Step; label: string }[] = [
 export default function MorningPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [currentStep, setCurrentStep] = useState<Step>('status');
+  const [currentStep, setCurrentStep] = useState<Step>('intentie');
   const [showCelebration, setShowCelebration] = useState(false);
   const router = useRouter();
 
@@ -61,7 +63,8 @@ export default function MorningPage() {
     identityStatement: '',
     todayTop3: ['', '', ''],
     intention: '',
-    affirmation: ''
+    affirmation: '',
+    dagIntentie: '',
   });
 
   useEffect(() => {
@@ -235,6 +238,40 @@ export default function MorningPage() {
 
         {/* Step Content */}
         <div className="mb-8">
+          {/* Step 0: Intentie */}
+          {currentStep === 'intentie' && (
+            <div className="space-y-6">
+              <div className="text-center mb-8">
+                <p className="text-xs uppercase tracking-widest text-amber-500 dark:text-amber-400 mb-3 font-medium">
+                  Creëer voor je consumeert
+                </p>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                  Voordat je je telefoon aanraakt:
+                </h2>
+                <p className="text-slate-600 dark:text-slate-400">
+                  Bepaal wie jij vandaag wilt zijn.
+                </p>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                  Wat wil <span className="text-amber-600 dark:text-amber-400 font-bold">IK</span> vandaag?
+                </label>
+                <textarea
+                  value={formData.dagIntentie}
+                  onChange={(e) => setFormData({ ...formData, dagIntentie: e.target.value })}
+                  placeholder="Schrijf je intentie voor vandaag..."
+                  rows={4}
+                  className="w-full resize-none bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl px-4 py-3 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-300 dark:focus:ring-amber-800 text-sm leading-relaxed"
+                />
+              </div>
+
+              <div className="text-center text-xs text-slate-400 dark:text-slate-500">
+                Je vult dit in vóór je naar je feed, berichten of nieuws kijkt.
+              </div>
+            </div>
+          )}
+
           {/* Step 1: Status */}
           {currentStep === 'status' && (
             <div className="space-y-6">

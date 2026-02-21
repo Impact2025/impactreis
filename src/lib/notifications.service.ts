@@ -13,6 +13,8 @@ export interface NotificationPreferences {
   morningTime: string; // "06:30"
   eveningTime: string; // "21:30"
   weeklyStartEnabled: boolean;
+  createBeforeConsumeTime: string; // "06:30"
+  createBeforeConsumeEnabled: boolean;
 }
 
 const DEFAULT_PREFERENCES: NotificationPreferences = {
@@ -20,6 +22,8 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   morningTime: '06:30',
   eveningTime: '21:30',
   weeklyStartEnabled: true,
+  createBeforeConsumeTime: '06:30',
+  createBeforeConsumeEnabled: true,
 };
 
 const STORAGE_KEY = 'notification_preferences';
@@ -221,6 +225,16 @@ export function scheduleAllNotifications(): void {
     'Goedeavond!',
     'Tijd om je dag af te sluiten met reflectie.'
   );
+
+  // "Creëer voor je consumeert" early morning reminder
+  if (prefs.createBeforeConsumeEnabled) {
+    scheduleNotification(
+      'create-before-consume',
+      prefs.createBeforeConsumeTime,
+      'Goedemorgen.',
+      'Voordat je je feed opent: raak de vloer aan. Wat wil JIJ vandaag?'
+    );
+  }
 
   // Weekly start reminder (only on Mondays)
   if (prefs.weeklyStartEnabled) {

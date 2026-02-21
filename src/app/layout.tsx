@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { PWAProvider } from "@/components/pwa-provider";
+import { PauseButton } from "@/components/ui/pause-button";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -64,6 +65,7 @@ export default function RootLayout({
       >
         <PWAProvider>
           {children}
+          <PauseButton />
         </PWAProvider>
       </body>
     </html>
