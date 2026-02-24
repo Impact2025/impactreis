@@ -3,89 +3,90 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Brain, AlertCircle } from 'lucide-react';
+import { AlertCircle, ArrowRight } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const router = useRouter();
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+  const router                  = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
     try {
       await AuthService.login(email, password);
       router.push('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : 'Login mislukt');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-6">
-      <div className="w-full max-w-sm animate-in fade-in zoom-in duration-500">
+    <div className="min-h-screen bg-white flex items-center justify-center px-5">
+      <div className="w-full max-w-[360px]">
+
+        {/* Logo */}
         <div className="text-center mb-10">
-          <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-200 dark:shadow-none">
-            <Brain className="text-white" size={32} />
+          <div className="w-12 h-12 rounded-[14px] bg-[#0a0a14] flex items-center justify-center mx-auto mb-5 text-white text-[16px] font-bold">
+            OS
           </div>
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-white tracking-tight">
+          <h1 className="text-[28px] font-bold text-[#0a0a14] tracking-tight">
             Welkom terug
           </h1>
-          <p className="text-slate-500 mt-2">Personal OS voor Hoogbegaafden</p>
+          <p className="text-[13px] text-[#8a8a9a] mt-1.5">
+            Personal OS voor Hoogbegaafde Ondernemers
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <input
             type="email"
-            placeholder="E-mail"
+            placeholder="E-mailadres"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none focus:border-indigo-500 transition-colors text-slate-800 dark:text-white"
+            onChange={e => setEmail(e.target.value)}
             required
+            className="w-full px-4 py-3.5 rounded-[14px] bg-[#f4f4f7] border border-transparent text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66] focus:bg-white transition-all"
           />
           <input
             type="password"
             placeholder="Wachtwoord"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none focus:border-indigo-500 transition-colors text-slate-800 dark:text-white"
+            onChange={e => setPassword(e.target.value)}
             required
+            className="w-full px-4 py-3.5 rounded-[14px] bg-[#f4f4f7] border border-transparent text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66] focus:bg-white transition-all"
           />
 
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-              <AlertCircle size={16} className="text-red-500" />
-              <span className="text-sm text-red-700 dark:text-red-300">{error}</span>
+            <div className="flex items-center gap-2 px-3.5 py-3 rounded-[12px] bg-red-50 border border-red-100">
+              <AlertCircle size={15} className="text-red-500 shrink-0" />
+              <span className="text-[12px] text-red-600">{error}</span>
             </div>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold text-[15px] transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3.5 rounded-[14px] bg-[#00cc66] text-[#0a0a14] font-bold text-[14px] flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(0,204,102,0.35)] active:scale-[0.98] transition-all disabled:opacity-60 mt-2"
           >
-            {loading ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
-            ) : null}
-            Inloggen
+            {loading
+              ? <div className="w-4 h-4 border-2 border-[#0a0a14]/30 border-t-[#0a0a14] rounded-full animate-spin" />
+              : <>Inloggen <ArrowRight size={15} /></>
+            }
           </button>
         </form>
 
-        <div className="text-center mt-6">
-          <Link
-            href="/auth/register"
-            className="text-sm text-slate-500 font-medium hover:text-indigo-600 transition-colors"
-          >
-            Nog geen account? Registreer
+        <p className="text-center text-[13px] text-[#8a8a9a] mt-6">
+          Nog geen account?{' '}
+          <Link href="/auth/register" className="text-[#0a0a14] font-semibold hover:text-[#00cc66] transition-colors">
+            Registreer gratis
           </Link>
-        </div>
+        </p>
       </div>
     </div>
   );

@@ -1,8 +1,24 @@
 @import "tailwindcss";
 
 :root {
+  /* Core palette */
+  --bg: #ffffff;
+  --fg: #0a0a14;
+  --green: #00cc66;
+  --green-dark: #00a854;
+  --green-light: #dcfce7;
+  --green-muted: #f0fdf4;
+  --dark: #0a0a14;
+  --dark-card: #111118;
+  --card: #f8f9fa;
+  --border: #e8e8ec;
+  --muted: #8a8a9a;
+  --muted-light: #f4f4f7;
+  --yellow: #f59e0b;
+  --yellow-light: #fef3c7;
+
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0a0a14;
 }
 
 @theme inline {
@@ -12,15 +28,65 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Progress bar animation */
+@keyframes progress-fill {
+  from { width: 0%; }
+}
+.progress-animate {
+  animation: progress-fill 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Slide up */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slide-up 0.25s ease-out forwards;
+}
+
+/* Fade in */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out forwards;
+}
+
+/* Live dot pulse */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+.live-dot {
+  animation: live-pulse 2s ease-in-out infinite;
 }

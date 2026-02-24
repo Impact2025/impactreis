@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Brain, Target, Calendar, LogOut, Sunrise, Moon, CalendarDays, BookOpen, Trophy, BarChart3, Settings, ChevronRight, Shield, Zap, Flame, GraduationCap, Filter, Circle } from 'lucide-react';
-import { VisionCard } from '@/components/dashboard/vision-card';
+import {
+  Bell, Sunrise, Moon, CalendarDays, BookOpen,
+  TrendingUp, Play, ChevronRight, Zap,
+} from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { Win } from '@/types';
@@ -13,318 +15,349 @@ import { getDayType } from '@/lib/weekflow.service';
 import { initializeNotifications } from '@/lib/notifications.service';
 import { canStillDoWeeklyStart } from '@/lib/ritual-recovery.service';
 import { useRitualStatus } from '@/hooks/useRitualStatus';
+import { BottomNav } from '@/components/ui/bottom-nav';
+
+interface Goal {
+  id: string;
+  title: string;
+  category: string;
+  progress: number;
+  status: string;
+}
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser]             = useState<any>(null);
+  const [loading, setLoading]       = useState(true);
+  const [goals, setGoals]           = useState<Goal[]>([]);
   const [recentWins, setRecentWins] = useState<Win[]>([]);
-  const [stats, setStats] = useState({
-    activeGoals: 0,
-    weeklyProgress: 0,
-    streak: 0
-  });
-  const router = useRouter();
+  const [stats, setStats]           = useState({ activeGoals: 0, weeklyProgress: 0, streak: 12 });
+  const router                      = useRouter();
 
   const ritualStatuses = useRitualStatus();
-  const dayType = getDayType();
+  const dayType        = getDayType();
 
-  const fetchDashboardData = async (retryCount = 0) => {
+  const categoryLabel: Record<string, string> = {
+    business:      'BUSINESS',
+    health:        'GEZONDHEID',
+    relationships: 'RELATIES',
+    personal:      'PERSOONLIJK',
+    marketing:     'MARKETING',
+  };
+
+  const fetchData = async (retry = 0) => {
     try {
-      const fetchWithTimeout = (promise: Promise<any>, timeout = 5000) => {
-        return Promise.race([
-          promise,
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Request timeout')), timeout)
-          )
-        ]);
-      };
-
-      const [goalsResponse, focusResponse, winsResponse] = await Promise.allSettled([
-        fetchWithTimeout(api.goals.getAll()),
-        fetchWithTimeout(api.focus.getAll()),
-        fetchWithTimeout(api.wins.getAll())
+      const [goalsRes, focusRes, winsRes] = await Promise.allSettled([
+        api.goals.getAll(),
+        api.focus.getAll(),
+        api.wins.getAll(),
       ]);
 
-      const activeGoals = goalsResponse.status === 'fulfilled'
-        ? goalsResponse.value.filter((g: any) => g.status === 'active').length
-        : 0;
+      const allGoals    = goalsRes.status === 'fulfilled' ? goalsRes.value : [];
+      const activeGoals = allGoals.filter((g: any) => g.status === 'active');
+      const weeklyProg  = focusRes.status === 'fulfilled'
+        ? Math.min(100, (focusRes.value as any[]).length * 10) : 0;
 
-      const weeklyProgress = focusResponse.status === 'fulfilled'
-        ? Math.min(100, focusResponse.value.length * 10)
-        : 0;
+      setGoals(activeGoals.slice(0, 4));
+      setStats({ activeGoals: activeGoals.length, weeklyProgress: weeklyProg, streak: 12 });
 
-      setStats({
-        activeGoals,
-        weeklyProgress,
-        streak: 12
-      });
-
-      if (winsResponse.status === 'fulfilled') {
-        const sortedWins = winsResponse.value
-          .sort((a: Win, b: Win) => new Date(b.date).getTime() - new Date(a.date).getTime())
-          .slice(0, 3);
-        setRecentWins(sortedWins);
+      if (winsRes.status === 'fulfilled') {
+        setRecentWins(
+          winsRes.value
+            .sort((a: Win, b: Win) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(0, 3)
+        );
       }
-
-    } catch (err) {
-      console.error('Failed to fetch dashboard data:', err);
-      if (retryCount < 2) {
-        setTimeout(() => fetchDashboardData(retryCount + 1), 1000 * (retryCount + 1));
-      }
+    } catch {
+      if (retry < 2) setTimeout(() => fetchData(retry + 1), 1200 * (retry + 1));
     }
   };
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const currentUser = AuthService.getUser();
-        if (!currentUser) {
-          router.push('/auth/login');
-          return;
-        }
-        setUser(currentUser);
-        await fetchDashboardData();
-        initializeNotifications().catch(console.error);
-      } catch (err) {
-        console.error('Auth check failed:', err);
-        router.push('/auth/login');
-      } finally {
-        setLoading(false);
-      }
+    const init = async () => {
+      const u = AuthService.getUser();
+      if (!u) { router.push('/auth/login'); return; }
+      setUser(u);
+      await fetchData();
+      initializeNotifications().catch(() => {});
+      setLoading(false);
     };
-
-    checkAuth();
-  }, [router]);
-
-  const handleLogout = async () => {
-    try {
-      await AuthService.logout();
-      router.push('/auth/login');
-    } catch (err) {
-      console.error('Logout failed:', err);
-    }
-  };
+    init();
+  }, []);
 
   const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Goedemorgen';
-    if (hour < 18) return 'Goedemiddag';
+    const h = new Date().getHours();
+    if (h < 12) return 'Goedemorgen';
+    if (h < 18) return 'Goedemiddag';
     return 'Goedenavond';
   };
 
+  const firstName  = user?.email?.split('@')[0] ?? 'Ondernemer';
+  const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+  const focusGoal  = goals[0];
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-slate-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-900 dark:border-white border-t-transparent" />
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#00cc66] border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
     <RitualGuard>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-        {/* Minimal Header */}
-        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-          <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="min-h-screen bg-white pb-28">
+
+        {/* ══ HEADER ══════════════════════════════════════════ */}
+        <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#e8e8ec]">
+          <div className="max-w-lg mx-auto px-5 py-3.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-slate-900 dark:bg-white rounded-lg flex items-center justify-center">
-                <Brain className="text-white dark:text-slate-900" size={16} />
+              {/* Avatar */}
+              <div className="w-9 h-9 rounded-full bg-[#0a0a14] flex items-center justify-center text-white text-[13px] font-bold select-none">
+                {displayName.charAt(0)}
               </div>
-              <span className="font-semibold text-slate-900 dark:text-white">Mijn OS</span>
+              <div className="leading-tight">
+                <p className="text-[13px] font-bold text-[#0a0a14]">Mijn Ondernemers OS</p>
+                <p className="text-[9px] font-bold tracking-[0.18em] text-[#00cc66] uppercase">
+                  Mastermind Edition
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <Link
-                href="/settings"
-                className="p-2 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <Settings size={18} />
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="p-2 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <LogOut size={18} />
-              </button>
-            </div>
+            <button className="w-9 h-9 rounded-full bg-[#f4f4f7] flex items-center justify-center text-[#8a8a9a] hover:text-[#0a0a14] transition-colors">
+              <Bell size={16} />
+            </button>
           </div>
         </header>
 
-        <main className="max-w-5xl mx-auto px-6 py-8">
-          {/* Welcome */}
-          <div className="mb-6">
-            <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">
-              {getGreeting()}, {user?.email?.split('@')[0]}
+        <main className="max-w-lg mx-auto px-5">
+
+          {/* ══ GREETING ════════════════════════════════════════ */}
+          <div className="pt-7 pb-6">
+            <h1 className="text-[30px] font-bold leading-tight text-[#0a0a14] tracking-tight">
+              {getGreeting()}, {displayName}
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">
-              {new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
+            <p className="text-[13px] text-[#8a8a9a] mt-2 italic leading-relaxed">
+              &ldquo;The best way to predict the future is to create it.&rdquo;
             </p>
           </div>
 
-          {/* Vision Card */}
-          <div className="mb-8">
-            <VisionCard />
-          </div>
+          {/* ══ FOCUS CARD ══════════════════════════════════════ */}
+          {focusGoal ? (
+            <div className="rounded-[20px] bg-[#0a0a14] p-5 mb-6">
+              <div className="flex items-center gap-1.5 mb-3">
+                <span className="live-dot w-2 h-2 rounded-full bg-[#00cc66] inline-block" />
+                <span className="text-[9px] font-bold tracking-[0.2em] text-[#00cc66] uppercase">
+                  Focus van de dag
+                </span>
+              </div>
+              <h2 className="text-[19px] font-bold text-white leading-snug mb-1.5">
+                {focusGoal.title}
+              </h2>
+              <p className="text-[12px] text-[#5a5a6a] mb-5">
+                Prioriteit: Hoog &mdash; blijf gefocust op wat écht telt.
+              </p>
+              <Link
+                href="/focus"
+                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-[14px] bg-[#00cc66] text-[#0a0a14] font-bold text-[14px] active:scale-[0.98] transition-transform shadow-[0_4px_20px_rgba(0,204,102,0.35)]"
+              >
+                <Play size={14} fill="currentColor" />
+                Start Focus Timer
+              </Link>
+            </div>
+          ) : (
+            <Link
+              href="/goals"
+              className="block rounded-[20px] bg-[#0a0a14] p-5 mb-6"
+            >
+              <div className="flex items-center gap-1.5 mb-3">
+                <span className="w-2 h-2 rounded-full bg-[#8a8a9a] inline-block" />
+                <span className="text-[9px] font-bold tracking-[0.2em] text-[#8a8a9a] uppercase">
+                  Geen actief doel
+                </span>
+              </div>
+              <p className="text-[16px] font-bold text-white mb-1">Stel je focus in</p>
+              <p className="text-[12px] text-[#5a5a6a]">Voeg een doel toe om te starten →</p>
+            </Link>
+          )}
 
-          {/* Stats Row */}
-          <div className="grid grid-cols-3 gap-4 mb-8">
-            <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">Doelen</p>
-              <p className="text-2xl font-semibold text-slate-900 dark:text-white mt-1">{stats.activeGoals}</p>
+          {/* ══ MIJN ROUTINES ═══════════════════════════════════ */}
+          <section className="mb-6">
+            <div className="flex items-center justify-between mb-3.5">
+              <h2 className="text-[15px] font-bold text-[#0a0a14]">Mijn Routines</h2>
+              <Link href="/morning" className="text-[12px] font-semibold text-[#00cc66]">
+                Beheer alles
+              </Link>
             </div>
-            <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">Week</p>
-              <p className="text-2xl font-semibold text-slate-900 dark:text-white mt-1">{stats.weeklyProgress}%</p>
-            </div>
-            <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">Streak</p>
-              <p className="text-2xl font-semibold text-slate-900 dark:text-white mt-1">{stats.streak}d</p>
-            </div>
-          </div>
 
-          {/* Rituals Section */}
-          <section className="mb-8">
-            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">
-              Rituelen
-            </h2>
-            <div className="space-y-2">
-              {/* Weekly Start - show on Mon/Tue/Wed if not complete */}
-              {!ritualStatuses.weeklyStart.isComplete && canStillDoWeeklyStart() && (
+            {/* Horizontal scroll */}
+            <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5 snap-x snap-mandatory">
+              {/* Ochtend */}
+              <Link
+                href="/morning"
+                className="flex-none w-[168px] snap-start rounded-[16px] border border-[#e8e8ec] bg-white p-4 hover:border-[#00cc66]/30 transition-colors"
+              >
+                <div className="flex items-center justify-between mb-3.5">
+                  <div className="w-9 h-9 rounded-[10px] bg-[#fff8eb] flex items-center justify-center">
+                    <Sunrise size={17} className="text-[#f59e0b]" />
+                  </div>
+                  {ritualStatuses.morning.isComplete && (
+                    <span className="text-[9px] font-bold text-[#00cc66] bg-[#f0fdf4] px-1.5 py-0.5 rounded-full">✓ Klaar</span>
+                  )}
+                </div>
+                <p className="text-[10px] text-[#8a8a9a] mb-0.5 tabular-nums">07:00 – 08:30</p>
+                <p className="text-[13px] font-bold text-[#0a0a14] mb-0.5">Ochtend Routine</p>
+                <p className="text-[10px] text-[#8a8a9a] mb-3 leading-snug">Meditatie, Schrijven, Sport</p>
+                <div className="h-1 rounded-full bg-[#f4f4f7] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[#00cc66] transition-all duration-700"
+                    style={{ width: ritualStatuses.morning.isComplete ? '100%' : '65%' }}
+                  />
+                </div>
+                <p className="text-[10px] text-[#8a8a9a] mt-1.5 font-medium">
+                  {ritualStatuses.morning.isComplete ? '100%' : '65%'}
+                </p>
+              </Link>
+
+              {/* Avond */}
+              <Link
+                href="/evening"
+                className="flex-none w-[168px] snap-start rounded-[16px] border border-[#e8e8ec] bg-white p-4 hover:border-[#6366f1]/30 transition-colors"
+              >
+                <div className="flex items-center justify-between mb-3.5">
+                  <div className="w-9 h-9 rounded-[10px] bg-[#f0f0ff] flex items-center justify-center">
+                    <Moon size={17} className="text-[#6366f1]" />
+                  </div>
+                  {ritualStatuses.evening.isComplete && (
+                    <span className="text-[9px] font-bold text-[#00cc66] bg-[#f0fdf4] px-1.5 py-0.5 rounded-full">✓ Klaar</span>
+                  )}
+                </div>
+                <p className="text-[10px] text-[#8a8a9a] mb-0.5 tabular-nums">20:00 – 21:00</p>
+                <p className="text-[13px] font-bold text-[#0a0a14] mb-0.5">Avond Routine</p>
+                <p className="text-[10px] text-[#8a8a9a] mb-3 leading-snug">Reflectie, Planning</p>
+                <div className="h-1 rounded-full bg-[#f4f4f7] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[#6366f1] transition-all duration-700"
+                    style={{ width: ritualStatuses.evening.isComplete ? '100%' : '0%' }}
+                  />
+                </div>
+                <p className="text-[10px] text-[#8a8a9a] mt-1.5 font-medium">
+                  {ritualStatuses.evening.isComplete ? '100%' : 'Vanaf 17:00'}
+                </p>
+              </Link>
+
+              {/* Week Start */}
+              {canStillDoWeeklyStart() && !ritualStatuses.weeklyStart.isComplete && (
                 <Link
                   href="/weekly-start"
-                  className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors group"
+                  className="flex-none w-[168px] snap-start rounded-[16px] border border-[#e8e8ec] bg-white p-4"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg flex items-center justify-center">
-                      <CalendarDays className="text-emerald-600 dark:text-emerald-400" size={18} />
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-900 dark:text-white">Week Start</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Plan je week</p>
+                  <div className="mb-3.5">
+                    <div className="w-9 h-9 rounded-[10px] bg-[#f0fdf4] flex items-center justify-center">
+                      <CalendarDays size={17} className="text-[#00cc66]" />
                     </div>
                   </div>
-                  <ChevronRight className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" size={18} />
+                  <p className="text-[10px] text-[#8a8a9a] mb-0.5">Maandag</p>
+                  <p className="text-[13px] font-bold text-[#0a0a14] mb-0.5">Week Start</p>
+                  <p className="text-[10px] text-[#8a8a9a] mb-3">Plan je week</p>
+                  <div className="h-1 rounded-full bg-[#f4f4f7]" />
+                  <p className="text-[10px] text-[#8a8a9a] mt-1.5">Niet gestart</p>
                 </Link>
               )}
 
-              {/* Morning */}
-              <Link
-                href="/morning"
-                className={`flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-xl border transition-colors group ${
-                  ritualStatuses.morning.isComplete
-                    ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10'
-                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    ritualStatuses.morning.isComplete
-                      ? 'bg-emerald-100 dark:bg-emerald-900/30'
-                      : 'bg-amber-50 dark:bg-amber-900/20'
-                  }`}>
-                    <Sunrise className={ritualStatuses.morning.isComplete ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'} size={18} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-slate-900 dark:text-white">Ochtend</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {ritualStatuses.morning.isComplete ? 'Afgerond' : 'Start je dag'}
-                    </p>
-                  </div>
-                </div>
-                {ritualStatuses.morning.isComplete ? (
-                  <div className="w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                ) : (
-                  <ChevronRight className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" size={18} />
-                )}
-              </Link>
-
-              {/* Evening */}
-              <Link
-                href="/evening"
-                className={`flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-xl border transition-colors group ${
-                  ritualStatuses.evening.isComplete
-                    ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10'
-                    : !ritualStatuses.evening.isAvailable
-                    ? 'border-slate-200 dark:border-slate-800 opacity-50 cursor-not-allowed'
-                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    ritualStatuses.evening.isComplete
-                      ? 'bg-emerald-100 dark:bg-emerald-900/30'
-                      : 'bg-indigo-50 dark:bg-indigo-900/20'
-                  }`}>
-                    <Moon className={ritualStatuses.evening.isComplete ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'} size={18} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-slate-900 dark:text-white">Avond</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {ritualStatuses.evening.isComplete ? 'Afgerond' : !ritualStatuses.evening.isAvailable ? 'Vanaf 17:00' : 'Reflectie'}
-                    </p>
-                  </div>
-                </div>
-                {ritualStatuses.evening.isComplete ? (
-                  <div className="w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                ) : (
-                  <ChevronRight className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" size={18} />
-                )}
-              </Link>
-
-              {/* Weekend: Week Review */}
+              {/* Weekend review */}
               {dayType === 'weekend' && (
                 <Link
                   href="/weekly-review"
-                  className={`flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-xl border transition-colors group ${
-                    ritualStatuses.weeklyReview.isComplete
-                      ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10'
-                      : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                  }`}
+                  className="flex-none w-[168px] snap-start rounded-[16px] border border-[#e8e8ec] bg-white p-4"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      ritualStatuses.weeklyReview.isComplete
-                        ? 'bg-emerald-100 dark:bg-emerald-900/30'
-                        : 'bg-purple-50 dark:bg-purple-900/20'
-                    }`}>
-                      <BookOpen className={ritualStatuses.weeklyReview.isComplete ? 'text-emerald-600 dark:text-emerald-400' : 'text-purple-600 dark:text-purple-400'} size={18} />
+                  <div className="flex items-center justify-between mb-3.5">
+                    <div className="w-9 h-9 rounded-[10px] bg-[#fdf4ff] flex items-center justify-center">
+                      <BookOpen size={17} className="text-[#a855f7]" />
                     </div>
-                    <div>
-                      <p className="font-medium text-slate-900 dark:text-white">Week Review</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
-                        {ritualStatuses.weeklyReview.isComplete ? 'Afgerond' : 'Evalueer je week'}
-                      </p>
-                    </div>
+                    {ritualStatuses.weeklyReview.isComplete && (
+                      <span className="text-[9px] font-bold text-[#00cc66] bg-[#f0fdf4] px-1.5 py-0.5 rounded-full">✓</span>
+                    )}
                   </div>
-                  {ritualStatuses.weeklyReview.isComplete ? (
-                    <div className="w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                  ) : (
-                    <ChevronRight className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" size={18} />
-                  )}
+                  <p className="text-[10px] text-[#8a8a9a] mb-0.5">Weekend</p>
+                  <p className="text-[13px] font-bold text-[#0a0a14] mb-0.5">Week Review</p>
+                  <p className="text-[10px] text-[#8a8a9a] mb-3">Evalueer je week</p>
+                  <div className="h-1 rounded-full bg-[#f4f4f7] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[#a855f7]"
+                      style={{ width: ritualStatuses.weeklyReview.isComplete ? '100%' : '0%' }}
+                    />
+                  </div>
                 </Link>
               )}
             </div>
           </section>
 
-          {/* Recent Wins */}
+          {/* ══ ACTUELE DOELEN ══════════════════════════════════ */}
+          {goals.length > 0 && (
+            <section className="mb-6">
+              <div className="flex items-center justify-between mb-3.5">
+                <h2 className="text-[15px] font-bold text-[#0a0a14]">Actuele Doelen</h2>
+                <Link href="/goals">
+                  <TrendingUp size={17} className="text-[#8a8a9a] hover:text-[#00cc66] transition-colors" />
+                </Link>
+              </div>
+
+              <div className="space-y-2.5">
+                {goals.map((goal) => (
+                  <Link
+                    key={goal.id}
+                    href="/goals"
+                    className="block rounded-[14px] border border-[#e8e8ec] bg-white px-4 py-3.5 hover:border-[#00cc66]/30 transition-colors"
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-[13px] font-semibold text-[#0a0a14] leading-snug flex-1 pr-3">
+                        {goal.title}
+                      </p>
+                      <span className="text-[14px] font-bold text-[#00cc66] tabular-nums shrink-0">
+                        {goal.progress ?? 0}%
+                      </span>
+                    </div>
+                    <p className="text-[9px] font-bold text-[#8a8a9a] tracking-[0.15em] uppercase mb-2">
+                      {categoryLabel[goal.category] ?? goal.category}
+                    </p>
+                    <div className="h-1 rounded-full bg-[#f4f4f7] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-[#00cc66] transition-all duration-700"
+                        style={{ width: `${Math.max(2, goal.progress ?? 0)}%` }}
+                      />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ══ STATS ROW ═══════════════════════════════════════ */}
+          <section className="mb-6">
+            <div className="grid grid-cols-3 gap-2.5">
+              <div className="rounded-[14px] bg-[#f4f4f7] px-3 py-4">
+                <p className="text-[9px] font-bold text-[#8a8a9a] uppercase tracking-[0.12em] mb-1.5">Doelen</p>
+                <p className="text-[26px] font-bold text-[#0a0a14] leading-none">{stats.activeGoals}</p>
+                <p className="text-[9px] text-[#8a8a9a] mt-1">actief</p>
+              </div>
+              <div className="rounded-[14px] bg-[#fef3c7] border border-[#fde68a] px-3 py-4">
+                <p className="text-[9px] font-bold text-[#f59e0b] uppercase tracking-[0.12em] mb-1.5">Streak</p>
+                <p className="text-[26px] font-bold text-[#0a0a14] leading-none">{stats.streak}</p>
+                <p className="text-[9px] text-[#f59e0b] mt-1">dagen</p>
+              </div>
+              <div className="rounded-[14px] bg-[#f4f4f7] px-3 py-4">
+                <p className="text-[9px] font-bold text-[#8a8a9a] uppercase tracking-[0.12em] mb-1.5">Week</p>
+                <p className="text-[26px] font-bold text-[#0a0a14] leading-none">{stats.weeklyProgress}</p>
+                <p className="text-[9px] text-[#8a8a9a] mt-1">procent</p>
+              </div>
+            </div>
+          </section>
+
+          {/* ══ RECENTE WINS ════════════════════════════════════ */}
           {recentWins.length > 0 && (
-            <section className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                  Recente Wins
-                </h2>
-                <Link href="/wins" className="text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">
+            <section className="mb-6">
+              <div className="flex items-center justify-between mb-3.5">
+                <h2 className="text-[15px] font-bold text-[#0a0a14]">Recente Wins</h2>
+                <Link href="/wins" className="text-[12px] font-semibold text-[#00cc66]">
                   Alles bekijken
                 </Link>
               </div>
@@ -332,17 +365,20 @@ export default function DashboardPage() {
                 {recentWins.map((win) => (
                   <div
                     key={win.id}
-                    className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800"
+                    className="flex items-center gap-3 px-4 py-3 rounded-[14px] border border-[#e8e8ec] bg-white"
                   >
-                    <div>
-                      <p className="font-medium text-slate-900 dark:text-white">{win.title}</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <div className="w-8 h-8 rounded-[10px] bg-[#f0fdf4] flex items-center justify-center flex-none">
+                      <Zap size={14} className="text-[#00cc66]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-[#0a0a14] truncate">{win.title}</p>
+                      <p className="text-[11px] text-[#8a8a9a]">
                         {new Date(win.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: win.impact_level }).map((_, i) => (
-                        <div key={i} className="w-1.5 h-1.5 bg-slate-900 dark:bg-white rounded-full" />
+                    <div className="flex gap-0.5 shrink-0">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < win.impact_level ? 'bg-[#00cc66]' : 'bg-[#e8e8ec]'}`} />
                       ))}
                     </div>
                   </div>
@@ -351,116 +387,49 @@ export default function DashboardPage() {
             </section>
           )}
 
-          {/* Quick Links */}
-          <section className="mb-8">
-            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">
-              Tools
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* ══ QUICK ACTIONS ═══════════════════════════════════ */}
+          <section className="mb-6">
+            <div className="grid grid-cols-2 gap-2.5">
               <Link
-                href="/goals"
-                className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors text-center"
+                href="/identity"
+                className="rounded-[16px] bg-[#0a0a14] p-4 flex items-center gap-3 group hover:bg-[#111118] transition-colors"
               >
-                <Target className="mx-auto text-slate-600 dark:text-slate-400 mb-2" size={20} />
-                <p className="text-sm font-medium text-slate-900 dark:text-white">Doelen</p>
-              </Link>
-              <Link
-                href="/focus"
-                className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors text-center"
-              >
-                <Calendar className="mx-auto text-slate-600 dark:text-slate-400 mb-2" size={20} />
-                <p className="text-sm font-medium text-slate-900 dark:text-white">Focus</p>
-              </Link>
-              <Link
-                href="/wins"
-                className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors text-center"
-              >
-                <Trophy className="mx-auto text-slate-600 dark:text-slate-400 mb-2" size={20} />
-                <p className="text-sm font-medium text-slate-900 dark:text-white">Wins</p>
-              </Link>
-              <Link
-                href="/insights"
-                className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors text-center"
-              >
-                <BarChart3 className="mx-auto text-slate-600 dark:text-slate-400 mb-2" size={20} />
-                <p className="text-sm font-medium text-slate-900 dark:text-white">Insights</p>
-              </Link>
-              <Link
-                href="/reflectie"
-                className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors text-center"
-              >
-                <Filter className="mx-auto text-indigo-500 dark:text-indigo-400 mb-2" size={20} />
-                <p className="text-sm font-medium text-slate-900 dark:text-white">Reflectie</p>
+                <div className="w-9 h-9 rounded-[10px] bg-white/10 flex items-center justify-center text-base">🛡️</div>
+                <div>
+                  <p className="text-[12px] font-bold text-white">Identiteit</p>
+                  <p className="text-[10px] text-[#5a5a6a]">Claim wie je bent</p>
+                </div>
               </Link>
               <Link
                 href="/controle-cirkel"
-                className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors text-center"
+                className="rounded-[16px] border border-[#e8e8ec] bg-white p-4 flex items-center gap-3 hover:border-[#00cc66]/30 transition-colors"
               >
-                <Circle className="mx-auto text-emerald-500 dark:text-emerald-400 mb-2" size={20} />
-                <p className="text-sm font-medium text-slate-900 dark:text-white">Controle</p>
+                <div className="w-9 h-9 rounded-[10px] bg-[#f0fdf4] flex items-center justify-center text-base">⭕</div>
+                <div>
+                  <p className="text-[12px] font-bold text-[#0a0a14]">Controle</p>
+                  <p className="text-[10px] text-[#8a8a9a]">Cirkel oefening</p>
+                </div>
+              </Link>
+              <Link
+                href="/courses"
+                className="col-span-2 rounded-[16px] bg-gradient-to-r from-[#ff6b35] to-[#e83e3e] p-4 flex items-center justify-between group active:scale-[0.99] transition-transform"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-[10px] bg-white/20 flex items-center justify-center text-base">🔥</div>
+                  <div>
+                    <p className="text-[13px] font-bold text-white">Tony Robbins Cursussen</p>
+                    <p className="text-[10px] text-white/70">Unleash Your Power · 12 weken</p>
+                  </div>
+                </div>
+                <ChevronRight size={17} className="text-white/60 group-hover:text-white transition-colors" />
               </Link>
             </div>
           </section>
 
-          {/* Courses Section */}
-          <section className="mb-8">
-            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">
-              Leren & Groeien
-            </h2>
-            <Link
-              href="/courses"
-              className="block p-4 bg-gradient-to-r from-orange-600 via-red-600 to-orange-600 rounded-xl hover:shadow-lg hover:shadow-orange-500/20 transition-all group"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                    <Flame className="text-white" size={20} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-white">Tony Robbins Cursussen</p>
-                    <p className="text-sm text-white/80">Unleash Your Power - Transformeer je leven</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="px-3 py-1 bg-white/20 rounded-full text-xs text-white">
-                    <GraduationCap size={14} className="inline mr-1" />
-                    12 weken
-                  </div>
-                  <ChevronRight className="text-white/70 group-hover:text-white transition-colors" size={18} />
-                </div>
-              </div>
-            </Link>
-          </section>
-
-          {/* Identity Section */}
-          <section className="mb-8">
-            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">
-              Identiteit & State
-            </h2>
-            <Link
-              href="/identity"
-              className="block p-4 bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-800 dark:to-slate-700 rounded-xl border border-slate-700 hover:shadow-lg transition-all group"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
-                    <Shield className="text-amber-400" size={20} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-white">Mijn Identiteit</p>
-                    <p className="text-sm text-white/70">Claim wie je bent. Bewijs het.</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="px-3 py-1 bg-white/10 rounded-full text-xs text-white/80">
-                    Tony Robbins
-                  </div>
-                  <ChevronRight className="text-white/50 group-hover:text-white/80 transition-colors" size={18} />
-                </div>
-              </div>
-            </Link>
-          </section>
         </main>
+
+        {/* ══ BOTTOM NAV ══════════════════════════════════════ */}
+        <BottomNav />
       </div>
     </RitualGuard>
   );
