@@ -149,13 +149,21 @@ export default function SalesPage() {
             ))}
           </div>
 
-          <Link
-            href="/auth/register"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#0a0a14] text-white text-[13px] font-semibold hover:bg-[#111118] transition-colors"
-          >
-            Gratis kennismaking
-            <ArrowRight size={13} />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/auth/login"
+              className="inline-flex items-center px-4 py-2 rounded-full text-[13px] font-semibold text-[#8a8a9a] hover:text-[#0a0a14] transition-colors"
+            >
+              Inloggen
+            </Link>
+            <Link
+              href="/auth/register"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#0a0a14] text-white text-[13px] font-semibold hover:bg-[#111118] transition-colors"
+            >
+              Gratis kennismaking
+              <ArrowRight size={13} />
+            </Link>
+          </div>
         </div>
       </nav>
 

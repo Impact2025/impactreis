@@ -14,7 +14,6 @@ import {
   ArrowLeft,
   Plus,
   X,
-  Sparkles,
   HelpCircle,
   Gift,
   BookOpen
@@ -22,6 +21,7 @@ import {
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { isWeeklyReviewComplete } from '@/lib/weekflow.service';
+import { BottomNav } from '@/components/ui/bottom-nav';
 
 interface WeeklyReviewData {
   wins: string[];
@@ -36,7 +36,6 @@ interface WeeklyReviewData {
   weekNumber: number;
   weekStart: string;
   weekEnd: string;
-  // Tony Robbins Quality Questions
   whatGave: string;
   whatLearned: string;
   howContributed: string;
@@ -50,23 +49,17 @@ export default function WeeklyReviewPage() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [newWin, setNewWin] = useState('');
 
-  // Calculate week number and date range
   const getWeekInfo = () => {
     const now = new Date();
     const start = new Date(now.getFullYear(), 0, 1);
     const days = Math.floor((now.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
     const weekNumber = Math.ceil((days + start.getDay() + 1) / 7);
-
-    // Get Monday of current week
     const currentDay = now.getDay();
-    const diff = currentDay === 0 ? -6 : 1 - currentDay; // Adjust for Sunday
+    const diff = currentDay === 0 ? -6 : 1 - currentDay;
     const monday = new Date(now);
     monday.setDate(now.getDate() + diff);
-
-    // Get Sunday of current week
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
-
     return {
       weekNumber,
       weekStart: monday.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }),
@@ -91,7 +84,6 @@ export default function WeeklyReviewPage() {
     weekNumber: weekInfo.weekNumber,
     weekStart: weekInfo.weekStartISO,
     weekEnd: weekInfo.weekEndISO,
-    // Quality Questions
     whatGave: '',
     whatLearned: '',
     howContributed: '',
@@ -108,58 +100,39 @@ export default function WeeklyReviewPage() {
     const checkAuth = async () => {
       try {
         const currentUser = AuthService.getUser();
-        if (!currentUser) {
-          router.push('/auth/login');
-          return;
-        }
+        if (!currentUser) { router.push('/auth/login'); return; }
         setLoading(false);
       } catch (err) {
         router.push('/auth/login');
       }
     };
-
     checkAuth();
   }, [router]);
 
   const handleAddWin = () => {
     if (newWin.trim()) {
-      setFormData({
-        ...formData,
-        wins: [...formData.wins, newWin.trim()]
-      });
+      setFormData({ ...formData, wins: [...formData.wins, newWin.trim()] });
       setNewWin('');
     }
   };
 
   const handleRemoveWin = (index: number) => {
-    setFormData({
-      ...formData,
-      wins: formData.wins.filter((_, i) => i !== index)
-    });
+    setFormData({ ...formData, wins: formData.wins.filter((_, i) => i !== index) });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-
     try {
       await api.weeklyReviews.create(formData);
-
-      // Mark weekly review as complete in localStorage
       const year = new Date().getFullYear();
       const key = `weeklyReview_${year}_${weekInfo.weekNumber}`;
       localStorage.setItem(key, JSON.stringify({
         completedAt: new Date().toISOString(),
         weekNumber: weekInfo.weekNumber
       }));
-
-      // Show celebration animation
       setShowCelebration(true);
-
-      // Redirect after animation
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 3000);
+      setTimeout(() => { router.push('/dashboard'); }, 3000);
     } catch (error) {
       console.error('Failed to save weekly review:', error);
       alert('Er ging iets mis bij het opslaan. Probeer het opnieuw.');
@@ -170,44 +143,21 @@ export default function WeeklyReviewPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-pink-800 to-orange-700">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-white border-t-transparent" />
+      <div className="min-h-screen bg-[#ffffff] flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-[#00cc66] border-t-transparent animate-spin" />
       </div>
     );
   }
 
   if (showCelebration) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-pink-800 to-orange-700 overflow-hidden">
-        <div className="text-center animate-bounce">
-          <div className="relative">
-            <Sparkles className="text-yellow-300 w-24 h-24 mx-auto mb-6 animate-pulse" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Award className="text-white w-16 h-16 animate-spin" style={{ animationDuration: '3s' }} />
-            </div>
+      <div className="min-h-screen bg-[#0a0a14] flex items-center justify-center">
+        <div className="text-center px-5">
+          <div className="w-24 h-24 rounded-full bg-[#00cc66]/20 flex items-center justify-center mx-auto mb-6">
+            <Award className="text-[#00cc66]" size={48} />
           </div>
-          <h2 className="text-4xl font-bold text-white mb-4">
-            Fantastisch werk!
-          </h2>
-          <p className="text-xl text-white/80">
-            Je reflectie is opgeslagen. Trots op je vooruitgang!
-          </p>
-        </div>
-
-        {/* Confetti effect */}
-        <div className="absolute inset-0 pointer-events-none">
-          {[...Array(20)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-3 h-3 bg-yellow-300 rounded-full animate-ping"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 2}s`,
-                animationDuration: `${1 + Math.random() * 2}s`
-              }}
-            />
-          ))}
+          <h2 className="text-[28px] font-bold text-white mb-3">Fantastisch werk!</h2>
+          <p className="text-[15px] text-white/60">Je reflectie is opgeslagen.</p>
         </div>
       </div>
     );
@@ -216,93 +166,69 @@ export default function WeeklyReviewPage() {
   const isAlreadyComplete = isWeeklyReviewComplete();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-pink-800 to-orange-700">
+    <div className="min-h-screen bg-[#ffffff] pb-28">
       {/* Header */}
-      <header className="backdrop-blur-md bg-white/10 border-b border-white/20 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+      <header className="bg-[#ffffff] border-b border-[#e8e8ec] px-5 py-4 sticky top-0 z-30">
+        <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-[#f4f4f7] text-[#0a0a14] active:scale-95 transition-transform"
             >
-              <ArrowLeft size={20} className="text-white" />
+              <ArrowLeft size={18} strokeWidth={2} />
             </Link>
-            <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-pink-500 rounded-xl flex items-center justify-center">
-              <Award className="text-white" size={24} />
-            </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">Wekelijkse Reflectie</h1>
-              <p className="text-white/70">Week {weekInfo.weekNumber} | {weekInfo.weekStart} - {weekInfo.weekEnd}</p>
+              <h1 className="text-[18px] font-bold text-[#0a0a14] tracking-tight">Week Review</h1>
+              <p className="text-[11px] text-[#8a8a9a]">{weekInfo.weekStart} — {weekInfo.weekEnd}</p>
             </div>
           </div>
+          <span className="text-[12px] font-semibold text-[#00cc66] bg-[#f0fdf4] px-3 py-1 rounded-full">
+            W{weekInfo.weekNumber}
+          </span>
         </div>
       </header>
 
-      {/* Stats Bar */}
-      {stats.totalReviews > 0 && (
-        <div className="backdrop-blur-md bg-white/10 border-b border-white/20 px-6 py-4">
-          <div className="max-w-4xl mx-auto grid grid-cols-3 gap-4 text-center">
+      <div className="max-w-lg mx-auto px-5 py-5">
+        {/* Already complete banner */}
+        {isAlreadyComplete && (
+          <div className="rounded-[16px] border border-[#00cc66]/20 bg-[#00cc66]/5 p-4 mb-5 flex items-center gap-3">
+            <CheckCircle2 size={18} className="text-[#00cc66] flex-shrink-0" />
             <div>
-              <div className="text-3xl font-bold text-white">{stats.averageProductivity}</div>
-              <div className="text-sm text-white/70">Gem. Productiviteit</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-white">{stats.averageEnergy}</div>
-              <div className="text-sm text-white/70">Gem. Energie</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-white">{stats.totalReviews}</div>
-              <div className="text-sm text-white/70">Totaal Reviews</div>
+              <p className="text-[13px] font-semibold text-[#0a0a14]">Je hebt deze week review al voltooid</p>
+              <p className="text-[12px] text-[#8a8a9a]">Je kunt het opnieuw doen om te overschrijven</p>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Main Content */}
-      <main className="p-6 pb-12">
-        <div className="max-w-4xl mx-auto">
-          {/* Completion Banner */}
-          {isAlreadyComplete && (
-            <div className="backdrop-blur-md bg-emerald-500/20 rounded-2xl p-4 mb-6 border-2 border-emerald-400/50 flex items-center gap-3">
-              <CheckCircle2 className="text-emerald-300" size={24} />
-              <div className="flex-1">
-                <p className="text-white font-semibold">Je hebt deze week review al voltooid</p>
-                <p className="text-emerald-200 text-sm">Je kunt het opnieuw doen om te overschrijven</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
-
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Biggest Wins */}
-          <div className="backdrop-blur-md bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center">
-                <Award className="text-white" size={24} />
+          <div className="rounded-[16px] border border-[#e8e8ec] p-5">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-[10px] bg-[#fef3c7] flex items-center justify-center">
+                <Award size={15} className="text-[#92400e]" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Grootste Overwinningen</h2>
-                <p className="text-white/70">Wat ging er geweldig deze week?</p>
+                <h3 className="text-[14px] font-semibold text-[#0a0a14]">Grootste Overwinningen</h3>
+                <p className="text-[11px] text-[#8a8a9a]">Wat ging er geweldig deze week?</p>
               </div>
             </div>
 
-            <div className="space-y-3 mb-4">
+            <div className="flex flex-wrap gap-2 mb-3">
               {formData.wins.map((win, index) => (
-                <div
+                <span
                   key={index}
-                  className="flex items-center gap-3 bg-white/10 rounded-xl p-4 group hover:bg-white/20 transition-all"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#00cc66]/30 bg-[#f0fdf4] text-[#0a0a14] text-[12px] font-medium"
                 >
-                  <CheckCircle2 className="text-green-400 flex-shrink-0" size={20} />
-                  <span className="flex-1 text-white">{win}</span>
+                  <CheckCircle2 size={11} className="text-[#00cc66]" />
+                  {win}
                   <button
                     type="button"
                     onClick={() => handleRemoveWin(index)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-300"
+                    className="ml-0.5"
                   >
-                    <X size={18} />
+                    <X size={12} className="text-[#8a8a9a] hover:text-red-500 transition-colors" />
                   </button>
-                </div>
+                </span>
               ))}
             </div>
 
@@ -311,29 +237,29 @@ export default function WeeklyReviewPage() {
                 type="text"
                 value={newWin}
                 onChange={(e) => setNewWin(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddWin())}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddWin(); } }}
                 placeholder="Voeg een overwinning toe..."
-                className="flex-1 p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 outline-none focus:border-white/40 transition-all"
+                className="flex-1 px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] transition-colors"
               />
               <button
                 type="button"
                 onClick={handleAddWin}
-                className="px-6 py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-xl font-medium hover:shadow-lg transition-all active:scale-95 flex items-center gap-2"
+                className="w-11 h-11 bg-[#00cc66] text-white rounded-[12px] flex items-center justify-center active:scale-95 transition-transform"
               >
-                <Plus size={20} />
+                <Plus size={18} />
               </button>
             </div>
           </div>
 
           {/* Challenges */}
-          <div className="backdrop-blur-md bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center">
-                <TrendingUp className="text-white" size={24} />
+          <div className="rounded-[16px] border border-[#e8e8ec] p-5">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-[10px] bg-[#eff6ff] flex items-center justify-center">
+                <TrendingUp size={15} className="text-[#1d4ed8]" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Wat ging niet zoals gepland?</h2>
-                <p className="text-white/70">Elke uitdaging is een kans om te leren</p>
+                <h3 className="text-[14px] font-semibold text-[#0a0a14]">Wat ging niet zoals gepland?</h3>
+                <p className="text-[11px] text-[#8a8a9a]">Elke uitdaging is een kans om te leren</p>
               </div>
             </div>
             <textarea
@@ -341,19 +267,19 @@ export default function WeeklyReviewPage() {
               onChange={(e) => setFormData({ ...formData, challenges: e.target.value })}
               placeholder="Schrijf over uitdagingen en obstakels..."
               rows={4}
-              className="w-full p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 outline-none focus:border-white/40 transition-all resize-none"
+              className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] resize-none transition-colors"
             />
           </div>
 
           {/* Key Learnings */}
-          <div className="backdrop-blur-md bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center">
-                <Lightbulb className="text-white" size={24} />
+          <div className="rounded-[16px] border border-[#e8e8ec] p-5">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-[10px] bg-[#f5f3ff] flex items-center justify-center">
+                <Lightbulb size={15} className="text-[#7c3aed]" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Belangrijkste Lessen</h2>
-                <p className="text-white/70">Welke inzichten heb je opgedaan?</p>
+                <h3 className="text-[14px] font-semibold text-[#0a0a14]">Belangrijkste Lessen</h3>
+                <p className="text-[11px] text-[#8a8a9a]">Welke inzichten heb je opgedaan?</p>
               </div>
             </div>
             <textarea
@@ -361,86 +287,65 @@ export default function WeeklyReviewPage() {
               onChange={(e) => setFormData({ ...formData, learnings: e.target.value })}
               placeholder="Deel je belangrijkste lessen en inzichten..."
               rows={4}
-              className="w-full p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 outline-none focus:border-white/40 transition-all resize-none"
+              className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] resize-none transition-colors"
             />
           </div>
 
-          {/* Scores */}
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Productivity Score */}
-            <div className="backdrop-blur-md bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-teal-500 rounded-xl flex items-center justify-center">
-                  <BarChart className="text-white" size={24} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-white">Productiviteit</h2>
-                  <p className="text-white/70">Hoe productief was je?</p>
-                </div>
+          {/* Scores — 2-col */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-[16px] border border-[#e8e8ec] p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <BarChart size={14} className="text-[#00cc66]" />
+                <h3 className="text-[13px] font-semibold text-[#0a0a14]">Productiviteit</h3>
               </div>
-              <div className="space-y-4">
-                <div className="flex justify-center">
-                  <span className="text-6xl font-bold text-white">{formData.productivityScore}</span>
-                  <span className="text-3xl text-white/50 mt-auto">/10</span>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  value={formData.productivityScore}
-                  onChange={(e) => setFormData({ ...formData, productivityScore: parseInt(e.target.value) })}
-                  className="w-full h-3 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-r [&::-webkit-slider-thumb]:from-green-400 [&::-webkit-slider-thumb]:to-teal-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg"
+              <div className="text-center mb-3">
+                <span className="text-[36px] font-bold text-[#0a0a14]">{formData.productivityScore}</span>
+                <span className="text-[16px] text-[#8a8a9a]">/10</span>
+              </div>
+              <div className="relative h-2 bg-[#f4f4f7] rounded-full">
+                <div
+                  className="absolute inset-y-0 left-0 bg-[#00cc66] rounded-full"
+                  style={{ width: `${(formData.productivityScore / 10) * 100}%` }}
                 />
-                <div className="flex justify-between text-sm text-white/50">
-                  <span>Laag</span>
-                  <span>Gemiddeld</span>
-                  <span>Hoog</span>
-                </div>
+                <input
+                  type="range" min="1" max="10" value={formData.productivityScore}
+                  onChange={(e) => setFormData({ ...formData, productivityScore: parseInt(e.target.value) })}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
               </div>
             </div>
-
-            {/* Energy Score */}
-            <div className="backdrop-blur-md bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-pink-400 to-rose-500 rounded-xl flex items-center justify-center">
-                  <Heart className="text-white" size={24} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-white">Energie & Balans</h2>
-                  <p className="text-white/70">Hoe voel je je?</p>
-                </div>
+            <div className="rounded-[16px] border border-[#e8e8ec] p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Heart size={14} className="text-[#be185d]" />
+                <h3 className="text-[13px] font-semibold text-[#0a0a14]">Energie</h3>
               </div>
-              <div className="space-y-4">
-                <div className="flex justify-center">
-                  <span className="text-6xl font-bold text-white">{formData.energyScore}</span>
-                  <span className="text-3xl text-white/50 mt-auto">/10</span>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  value={formData.energyScore}
-                  onChange={(e) => setFormData({ ...formData, energyScore: parseInt(e.target.value) })}
-                  className="w-full h-3 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-r [&::-webkit-slider-thumb]:from-pink-400 [&::-webkit-slider-thumb]:to-rose-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg"
+              <div className="text-center mb-3">
+                <span className="text-[36px] font-bold text-[#0a0a14]">{formData.energyScore}</span>
+                <span className="text-[16px] text-[#8a8a9a]">/10</span>
+              </div>
+              <div className="relative h-2 bg-[#f4f4f7] rounded-full">
+                <div
+                  className="absolute inset-y-0 left-0 bg-[#00cc66] rounded-full"
+                  style={{ width: `${(formData.energyScore / 10) * 100}%` }}
                 />
-                <div className="flex justify-between text-sm text-white/50">
-                  <span>Uitgeput</span>
-                  <span>Balans</span>
-                  <span>Energiek</span>
-                </div>
+                <input
+                  type="range" min="1" max="10" value={formData.energyScore}
+                  onChange={(e) => setFormData({ ...formData, energyScore: parseInt(e.target.value) })}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
               </div>
             </div>
           </div>
 
           {/* Carry Forward */}
-          <div className="backdrop-blur-md bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center">
-                <TrendingUp className="text-white" size={24} />
+          <div className="rounded-[16px] border border-[#e8e8ec] p-5">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-[10px] bg-[#f4f4f7] flex items-center justify-center">
+                <TrendingUp size={15} className="text-[#0a0a14]" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Wat neem je mee?</h2>
-                <p className="text-white/70">Naar de volgende week</p>
+                <h3 className="text-[14px] font-semibold text-[#0a0a14]">Wat neem je mee?</h3>
+                <p className="text-[11px] text-[#8a8a9a]">Naar de volgende week</p>
               </div>
             </div>
             <textarea
@@ -448,19 +353,19 @@ export default function WeeklyReviewPage() {
               onChange={(e) => setFormData({ ...formData, carryForward: e.target.value })}
               placeholder="Welke momentum, gewoontes of energie neem je mee..."
               rows={3}
-              className="w-full p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 outline-none focus:border-white/40 transition-all resize-none"
+              className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] resize-none transition-colors"
             />
           </div>
 
           {/* Leave Behind */}
-          <div className="backdrop-blur-md bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-pink-500 rounded-xl flex items-center justify-center">
-                <Trash2 className="text-white" size={24} />
+          <div className="rounded-[16px] border border-[#e8e8ec] p-5">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-[10px] bg-red-50 flex items-center justify-center">
+                <Trash2 size={15} className="text-red-500" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Wat laat je achter?</h2>
-                <p className="text-white/70">Tijd om los te laten</p>
+                <h3 className="text-[14px] font-semibold text-[#0a0a14]">Wat laat je achter?</h3>
+                <p className="text-[11px] text-[#8a8a9a]">Tijd om los te laten</p>
               </div>
             </div>
             <textarea
@@ -468,153 +373,73 @@ export default function WeeklyReviewPage() {
               onChange={(e) => setFormData({ ...formData, leaveBehing: e.target.value })}
               placeholder="Welke zorgen, gewoontes of gedachten laat je achter..."
               rows={3}
-              className="w-full p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 outline-none focus:border-white/40 transition-all resize-none"
+              className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] resize-none transition-colors"
             />
           </div>
 
-          {/* Growth Moment */}
-          <div className="backdrop-blur-md bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-green-500 rounded-xl flex items-center justify-center">
-                <Sparkles className="text-white" size={24} />
+          {/* Quality Questions — dark card */}
+          <div className="rounded-[16px] bg-[#0a0a14] p-5">
+            <div className="flex items-center gap-2.5 mb-5">
+              <div className="w-8 h-8 rounded-[10px] bg-[#fef3c7] flex items-center justify-center">
+                <HelpCircle size={15} className="text-[#92400e]" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Persoonlijk Groeimoment</h2>
-                <p className="text-white/70">Een moment waarop je jezelf voorbij ging</p>
-              </div>
-            </div>
-            <textarea
-              value={formData.growthMoment}
-              onChange={(e) => setFormData({ ...formData, growthMoment: e.target.value })}
-              placeholder="Beschrijf een moment van persoonlijke groei of doorbraak..."
-              rows={4}
-              className="w-full p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 outline-none focus:border-white/40 transition-all resize-none"
-            />
-          </div>
-
-          {/* Gratitude */}
-          <div className="backdrop-blur-md bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center">
-                <Heart className="text-white" size={24} />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white">Dankbaarheid</h2>
-                <p className="text-white/70">Waar ben je dankbaar voor?</p>
-              </div>
-            </div>
-            <textarea
-              value={formData.gratitude}
-              onChange={(e) => setFormData({ ...formData, gratitude: e.target.value })}
-              placeholder="Deel waar je deze week dankbaar voor bent..."
-              rows={4}
-              className="w-full p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 outline-none focus:border-white/40 transition-all resize-none"
-            />
-          </div>
-
-          {/* Quality Questions - Tony Robbins */}
-          <div className="backdrop-blur-md bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-3xl p-8 border border-amber-400/30 shadow-2xl">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center">
-                <HelpCircle className="text-white" size={24} />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white">Quality Questions</h2>
-                <p className="text-white/70">Tony Robbins Evening Power Questions</p>
+                <h3 className="text-[14px] font-semibold text-white">Quality Questions</h3>
+                <p className="text-[11px] text-white/40">Tony Robbins Evening Power Questions</p>
               </div>
             </div>
 
-            <div className="space-y-6">
-              {/* What Gave */}
-              <div>
-                <label className="flex items-center gap-2 text-white font-medium mb-2">
-                  <Gift size={16} className="text-amber-300" />
-                  Wat heb ik deze week GEGEVEN?
-                </label>
-                <textarea
-                  value={formData.whatGave}
-                  onChange={(e) => setFormData({ ...formData, whatGave: e.target.value })}
-                  placeholder="Welke waarde, liefde, hulp of inspiratie heb je anderen gegeven?"
-                  rows={2}
-                  className="w-full p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 outline-none focus:border-amber-400/50 transition-all resize-none"
-                />
-              </div>
-
-              {/* What Learned */}
-              <div>
-                <label className="flex items-center gap-2 text-white font-medium mb-2">
-                  <BookOpen size={16} className="text-amber-300" />
-                  Wat heb ik deze week GELEERD?
-                </label>
-                <textarea
-                  value={formData.whatLearned}
-                  onChange={(e) => setFormData({ ...formData, whatLearned: e.target.value })}
-                  placeholder="Nieuwe inzichten, vaardigheden of perspectieven?"
-                  rows={2}
-                  className="w-full p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 outline-none focus:border-amber-400/50 transition-all resize-none"
-                />
-              </div>
-
-              {/* How Contributed */}
-              <div>
-                <label className="flex items-center gap-2 text-white font-medium mb-2">
-                  <TrendingUp size={16} className="text-amber-300" />
-                  Hoe heeft deze week bijgedragen aan mijn leven?
-                </label>
-                <textarea
-                  value={formData.howContributed}
-                  onChange={(e) => setFormData({ ...formData, howContributed: e.target.value })}
-                  placeholder="In welke gebieden ben je gegroeid of vooruitgegaan?"
-                  rows={2}
-                  className="w-full p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 outline-none focus:border-amber-400/50 transition-all resize-none"
-                />
-              </div>
-
-              {/* How Make Better */}
-              <div>
-                <label className="flex items-center gap-2 text-white font-medium mb-2">
-                  <Sparkles size={16} className="text-amber-300" />
-                  Hoe kan ik volgende week nog beter maken?
-                </label>
-                <textarea
-                  value={formData.howMakeBetter}
-                  onChange={(e) => setFormData({ ...formData, howMakeBetter: e.target.value })}
-                  placeholder="Welke kleine aanpassing zou een groot verschil maken?"
-                  rows={2}
-                  className="w-full p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 outline-none focus:border-amber-400/50 transition-all resize-none"
-                />
-              </div>
+            <div className="space-y-4">
+              {[
+                { key: 'whatGave', icon: Gift, label: 'Wat heb ik deze week GEGEVEN?', placeholder: 'Welke waarde, liefde, hulp of inspiratie heb je anderen gegeven?' },
+                { key: 'whatLearned', icon: BookOpen, label: 'Wat heb ik deze week GELEERD?', placeholder: 'Nieuwe inzichten, vaardigheden of perspectieven?' },
+                { key: 'howContributed', icon: TrendingUp, label: 'Hoe heeft deze week bijgedragen?', placeholder: 'In welke gebieden ben je gegroeid of vooruitgegaan?' },
+                { key: 'howMakeBetter', icon: Award, label: 'Hoe kan ik volgende week beter maken?', placeholder: 'Welke kleine aanpassing zou een groot verschil maken?' },
+              ].map(({ key, icon: Icon, label, placeholder }) => (
+                <div key={key}>
+                  <label className="flex items-center gap-2 text-[13px] font-medium text-white mb-2">
+                    <Icon size={13} className="text-[#f59e0b]" />
+                    {label}
+                  </label>
+                  <textarea
+                    value={(formData as any)[key]}
+                    onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+                    placeholder={placeholder}
+                    rows={2}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/10 focus:border-[#00cc66] outline-none rounded-[12px] text-[13px] text-white placeholder-white/30 resize-none transition-colors"
+                  />
+                </div>
+              ))}
             </div>
 
-            <p className="text-center text-amber-200/70 text-sm mt-6 italic">
-              "Quality questions create a quality life. Successful people ask better questions."
-              <span className="block text-xs mt-1">— Tony Robbins</span>
+            <p className="text-center text-white/30 text-[11px] mt-5 italic">
+              "Quality questions create a quality life." — Tony Robbins
             </p>
           </div>
 
-          {/* Submit Button */}
-          <div className="flex justify-center pt-4">
-            <button
-              type="submit"
-              disabled={saving || formData.wins.length === 0}
-              className="px-12 py-5 bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500 text-white text-xl font-bold rounded-2xl hover:shadow-2xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
-            >
-              {saving ? (
-                <>
-                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent" />
-                  Opslaan...
-                </>
-              ) : (
-                <>
-                  <Award size={24} />
-                  Voltooien & Reflectie Opslaan
-                </>
-              )}
-            </button>
-          </div>
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={saving || formData.wins.length === 0}
+            className="w-full py-4 bg-[#00cc66] text-white text-[15px] font-semibold rounded-[16px] flex items-center justify-center gap-2.5 active:scale-[0.98] transition-transform disabled:opacity-40 shadow-[0_4px_20px_rgba(0,204,102,0.35)]"
+          >
+            {saving ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                <Award size={18} />
+                Week Voltooien
+              </>
+            )}
+          </button>
 
+          {formData.wins.length === 0 && (
+            <p className="text-center text-[12px] text-[#8a8a9a]">Voeg minimaal 1 overwinning toe om door te gaan</p>
+          )}
         </form>
-      </main>
+      </div>
+
+      <BottomNav />
     </div>
   );
 }

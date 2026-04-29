@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Plus, X, Circle, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Plus, X, CheckCircle2, Circle, ChevronDown, ChevronUp } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
+import { BottomNav } from '@/components/ui/bottom-nav';
 
 type FlowStep = 'probleem' | 'analyse' | 'actie' | 'loslaten' | 'opgeslagen';
 
@@ -20,12 +21,19 @@ interface ControleEntry {
   };
 }
 
+const STEP_ORDER: FlowStep[] = ['probleem', 'analyse', 'actie', 'loslaten'];
+
+function stepIndex(step: FlowStep): number {
+  return STEP_ORDER.indexOf(step);
+}
+
 export default function ControleCircelPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState<FlowStep>('probleem');
   const [entries, setEntries] = useState<ControleEntry[]>([]);
+  const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
 
   const [probleem, setProbleem] = useState('');
   const [mijnKant, setMijnKant] = useState<string[]>([]);
@@ -38,10 +46,7 @@ export default function ControleCircelPage() {
 
   useEffect(() => {
     const user = AuthService.getUser();
-    if (!user) {
-      router.push('/auth/login');
-      return;
-    }
+    if (!user) { router.push('/auth/login'); return; }
     fetchEntries();
   }, [router]);
 
@@ -50,10 +55,7 @@ export default function ControleCircelPage() {
       const res = await fetch('/api/controle-cirkel', {
         headers: { Authorization: `Bearer ${AuthService.getToken()}` },
       });
-      if (res.ok) {
-        const data = await res.json();
-        setEntries(data);
-      }
+      if (res.ok) setEntries(await res.json());
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
@@ -63,13 +65,13 @@ export default function ControleCircelPage() {
 
   const addMijn = () => {
     if (!newMijn.trim()) return;
-    setMijnKant((prev) => [...prev, newMijn.trim()]);
+    setMijnKant(prev => [...prev, newMijn.trim()]);
     setNewMijn('');
   };
 
   const addNiet = () => {
     if (!newNiet.trim()) return;
-    setNietMijnKant((prev) => [...prev, newNiet.trim()]);
+    setNietMijnKant(prev => [...prev, newNiet.trim()]);
     setNewNiet('');
   };
 
@@ -79,10 +81,7 @@ export default function ControleCircelPage() {
     try {
       const res = await fetch('/api/controle-cirkel', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${AuthService.getToken()}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${AuthService.getToken()}` },
         body: JSON.stringify({
           probleem,
           mijn_kant: mijnKant,
@@ -109,16 +108,12 @@ export default function ControleCircelPage() {
     try {
       await fetch(`/api/controle-cirkel/${savedId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${AuthService.getToken()}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${AuthService.getToken()}` },
         body: JSON.stringify({ losgelaten: true }),
       });
     } catch (err) {
       console.error('Loslaten error:', err);
     }
-
     setTimeout(async () => {
       await fetchEntries();
       setStep('opgeslagen');
@@ -128,72 +123,67 @@ export default function ControleCircelPage() {
       setGekozenActie('');
       setLoslatenDone(false);
       setSavedId(null);
-    }, 2500);
+    }, 2000);
   };
+
+  const currentIndex = stepIndex(step);
+  const totalSteps = STEP_ORDER.length;
+  const progressPct = step === 'opgeslagen' ? 100 : ((currentIndex + 1) / totalSteps) * 100;
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-slate-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-6 w-6 border-2 border-emerald-600 border-t-transparent" />
+      <div className="min-h-screen bg-[#ffffff] flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-[#00cc66] border-t-transparent animate-spin" />
       </div>
     );
   }
 
-  // Loslaten ceremony
   if (step === 'loslaten') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center px-6">
-        <div className="max-w-md w-full text-center space-y-8">
+      <div className="min-h-screen bg-[#0a0a14] flex items-center justify-center px-5 pb-28">
+        <div className="max-w-lg w-full text-center space-y-8">
           {!loslatenDone ? (
             <>
-              <div className="space-y-4">
-                <p className="text-white/50 text-sm uppercase tracking-widest">Jouw actie</p>
-                <p className="text-xl text-white font-medium">"{gekozenActie}"</p>
+              <div className="space-y-3">
+                <p className="text-[11px] text-white/40 uppercase tracking-widest">Jouw gekozen actie</p>
+                <p className="text-[18px] text-white font-semibold leading-snug">&ldquo;{gekozenActie}&rdquo;</p>
               </div>
-
-              <div className="space-y-2">
-                <p className="text-slate-400">Dit laat je los:</p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {nietMijnKant.map((item, i) => (
-                    <span
-                      key={i}
-                      className="px-3 py-1 bg-slate-700 text-slate-300 rounded-full text-sm"
-                    >
-                      {item}
-                    </span>
-                  ))}
+              {nietMijnKant.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-[13px] text-white/40">Dit laat je los:</p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {nietMijnKant.map((item, i) => (
+                      <span key={i} className="px-3 py-1.5 bg-white/10 text-white/60 rounded-full text-[13px]">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-
+              )}
               <button
                 onClick={handleLoslaten}
-                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl font-medium text-lg hover:opacity-90 transition-opacity"
+                className="w-full py-4 bg-[#00cc66] text-white rounded-[16px] font-semibold text-[15px] active:scale-[0.98] transition-transform shadow-[0_4px_20px_rgba(0,204,102,0.4)]"
               >
-                Commit & Laat los
+                Commit &amp; Laat los
               </button>
             </>
           ) : (
             <div className="space-y-6">
-              <div className="text-6xl">🌿</div>
-              <p className="text-2xl text-white font-light">
-                Je hebt gedaan wat je kon.
-              </p>
-              <p className="text-slate-400 text-lg">
-                De rest is niet van jou.
-              </p>
-              {/* Fading out items */}
-              <div className="flex flex-wrap gap-2 justify-center">
-                {nietMijnKant.map((item, i) => (
-                  <span
-                    key={i}
-                    className="px-3 py-1 bg-slate-700 text-slate-500 rounded-full text-sm transition-all duration-1000"
-                    style={{ opacity: 0.2 }}
-                  >
-                    {item}
-                  </span>
-                ))}
+              <div className="w-16 h-16 rounded-full bg-[#00cc66]/20 flex items-center justify-center mx-auto">
+                <CheckCircle2 size={32} className="text-[#00cc66]" />
               </div>
-              <div className="animate-spin rounded-full h-5 w-5 border-2 border-emerald-500 border-t-transparent mx-auto mt-4" />
+              <p className="text-[22px] text-white font-light">Je hebt gedaan wat je kon.</p>
+              <p className="text-white/40 text-[16px]">De rest is niet van jou.</p>
+              {nietMijnKant.length > 0 && (
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {nietMijnKant.map((item, i) => (
+                    <span key={i} className="px-3 py-1.5 bg-white/5 text-white/20 rounded-full text-[13px]">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="w-5 h-5 rounded-full border-2 border-[#00cc66] border-t-transparent animate-spin mx-auto" />
             </div>
           )}
         </div>
@@ -202,136 +192,149 @@ export default function ControleCircelPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen bg-[#ffffff] pb-28">
       {/* Header */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center gap-4">
-          <Link
-            href="/dashboard"
-            className="p-2 -ml-2 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
-          >
-            <ArrowLeft size={20} />
-          </Link>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-              <Circle className="text-emerald-600 dark:text-emerald-400" size={16} />
+      <div className="sticky top-0 z-10 bg-[#ffffff] border-b border-[#e8e8ec]">
+        <div className="max-w-lg mx-auto px-5 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/dashboard"
+                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#f4f4f7] transition-colors"
+              >
+                <ArrowLeft size={18} className="text-[#0a0a14]" />
+              </Link>
+              <h1 className="text-[17px] font-semibold text-[#0a0a14]">Controle Cirkel</h1>
             </div>
-            <h1 className="font-semibold text-slate-900 dark:text-white">Controle-Cirkel</h1>
+            {step !== 'opgeslagen' && (
+              <span className="text-[12px] font-medium text-[#8a8a9a] bg-[#f4f4f7] px-3 py-1 rounded-full">
+                {currentIndex + 1}/{totalSteps}
+              </span>
+            )}
           </div>
+          {step !== 'opgeslagen' && (
+            <div className="h-1 w-full bg-[#f4f4f7] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#00cc66] rounded-full transition-all duration-500"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          )}
         </div>
-      </header>
+      </div>
 
-      <main className="max-w-2xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-lg mx-auto px-5 pt-5 space-y-4">
+        {/* Saved banner */}
         {step === 'opgeslagen' && (
-          <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
-            <p className="text-emerald-800 dark:text-emerald-200 font-medium">✓ Analyse opgeslagen. Goed gedaan.</p>
-            <button
-              onClick={() => setStep('probleem')}
-              className="mt-2 text-sm text-emerald-600 dark:text-emerald-400 underline"
-            >
-              Nieuwe analyse starten
-            </button>
+          <div className="rounded-[16px] bg-[#00cc66]/10 border border-[#00cc66]/20 p-4 flex items-center gap-3">
+            <CheckCircle2 size={20} className="text-[#00cc66] flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-[14px] font-semibold text-[#0a0a14]">Analyse opgeslagen.</p>
+              <button
+                onClick={() => setStep('probleem')}
+                className="text-[13px] text-[#00cc66] font-medium mt-0.5"
+              >
+                Nieuwe analyse starten
+              </button>
+            </div>
           </div>
         )}
 
         {/* Step 1: Probleem */}
-        {(step === 'probleem' || step === 'opgeslagen') && step === 'probleem' && (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-            <h2 className="font-semibold text-slate-900 dark:text-white mb-1">Wat kost je nu energie?</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Schrijf het probleem of de situatie op.</p>
-            <textarea
-              value={probleem}
-              onChange={(e) => setProbleem(e.target.value)}
-              placeholder="Beschrijf de situatie..."
-              rows={3}
-              className="w-full resize-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 dark:focus:ring-emerald-700 text-sm"
-            />
-            {probleem.trim() && (
-              <button
-                onClick={() => setStep('analyse')}
-                className="mt-4 px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors"
-              >
-                Analyseer →
-              </button>
-            )}
+        {step === 'probleem' && (
+          <div className="space-y-3">
+            <div className="rounded-[16px] bg-[#0a0a14] p-4">
+              <p className="text-[13px] text-white/50 leading-relaxed">
+                Schrijf op wat nu energie kost. Geen filter, geen oordeel. Gewoon eerlijk.
+              </p>
+            </div>
+            <div className="rounded-[16px] border border-[#e8e8ec] p-5">
+              <h2 className="text-[15px] font-semibold text-[#0a0a14] mb-1">Wat kost je energie?</h2>
+              <p className="text-[12px] text-[#8a8a9a] mb-4">Beschrijf de situatie zo concreet mogelijk.</p>
+              <textarea
+                value={probleem}
+                onChange={(e) => setProbleem(e.target.value)}
+                placeholder="Beschrijf de situatie..."
+                rows={5}
+                className="w-full resize-none bg-[#f4f4f7] border border-[#e8e8ec] rounded-[12px] px-4 py-3 text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66] transition-colors"
+              />
+              {probleem.trim() && (
+                <button
+                  onClick={() => setStep('analyse')}
+                  className="mt-4 w-full py-3 bg-[#00cc66] text-white rounded-[12px] text-[14px] font-semibold active:scale-[0.98] transition-transform"
+                >
+                  Analyseer
+                </button>
+              )}
+            </div>
           </div>
         )}
 
         {/* Step 2: Analyse */}
         {step === 'analyse' && (
           <div className="space-y-4">
-            <div className="text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
-              <p className="font-medium text-slate-900 dark:text-white mb-1">Situatie:</p>
-              <p>{probleem}</p>
+            <div className="rounded-[12px] bg-[#f4f4f7] px-4 py-3">
+              <p className="text-[11px] text-[#8a8a9a] uppercase tracking-wider mb-1">Situatie</p>
+              <p className="text-[13px] text-[#0a0a14]">{probleem}</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Mijn kant */}
-              <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl p-5">
-                <h3 className="font-semibold text-emerald-800 dark:text-emerald-300 mb-1">Mijn kant</h3>
-                <p className="text-xs text-emerald-600 dark:text-emerald-500 mb-4">Wat KAN jij beïnvloeden?</p>
-
-                <div className="flex gap-2 mb-3">
+            <div className="grid grid-cols-2 gap-3">
+              {/* Mijn controle */}
+              <div className="rounded-[16px] border border-[#00cc66]/30 bg-[#00cc66]/5 p-4">
+                <p className="text-[13px] font-semibold text-[#00cc66] mb-0.5">Mijn controle</p>
+                <p className="text-[11px] text-[#8a8a9a] mb-3">Wat kan ik beïnvloeden?</p>
+                <div className="flex gap-1.5 mb-3">
                   <input
                     value={newMijn}
                     onChange={(e) => setNewMijn(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && addMijn()}
-                    placeholder="Voeg item toe..."
-                    className="flex-1 px-3 py-2 bg-white dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    placeholder="Voeg toe..."
+                    className="flex-1 min-w-0 px-2.5 py-1.5 bg-white border border-[#e8e8ec] rounded-[8px] text-[12px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66]"
                   />
                   <button
                     onClick={addMijn}
-                    className="p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                    className="w-7 h-7 bg-[#00cc66] text-white rounded-[8px] flex items-center justify-center flex-shrink-0"
                   >
-                    <Plus size={16} />
+                    <Plus size={13} />
                   </button>
                 </div>
-
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {mijnKant.map((item, i) => (
-                    <span
-                      key={i}
-                      className="flex items-center gap-1 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 rounded-full text-sm"
-                    >
+                    <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#00cc66]/15 text-[#0a0a14] rounded-full text-[11px] font-medium">
                       {item}
-                      <button onClick={() => setMijnKant((prev) => prev.filter((_, j) => j !== i))}>
-                        <X size={12} />
+                      <button onClick={() => setMijnKant(prev => prev.filter((_, j) => j !== i))}>
+                        <X size={10} className="text-[#8a8a9a]" />
                       </button>
                     </span>
                   ))}
                 </div>
               </div>
 
-              {/* Niet mijn kant */}
-              <div className="bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
-                <h3 className="font-semibold text-slate-600 dark:text-slate-300 mb-1">Niet mijn kant</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Wat is BUITEN jouw controle?</p>
-
-                <div className="flex gap-2 mb-3">
+              {/* Niet mijn controle */}
+              <div className="rounded-[16px] border border-[#e8e8ec] bg-[#f4f4f7] p-4">
+                <p className="text-[13px] font-semibold text-[#8a8a9a] mb-0.5">Niet mijn controle</p>
+                <p className="text-[11px] text-[#8a8a9a] mb-3">Wat is buiten mijn controle?</p>
+                <div className="flex gap-1.5 mb-3">
                   <input
                     value={newNiet}
                     onChange={(e) => setNewNiet(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && addNiet()}
-                    placeholder="Voeg item toe..."
-                    className="flex-1 px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-slate-400"
+                    placeholder="Voeg toe..."
+                    className="flex-1 min-w-0 px-2.5 py-1.5 bg-white border border-[#e8e8ec] rounded-[8px] text-[12px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none"
                   />
                   <button
                     onClick={addNiet}
-                    className="p-2 bg-slate-500 text-white rounded-lg hover:bg-slate-600 transition-colors"
+                    className="w-7 h-7 bg-[#8a8a9a] text-white rounded-[8px] flex items-center justify-center flex-shrink-0"
                   >
-                    <Plus size={16} />
+                    <Plus size={13} />
                   </button>
                 </div>
-
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {nietMijnKant.map((item, i) => (
-                    <span
-                      key={i}
-                      className="flex items-center gap-1 px-3 py-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full text-sm"
-                    >
+                    <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-[#e8e8ec] text-[#8a8a9a] rounded-full text-[11px] font-medium">
                       {item}
-                      <button onClick={() => setNietMijnKant((prev) => prev.filter((_, j) => j !== i))}>
-                        <X size={12} />
+                      <button onClick={() => setNietMijnKant(prev => prev.filter((_, j) => j !== i))}>
+                        <X size={10} />
                       </button>
                     </span>
                   ))}
@@ -339,114 +342,132 @@ export default function ControleCircelPage() {
               </div>
             </div>
 
-            {mijnKant.length > 0 && (
+            <div className="flex gap-3">
               <button
-                onClick={() => setStep('actie')}
-                className="w-full py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors"
+                onClick={() => setStep('probleem')}
+                className="flex-1 py-3 rounded-[12px] border border-[#e8e8ec] text-[14px] font-medium text-[#8a8a9a] active:scale-[0.98] transition-transform"
               >
-                Kies één actie →
+                Terug
               </button>
-            )}
+              <button
+                onClick={() => mijnKant.length > 0 && setStep('actie')}
+                disabled={mijnKant.length === 0}
+                className="flex-1 py-3 bg-[#00cc66] text-white rounded-[12px] text-[14px] font-semibold disabled:opacity-40 active:scale-[0.98] transition-transform"
+              >
+                Kies actie
+              </button>
+            </div>
           </div>
         )}
 
         {/* Step 3: Actie */}
         {step === 'actie' && (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-            <h2 className="font-semibold text-slate-900 dark:text-white mb-1">Kies ÉÉN actie van jouw kant.</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Focus op wat je kunt doen.</p>
+          <div className="space-y-4">
+            <div className="rounded-[16px] border border-[#e8e8ec] p-5">
+              <h2 className="text-[15px] font-semibold text-[#0a0a14] mb-1">Kies één actie van jouw kant.</h2>
+              <p className="text-[12px] text-[#8a8a9a] mb-5">Focus op wat je kunt doen.</p>
 
-            <div className="space-y-2 mb-5">
-              {mijnKant.map((item, i) => (
+              <div className="space-y-2 mb-5">
+                {mijnKant.map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setGekozenActie(item)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-[12px] border text-left transition-all ${
+                      gekozenActie === item ? 'border-[#00cc66] bg-[#00cc66]/5' : 'border-[#e8e8ec] hover:border-[#00cc66]/40'
+                    }`}
+                  >
+                    {gekozenActie === item
+                      ? <CheckCircle2 size={16} className="text-[#00cc66] flex-shrink-0" />
+                      : <Circle size={16} className="text-[#e8e8ec] flex-shrink-0" />
+                    }
+                    <span className="text-[13px] text-[#0a0a14]">{item}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mb-5">
+                <label className="text-[11px] text-[#8a8a9a] mb-1.5 block">Of schrijf een eigen actie:</label>
+                <input
+                  value={gekozenActie}
+                  onChange={(e) => setGekozenActie(e.target.value)}
+                  placeholder="Eigen actie..."
+                  className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66] transition-colors"
+                />
+              </div>
+
+              <div className="flex gap-3">
                 <button
-                  key={i}
-                  onClick={() => setGekozenActie(item)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ${
-                    gekozenActie === item
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                  }`}
+                  onClick={() => setStep('analyse')}
+                  className="flex-1 py-3 rounded-[12px] border border-[#e8e8ec] text-[14px] font-medium text-[#8a8a9a] active:scale-[0.98] transition-transform"
                 >
-                  {gekozenActie === item ? (
-                    <CheckCircle2 size={18} className="text-emerald-600 flex-shrink-0" />
-                  ) : (
-                    <Circle size={18} className="text-slate-400 flex-shrink-0" />
-                  )}
-                  <span className="text-sm text-slate-800 dark:text-white">{item}</span>
+                  Terug
                 </button>
-              ))}
+                <button
+                  onClick={handleSaveAndCommit}
+                  disabled={!gekozenActie.trim() || saving}
+                  className="flex-1 py-3 bg-[#00cc66] text-white rounded-[12px] text-[14px] font-semibold disabled:opacity-40 active:scale-[0.98] transition-transform"
+                >
+                  {saving ? 'Opslaan...' : 'Commit aan actie'}
+                </button>
+              </div>
             </div>
-
-            <div className="mb-5">
-              <label className="text-xs text-slate-500 mb-1 block">Of schrijf een eigen actie:</label>
-              <input
-                value={gekozenActie}
-                onChange={(e) => setGekozenActie(e.target.value)}
-                placeholder="Eigen actie..."
-                className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
-              />
-            </div>
-
-            {gekozenActie.trim() && (
-              <button
-                onClick={handleSaveAndCommit}
-                disabled={saving}
-                className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                {saving ? 'Opslaan...' : 'Commit aan deze actie →'}
-              </button>
-            )}
           </div>
         )}
 
         {/* History */}
-        {entries.length > 0 && step === 'opgeslagen' && (
-          <section>
-            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">
-              Eerdere Analyses
-            </h2>
-            <div className="space-y-3">
-              {entries.map((entry) => {
-                const d = typeof entry.data === 'string' ? JSON.parse(entry.data) : entry.data;
-                return (
-                  <div
-                    key={entry.id}
-                    className={`p-4 rounded-xl border ${
-                      d.losgelaten
-                        ? 'bg-slate-100/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-60'
-                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                    }`}
+        {step === 'opgeslagen' && entries.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-[11px] font-medium text-[#8a8a9a] uppercase tracking-wider">Eerdere analyses</p>
+            {entries.map((entry) => {
+              const d = typeof entry.data === 'string' ? JSON.parse(entry.data) : entry.data;
+              const isExpanded = expandedEntry === entry.id;
+              return (
+                <div key={entry.id} className="rounded-[16px] border border-[#e8e8ec] overflow-hidden">
+                  <button
+                    onClick={() => setExpandedEntry(isExpanded ? null : entry.id)}
+                    className="w-full px-5 py-4 flex items-center justify-between text-left"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-white line-clamp-2">
-                          {d.probleem}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium text-[#0a0a14] truncate">{d.probleem}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-[11px] text-[#8a8a9a]">
+                          {new Date(entry.timestamp).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
                         </p>
-                        {d.gekozen_actie && (
-                          <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
-                            Actie: {d.gekozen_actie}
-                          </p>
+                        {d.losgelaten && (
+                          <span className="text-[10px] px-2 py-0.5 bg-[#f4f4f7] text-[#8a8a9a] rounded-full">losgelaten</span>
                         )}
-                        <p className="text-xs text-slate-400 mt-1">
-                          {new Date(entry.timestamp).toLocaleDateString('nl-NL', {
-                            day: 'numeric',
-                            month: 'short',
-                          })}
-                        </p>
                       </div>
-                      {d.losgelaten && (
-                        <span className="flex-shrink-0 text-xs px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-500 rounded-full">
-                          losgelaten
-                        </span>
+                    </div>
+                    {isExpanded ? <ChevronUp size={15} className="text-[#8a8a9a] flex-shrink-0" /> : <ChevronDown size={15} className="text-[#8a8a9a] flex-shrink-0" />}
+                  </button>
+                  {isExpanded && (
+                    <div className="px-5 pb-4 border-t border-[#e8e8ec] pt-3 space-y-2">
+                      {d.gekozen_actie && (
+                        <div>
+                          <p className="text-[10px] text-[#00cc66] font-semibold uppercase tracking-wider mb-1">Gekozen actie</p>
+                          <p className="text-[13px] text-[#0a0a14]">{d.gekozen_actie}</p>
+                        </div>
+                      )}
+                      {d.mijn_kant?.length > 0 && (
+                        <div>
+                          <p className="text-[10px] text-[#8a8a9a] font-semibold uppercase tracking-wider mb-1">Mijn kant</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {d.mijn_kant.map((item: string, i: number) => (
+                              <span key={i} className="text-[11px] px-2.5 py-1 bg-[#00cc66]/10 text-[#0a0a14] rounded-full">{item}</span>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
-      </main>
+      </div>
+
+      <BottomNav />
     </div>
   );
 }

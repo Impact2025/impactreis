@@ -10,6 +10,7 @@ import {
 import { AuthService } from '@/lib/auth';
 import { MovementBreakMini } from '@/components/robbins/movement-break';
 import { Celebration } from '@/components/robbins/celebration';
+import { BottomNav } from '@/components/ui/bottom-nav';
 
 interface FocusSession {
   id: string;
@@ -50,75 +51,49 @@ export default function FocusPage() {
     const checkAuth = async () => {
       try {
         const currentUser = AuthService.isAuthenticated() ? { email: 'user@example.com' } : null;
-        if (!currentUser) {
-          router.push('/auth/login');
-          return;
-        }
+        if (!currentUser) { router.push('/auth/login'); return; }
         const savedSessions = localStorage.getItem('focusSessions');
-        if (savedSessions) {
-          setSessions(JSON.parse(savedSessions));
-        }
-      } catch (err) {
-        router.push('/auth/login');
-      } finally {
-        setLoading(false);
-      }
+        if (savedSessions) setSessions(JSON.parse(savedSessions));
+      } catch { router.push('/auth/login'); }
+      finally { setLoading(false); }
     };
-
     checkAuth();
   }, [router]);
 
   useEffect(() => {
     if (isActive && timeLeft > 0) {
-      intervalRef.current = setInterval(() => {
-        setTimeLeft(time => time - 1);
-      }, 1000);
+      intervalRef.current = setInterval(() => setTimeLeft(t => t - 1), 1000);
     } else if (timeLeft === 0) {
       handleSessionComplete();
     } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [isActive, timeLeft]);
 
-  const saveSessions = (updatedSessions: FocusSession[]) => {
-    setSessions(updatedSessions);
-    localStorage.setItem('focusSessions', JSON.stringify(updatedSessions));
+  const saveSessions = (updated: FocusSession[]) => {
+    setSessions(updated);
+    localStorage.setItem('focusSessions', JSON.stringify(updated));
   };
 
   const handleSessionComplete = () => {
     setIsActive(false);
-
     if (currentSession === 'work') {
-      // Show celebration for work session
       setShowCelebration(true);
-
       const session: FocusSession = {
         id: Date.now().toString(),
         duration: 25,
         completedAt: new Date().toISOString(),
         type: 'work',
         energyBefore,
-        energyAfter
+        energyAfter,
       };
-
-      const updatedSessions = [...sessions, session];
-      saveSessions(updatedSessions);
-
-      // After celebration, show movement break
+      saveSessions([...sessions, session]);
       setTimeout(() => {
         setShowCelebration(false);
         setShowMovementBreak(true);
       }, 3000);
     } else {
-      // Break complete, back to work
       setIsBreak(false);
       setCurrentSession('work');
       setTimeLeft(25 * 60);
@@ -134,16 +109,12 @@ export default function FocusPage() {
   };
 
   const startTimer = () => {
-    if (showGoalInput && !sessionGoal.trim()) {
-      return; // Require goal
-    }
+    if (showGoalInput && !sessionGoal.trim()) return;
     setShowGoalInput(false);
     setIsActive(true);
   };
 
-  const pauseTimer = () => {
-    setIsActive(false);
-  };
+  const pauseTimer = () => setIsActive(false);
 
   const resetTimer = () => {
     setIsActive(false);
@@ -169,8 +140,8 @@ export default function FocusPage() {
   };
 
   const showRandomPowerQuestion = () => {
-    const randomIndex = Math.floor(Math.random() * powerQuestions.length);
-    setCurrentPowerQuestion(powerQuestions[randomIndex]);
+    const idx = Math.floor(Math.random() * powerQuestions.length);
+    setCurrentPowerQuestion(powerQuestions[idx]);
     setShowPowerQuestion(true);
   };
 
@@ -180,22 +151,24 @@ export default function FocusPage() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const todaySessions = sessions.filter(session => {
-    const today = new Date().toDateString();
-    return new Date(session.completedAt).toDateString() === today;
-  });
+  const todaySessions = sessions.filter(s =>
+    new Date(s.completedAt).toDateString() === new Date().toDateString()
+  );
+  const workSessions = todaySessions.filter(s => s.type === 'work');
+  const totalFocusTime = workSessions.reduce((t, s) => t + s.duration, 0);
+  const completedSessions = workSessions.length;
+  const totalDuration = currentSession === 'work' ? 25 * 60 : 5 * 60;
+  const progress = (1 - timeLeft / totalDuration) * 100;
 
-  const totalFocusTime = todaySessions
-    .filter(session => session.type === 'work')
-    .reduce((total, session) => total + session.duration, 0);
-
-  const completedSessions = todaySessions.filter(session => session.type === 'work').length;
-  const progress = (1 - timeLeft / (currentSession === 'work' ? 25 * 60 : 5 * 60)) * 100;
+  const radius = 88;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (circumference * progress) / 100;
+  const isWorkMode = currentSession === 'work';
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent" />
+      <div className="min-h-screen bg-[#ffffff] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#00cc66] border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -205,7 +178,7 @@ export default function FocusPage() {
       <Celebration
         type="focus"
         message="Focus Sessie Voltooid!"
-        subMessage={`${completedSessions + 1} sessies vandaag - ${totalFocusTime + 25} minuten deep work`}
+        subMessage={`${completedSessions + 1} sessies vandaag — ${totalFocusTime + 25} minuten deep work`}
         autoCloseDelay={3000}
       />
     );
@@ -213,98 +186,70 @@ export default function FocusPage() {
 
   if (showMovementBreak) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-500 via-red-500 to-pink-600 flex items-center justify-center p-6">
-        <div className="max-w-md w-full">
+      <div className="min-h-screen bg-[#f4f4f7] flex items-center justify-center p-6 pb-28">
+        <div className="max-w-lg w-full">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white mb-4">
-              <Flame className="w-5 h-5 animate-pulse" />
-              <span className="font-medium">Bewegings Pauze</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#fef3c7] rounded-full text-[#f59e0b] text-[13px] font-semibold mb-4">
+              <Flame className="w-4 h-4" />
+              Bewegings Pauze
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">
+            <h1 className="text-[22px] font-bold text-[#0a0a14] mb-2 leading-tight">
               "Emotion is created by motion"
             </h1>
-            <p className="text-white/80">
-              Beweeg je lichaam om je energie te resetten voor de volgende sessie
+            <p className="text-[13px] text-[#8a8a9a]">
+              Beweeg je lichaam om je energie te resetten
             </p>
           </div>
-
           <MovementBreakMini onComplete={handleMovementComplete} />
-
-          <p className="text-center text-white/60 text-sm mt-6 italic">
-            "Change your physiology, change your state"
-            <span className="block text-xs mt-1">— Tony Robbins</span>
+          <p className="text-center text-[12px] text-[#8a8a9a] mt-6 italic">
+            "Change your physiology, change your state" — Tony Robbins
           </p>
         </div>
+        <BottomNav />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-[#ffffff] pb-28">
       {/* Header */}
-      <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4">
-        <div className="flex items-center justify-between max-w-2xl mx-auto">
+      <header className="bg-[#ffffff] border-b border-[#e8e8ec] px-5 py-4 sticky top-0 z-30">
+        <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-[#f4f4f7] text-[#0a0a14] active:scale-95 transition-transform"
             >
-              <ArrowLeft size={20} className="text-slate-600 dark:text-slate-300" />
+              <ArrowLeft size={18} strokeWidth={2} />
             </Link>
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
-              <Timer className="text-white" size={20} />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-800 dark:text-white">Focus Sessies</h1>
-              <p className="text-sm text-slate-500">State-first deep work</p>
-            </div>
+            <h1 className="text-[18px] font-bold text-[#0a0a14] tracking-tight">Focus Sessies</h1>
           </div>
-
-          {/* Power Question Button */}
           <button
             onClick={showRandomPowerQuestion}
-            className="p-2 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
-            title="Stuck? Get a Power Question"
+            className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-[#fef3c7] text-[#f59e0b] active:scale-95 transition-transform"
+            title="Power vraag"
           >
-            <HelpCircle size={20} />
+            <HelpCircle size={18} />
           </button>
         </div>
       </header>
 
-      {/* Stats */}
-      <div className="px-6 py-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-        <div className="max-w-2xl mx-auto grid grid-cols-3 gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-slate-800 dark:text-white">{completedSessions}</div>
-            <div className="text-sm text-slate-500">Sessies</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">{totalFocusTime}</div>
-            <div className="text-sm text-slate-500">Minuten</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{Math.round(totalFocusTime / 25)}</div>
-            <div className="text-sm text-slate-500">Pomodoros</div>
-          </div>
-        </div>
-      </div>
-
       {/* Power Question Modal */}
       {showPowerQuestion && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 max-w-md w-full text-center">
-            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <HelpCircle className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+        <div className="fixed inset-0 bg-[#0a0a14]/50 flex items-center justify-center z-50 p-5">
+          <div className="bg-white rounded-[20px] p-7 max-w-sm w-full text-center shadow-xl">
+            <div className="w-14 h-14 bg-[#fef3c7] rounded-full flex items-center justify-center mx-auto mb-4">
+              <HelpCircle size={26} className="text-[#f59e0b]" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            <p className="text-[11px] font-bold text-[#8a8a9a] uppercase tracking-[0.15em] mb-3">
               Power Question
-            </h3>
-            <p className="text-xl text-slate-700 dark:text-slate-300 mb-6 italic">
+            </p>
+            <p className="text-[17px] font-semibold text-[#0a0a14] mb-6 leading-snug italic">
               "{currentPowerQuestion}"
             </p>
             <button
               onClick={() => setShowPowerQuestion(false)}
-              className="px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-medium"
+              className="w-full py-3.5 bg-[#0a0a14] text-white text-[14px] font-semibold rounded-[14px] active:scale-95 transition-transform"
             >
               Doorgaan met focus
             </button>
@@ -312,209 +257,180 @@ export default function FocusPage() {
         </div>
       )}
 
-      {/* Main Content */}
-      <main className="p-6">
-        <div className="max-w-2xl mx-auto">
-          {/* Goal Input */}
-          {showGoalInput && currentSession === 'work' && (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 mb-6 border border-slate-200 dark:border-slate-700">
-              <div className="flex items-center gap-3 mb-4">
-                <Zap className="text-amber-500" size={20} />
-                <h3 className="font-semibold text-slate-800 dark:text-white">Wat ga je focussen deze sessie?</h3>
-              </div>
-              <input
-                type="text"
-                value={sessionGoal}
-                onChange={(e) => setSessionGoal(e.target.value)}
-                placeholder="Bijv: Hoofdstuk 3 schrijven, emails beantwoorden..."
-                className="w-full p-4 bg-slate-50 dark:bg-slate-700 rounded-xl border-none text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-
-              {/* Energy Before */}
-              <div className="mt-4">
-                <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-slate-500">Energie nu</span>
-                  <span className="font-medium text-slate-900 dark:text-white">{energyBefore}/10</span>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  value={energyBefore}
-                  onChange={(e) => setEnergyBefore(parseInt(e.target.value))}
-                  className="w-full h-2 bg-slate-200 dark:bg-slate-600 rounded-full appearance-none cursor-pointer accent-orange-500"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Current Goal Display */}
-          {!showGoalInput && sessionGoal && currentSession === 'work' && (
-            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 mb-6 border border-amber-200 dark:border-amber-800">
-              <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
-                <Zap size={16} />
-                <span className="font-medium">Focus: {sessionGoal}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Timer */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 mb-6 border border-slate-200 dark:border-slate-700 text-center">
-            {/* Progress Ring */}
-            <div className="relative w-48 h-48 mx-auto mb-6">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle
-                  cx="96"
-                  cy="96"
-                  r="88"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="8"
-                  className="text-slate-200 dark:text-slate-700"
-                />
-                <circle
-                  cx="96"
-                  cy="96"
-                  r="88"
-                  fill="none"
-                  stroke="url(#timerGradient)"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray={553}
-                  strokeDashoffset={553 - (553 * progress) / 100}
-                  className="transition-all duration-1000"
-                />
-                <defs>
-                  <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor={currentSession === 'work' ? '#f97316' : '#22c55e'} />
-                    <stop offset="100%" stopColor={currentSession === 'work' ? '#ef4444' : '#10b981'} />
-                  </linearGradient>
-                </defs>
-              </svg>
-
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium mb-2 ${
-                  currentSession === 'work'
-                    ? 'bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300'
-                    : 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
-                }`}>
-                  {currentSession === 'work' ? <Timer size={12} /> : <Coffee size={12} />}
-                  {currentSession === 'work' ? 'Focus' : 'Pauze'}
-                </div>
-                <div className="text-5xl font-bold text-slate-800 dark:text-white font-mono">
-                  {formatTime(timeLeft)}
-                </div>
-              </div>
-            </div>
-
-            {/* Controls */}
-            <div className="flex items-center justify-center gap-4 mb-6">
-              {!isActive ? (
-                <button
-                  onClick={startTimer}
-                  disabled={showGoalInput && !sessionGoal.trim() && currentSession === 'work'}
-                  className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-medium hover:shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Play size={24} />
-                  Start
-                </button>
-              ) : (
-                <button
-                  onClick={pauseTimer}
-                  className="flex items-center gap-2 px-8 py-4 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                >
-                  <Pause size={24} />
-                  Pauzeer
-                </button>
-              )}
-
-              <button
-                onClick={resetTimer}
-                className="p-4 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-              >
-                <RotateCcw size={24} />
-              </button>
-            </div>
-
-            {/* Session Type Switcher */}
-            <div className="flex items-center justify-center gap-3">
-              <button
-                onClick={switchToWork}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  currentSession === 'work'
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                }`}
-              >
-                Focus (25min)
-              </button>
-              <button
-                onClick={switchToBreak}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  currentSession === 'break'
-                    ? 'bg-green-500 text-white'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                }`}
-              >
-                Pauze (5min)
-              </button>
-            </div>
+      <div className="max-w-lg mx-auto px-5">
+        {/* Stats Strip */}
+        <div className="grid grid-cols-3 gap-3 py-5">
+          <div className="bg-[#f4f4f7] rounded-[14px] p-4 text-center">
+            <p className="text-[22px] font-bold text-[#0a0a14]">{completedSessions}</p>
+            <p className="text-[11px] text-[#8a8a9a] font-medium mt-0.5">Sessies</p>
           </div>
-
-          {/* Tony Quote */}
-          <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-4 mb-6">
-            <p className="text-sm text-slate-600 dark:text-slate-400 italic text-center">
-              "Where focus goes, energy flows."
-              <span className="block text-xs text-slate-400 mt-1">— Tony Robbins</span>
-            </p>
+          <div className="bg-[#f4f4f7] rounded-[14px] p-4 text-center">
+            <p className="text-[22px] font-bold text-[#0a0a14]">{totalFocusTime}</p>
+            <p className="text-[11px] text-[#8a8a9a] font-medium mt-0.5">Minuten</p>
           </div>
-
-          {/* Today's Sessions */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
-            <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Vandaag Voltooid</h3>
-            <div className="space-y-3">
-              {todaySessions.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  <Clock size={32} className="mx-auto mb-2 opacity-50" />
-                  <p>Geen sessies vandaag</p>
-                  <p className="text-sm">Start je eerste focus sessie!</p>
-                </div>
-              ) : (
-                todaySessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl"
-                  >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      session.type === 'work'
-                        ? 'bg-orange-100 dark:bg-orange-900/20'
-                        : 'bg-green-100 dark:bg-green-900/20'
-                    }`}>
-                      {session.type === 'work' ? (
-                        <Timer size={16} className="text-orange-600 dark:text-orange-400" />
-                      ) : (
-                        <Coffee size={16} className="text-green-600 dark:text-green-400" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-slate-800 dark:text-white">
-                        {session.type === 'work' ? 'Focus Sessie' : 'Pauze'}
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        {session.duration} min • {new Date(session.completedAt).toLocaleTimeString('nl-NL', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
-                    <CheckCircle size={20} className="text-green-500" />
-                  </div>
-                ))
-              )}
-            </div>
+          <div className="bg-[#f4f4f7] rounded-[14px] p-4 text-center">
+            <p className="text-[22px] font-bold text-[#00cc66]">{Math.round(totalFocusTime / 25)}</p>
+            <p className="text-[11px] text-[#8a8a9a] font-medium mt-0.5">Pomodoros</p>
           </div>
         </div>
-      </main>
+
+        {/* Session Goal Input */}
+        {showGoalInput && currentSession === 'work' && (
+          <div className="bg-white rounded-[16px] border border-[#e8e8ec] p-5 mb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Zap size={16} className="text-[#f59e0b]" />
+              <span className="text-[14px] font-semibold text-[#0a0a14]">
+                Wat ga je focussen deze sessie?
+              </span>
+            </div>
+            <input
+              type="text"
+              value={sessionGoal}
+              onChange={(e) => setSessionGoal(e.target.value)}
+              placeholder="Bijv: Hoofdstuk 3 schrijven, emails beantwoorden..."
+              className="w-full bg-[#f4f4f7] border border-transparent focus:border-[#00cc66] outline-none rounded-[14px] px-4 py-3.5 text-[14px] text-[#0a0a14] placeholder:text-[#8a8a9a] transition-colors"
+            />
+            <div className="mt-4">
+              <div className="flex items-center justify-between text-[12px] mb-2">
+                <span className="text-[#8a8a9a]">Energie nu</span>
+                <span className="font-semibold text-[#0a0a14]">{energyBefore}/10</span>
+              </div>
+              <input
+                type="range" min="1" max="10" value={energyBefore}
+                onChange={(e) => setEnergyBefore(parseInt(e.target.value))}
+                className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                style={{ accentColor: '#00cc66' }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Current goal display */}
+        {!showGoalInput && sessionGoal && currentSession === 'work' && (
+          <div className="bg-[#fef3c7] rounded-[14px] px-4 py-3 mb-4 flex items-center gap-2">
+            <Zap size={15} className="text-[#f59e0b] shrink-0" />
+            <span className="text-[13px] font-semibold text-[#92400e]">Focus: {sessionGoal}</span>
+          </div>
+        )}
+
+        {/* Timer Card */}
+        <div className="bg-white rounded-[20px] border border-[#e8e8ec] p-6 mb-4 text-center">
+          {/* SVG Timer Ring */}
+          <div className="relative w-52 h-52 mx-auto mb-6">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
+              <circle cx="100" cy="100" r={radius} fill="none" stroke="#f4f4f7" strokeWidth="10" />
+              <circle
+                cx="100" cy="100" r={radius}
+                fill="none"
+                stroke={isWorkMode ? '#0a0a14' : '#00cc66'}
+                strokeWidth="10"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                className="transition-all duration-1000"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold mb-2 ${
+                isWorkMode ? 'bg-[#0a0a14] text-white' : 'bg-[#f0fdf4] text-[#00cc66]'
+              }`}>
+                {isWorkMode ? <Timer size={11} /> : <Coffee size={11} />}
+                {isWorkMode ? 'Focus' : 'Pauze'}
+              </div>
+              <div className="text-[44px] font-bold text-[#0a0a14] font-mono leading-none">
+                {formatTime(timeLeft)}
+              </div>
+            </div>
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center justify-center gap-4 mb-5">
+            {!isActive ? (
+              <button
+                onClick={startTimer}
+                disabled={showGoalInput && !sessionGoal.trim() && currentSession === 'work'}
+                className={`flex items-center gap-2 px-8 py-4 text-[15px] font-semibold rounded-[14px] active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed ${
+                  isWorkMode ? 'bg-[#0a0a14] text-white' : 'bg-[#00cc66] text-[#0a0a14]'
+                }`}
+              >
+                <Play size={20} />
+                Start
+              </button>
+            ) : (
+              <button
+                onClick={pauseTimer}
+                className="flex items-center gap-2 px-8 py-4 bg-[#f4f4f7] text-[#0a0a14] text-[15px] font-semibold rounded-[14px] active:scale-95 transition-transform"
+              >
+                <Pause size={20} />
+                Pauzeer
+              </button>
+            )}
+            <button
+              onClick={resetTimer}
+              className="w-14 h-14 flex items-center justify-center bg-[#f4f4f7] text-[#8a8a9a] rounded-[14px] active:scale-95 transition-transform"
+            >
+              <RotateCcw size={20} />
+            </button>
+          </div>
+
+          {/* Session type switcher */}
+          <div className="inline-flex bg-[#f4f4f7] rounded-[12px] p-1 gap-1">
+            <button
+              onClick={switchToWork}
+              className={`px-4 py-2 rounded-[10px] text-[13px] font-semibold transition-all ${
+                currentSession === 'work' ? 'bg-[#0a0a14] text-white shadow-sm' : 'text-[#8a8a9a]'
+              }`}
+            >
+              Focus (25min)
+            </button>
+            <button
+              onClick={switchToBreak}
+              className={`px-4 py-2 rounded-[10px] text-[13px] font-semibold transition-all ${
+                currentSession === 'break' ? 'bg-[#0a0a14] text-white shadow-sm' : 'text-[#8a8a9a]'
+              }`}
+            >
+              Pauze (5min)
+            </button>
+          </div>
+        </div>
+
+        {/* Today's Sessions */}
+        <div className="bg-white rounded-[20px] border border-[#e8e8ec] p-5 mb-4">
+          <h3 className="text-[15px] font-semibold text-[#0a0a14] mb-4">Vandaag Voltooid</h3>
+          <div className="space-y-2">
+            {todaySessions.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-12 h-12 bg-[#f4f4f7] rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Clock size={22} className="text-[#8a8a9a]" />
+                </div>
+                <p className="text-[13px] text-[#8a8a9a]">Geen sessies vandaag</p>
+                <p className="text-[12px] text-[#8a8a9a] mt-1">Start je eerste focus sessie!</p>
+              </div>
+            ) : (
+              todaySessions.map((session) => (
+                <div key={session.id} className="flex items-center gap-3 p-3 rounded-[12px] bg-[#f4f4f7]">
+                  <div className="w-9 h-9 rounded-[10px] bg-white flex items-center justify-center shrink-0">
+                    {session.type === 'work'
+                      ? <Timer size={16} className="text-[#0a0a14]" />
+                      : <Coffee size={16} className="text-[#00cc66]" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[13px] font-semibold text-[#0a0a14]">
+                      {session.type === 'work' ? 'Focus Sessie' : 'Pauze'}
+                    </p>
+                    <p className="text-[11px] text-[#8a8a9a]">
+                      {session.duration} min — {new Date(session.completedAt).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  <CheckCircle size={18} className="text-[#00cc66] shrink-0" />
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      <BottomNav />
     </div>
   );
 }
