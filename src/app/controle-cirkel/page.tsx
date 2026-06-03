@@ -278,32 +278,32 @@ export default function ControleCircelPage() {
               <p className="text-[13px] text-[#0a0a14]">{probleem}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-3">
               {/* Mijn controle */}
               <div className="rounded-[16px] border border-[#00cc66]/30 bg-[#00cc66]/5 p-4">
-                <p className="text-[13px] font-semibold text-[#00cc66] mb-0.5">Mijn controle</p>
-                <p className="text-[11px] text-[#8a8a9a] mb-3">Wat kan ik beïnvloeden?</p>
-                <div className="flex gap-1.5 mb-3">
+                <p className="text-[14px] font-semibold text-[#00cc66] mb-0.5">Mijn controle</p>
+                <p className="text-[12px] text-[#8a8a9a] mb-3">Wat kan ik beïnvloeden?</p>
+                <div className="flex gap-2 mb-3">
                   <input
                     value={newMijn}
                     onChange={(e) => setNewMijn(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && addMijn()}
                     placeholder="Voeg toe..."
-                    className="flex-1 min-w-0 px-2.5 py-1.5 bg-white border border-[#e8e8ec] rounded-[8px] text-[12px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66]"
+                    className="flex-1 min-w-0 px-3 py-3 bg-white border border-[#e8e8ec] rounded-[10px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66]"
                   />
                   <button
                     onClick={addMijn}
-                    className="w-7 h-7 bg-[#00cc66] text-white rounded-[8px] flex items-center justify-center flex-shrink-0"
+                    className="w-11 h-11 bg-[#00cc66] text-white rounded-[10px] flex items-center justify-center flex-shrink-0"
                   >
-                    <Plus size={13} />
+                    <Plus size={18} />
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {mijnKant.map((item, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#00cc66]/15 text-[#0a0a14] rounded-full text-[11px] font-medium">
+                    <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#00cc66]/15 text-[#0a0a14] rounded-full text-[12px] font-medium">
                       {item}
-                      <button onClick={() => setMijnKant(prev => prev.filter((_, j) => j !== i))}>
-                        <X size={10} className="text-[#8a8a9a]" />
+                      <button onClick={() => setMijnKant(prev => prev.filter((_, j) => j !== i))} className="flex items-center">
+                        <X size={11} className="text-[#8a8a9a]" />
                       </button>
                     </span>
                   ))}
@@ -312,29 +312,29 @@ export default function ControleCircelPage() {
 
               {/* Niet mijn controle */}
               <div className="rounded-[16px] border border-[#e8e8ec] bg-[#f4f4f7] p-4">
-                <p className="text-[13px] font-semibold text-[#8a8a9a] mb-0.5">Niet mijn controle</p>
-                <p className="text-[11px] text-[#8a8a9a] mb-3">Wat is buiten mijn controle?</p>
-                <div className="flex gap-1.5 mb-3">
+                <p className="text-[14px] font-semibold text-[#8a8a9a] mb-0.5">Niet mijn controle</p>
+                <p className="text-[12px] text-[#8a8a9a] mb-3">Wat is buiten mijn controle?</p>
+                <div className="flex gap-2 mb-3">
                   <input
                     value={newNiet}
                     onChange={(e) => setNewNiet(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && addNiet()}
                     placeholder="Voeg toe..."
-                    className="flex-1 min-w-0 px-2.5 py-1.5 bg-white border border-[#e8e8ec] rounded-[8px] text-[12px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none"
+                    className="flex-1 min-w-0 px-3 py-3 bg-white border border-[#e8e8ec] rounded-[10px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#8a8a9a]"
                   />
                   <button
                     onClick={addNiet}
-                    className="w-7 h-7 bg-[#8a8a9a] text-white rounded-[8px] flex items-center justify-center flex-shrink-0"
+                    className="w-11 h-11 bg-[#8a8a9a] text-white rounded-[10px] flex items-center justify-center flex-shrink-0"
                   >
-                    <Plus size={13} />
+                    <Plus size={18} />
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {nietMijnKant.map((item, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-[#e8e8ec] text-[#8a8a9a] rounded-full text-[11px] font-medium">
+                    <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#e8e8ec] text-[#8a8a9a] rounded-full text-[12px] font-medium">
                       {item}
-                      <button onClick={() => setNietMijnKant(prev => prev.filter((_, j) => j !== i))}>
-                        <X size={10} />
+                      <button onClick={() => setNietMijnKant(prev => prev.filter((_, j) => j !== i))} className="flex items-center">
+                        <X size={11} />
                       </button>
                     </span>
                   ))}

@@ -73,8 +73,12 @@ export function PauseButton() {
       <button
         onClick={handleOpen}
         aria-label="Pauze noodknop"
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
-        style={{ animation: 'pausePulse 3s ease-in-out infinite' }}
+        className="fixed z-50 w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+        style={{
+          bottom: 'calc(5.5rem + env(safe-area-inset-bottom))',
+          right: '1rem',
+          animation: 'pausePulse 3s ease-in-out infinite',
+        }}
       >
         <Pause size={22} />
         <style>{`
