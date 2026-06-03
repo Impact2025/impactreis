@@ -85,9 +85,25 @@ export default function MorningPage() {
         const currentUser = AuthService.isAuthenticated() ? { email: 'user@example.com' } : null;
         if (!currentUser) { router.push('/auth/login'); return; }
         const saved = localStorage.getItem(`morningRitual_${todayStr}`);
-        if (saved) setFormData(JSON.parse(saved));
+        if (saved) {
+          try {
+            const p = JSON.parse(saved);
+            setFormData({
+              intentie: typeof p.intentie === 'string' ? p.intentie : '',
+              affirmatie: typeof p.affirmatie === 'string' ? p.affirmatie : '',
+              dankbaarheid: Array.isArray(p.dankbaarheid)
+                ? p.dankbaarheid.map((d: unknown) => (typeof d === 'string' ? d : ''))
+                : ['', '', ''],
+              energyLevel: typeof p.energyLevel === 'number' ? p.energyLevel : 7,
+              sleepQuality: typeof p.sleepQuality === 'number' ? p.sleepQuality : 7,
+              wakeTime: typeof p.wakeTime === 'string' ? p.wakeTime : '06:30',
+            });
+          } catch { /* corrupt localStorage, use defaults */ }
+        }
         const savedAdhd = localStorage.getItem(`adhdLog_${todayStr}`);
-        if (savedAdhd) setAdhdScores(JSON.parse(savedAdhd));
+        if (savedAdhd) {
+          try { setAdhdScores(JSON.parse(savedAdhd)); } catch { /* ignore */ }
+        }
       } catch {
         router.push('/auth/login');
       } finally {
@@ -161,9 +177,9 @@ export default function MorningPage() {
   const isLastStep = step === 'adhd';
 
   const canGoNext = () => {
-    if (step === 'intentie') return formData.intentie.trim().length > 0;
-    if (step === 'dankbaarheid') return formData.dankbaarheid.some((d) => d.trim().length > 0);
-    if (step === 'affirmatie') return formData.affirmatie.trim().length > 0;
+    if (step === 'intentie') return (formData.intentie ?? '').trim().length > 0;
+    if (step === 'dankbaarheid') return (formData.dankbaarheid ?? []).some((d) => (d ?? '').trim().length > 0);
+    if (step === 'affirmatie') return (formData.affirmatie ?? '').trim().length > 0;
     return true;
   };
 
