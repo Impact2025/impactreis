@@ -354,6 +354,8 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+    getByWeekNumber: (weekNumber: number) =>
+      this.request<any[]>(`/weekly-reviews?weekNumber=${weekNumber}`),
   };
 
   // Focus Sessions

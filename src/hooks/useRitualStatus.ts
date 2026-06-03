@@ -60,17 +60,30 @@ export function useRitualStatus(): RitualStatusData {
 
       try {
         // Fetch all ritual statuses from database in parallel
-        const [morningLogs, eveningLogs, weeklyStartLogs, weeklyReviewLogs] = await Promise.all([
+        const [morningLogs, eveningLogs, weeklyReviews] = await Promise.all([
           api.logs.getByTypeAndDate('morning', today).catch(() => []),
           api.logs.getByTypeAndDate('evening', today).catch(() => []),
-          api.logs.getByTypeAndDate('weeklyStart', weekKey).catch(() => []),
-          api.logs.getByTypeAndDate('weeklyReview', weekKey).catch(() => []),
+          api.weeklyReviews.getByWeekNumber(weekNumber).catch(() => []),
         ]);
 
         const morningComplete = morningLogs.length > 0;
         const eveningComplete = eveningLogs.length > 0;
-        const weeklyStartComplete = weeklyStartLogs.length > 0;
-        const weeklyReviewComplete = weeklyReviewLogs.length > 0;
+
+        // Weekly start is saved to weekly_reviews with type='weekly-start' in the data field
+        const weeklyStartComplete = Array.isArray(weeklyReviews) && weeklyReviews.some((r: { data: unknown }) => {
+          try {
+            const d = typeof r.data === 'string' ? JSON.parse(r.data) : r.data as Record<string, unknown>;
+            return (d as Record<string, unknown>)?.type === 'weekly-start';
+          } catch { return false; }
+        });
+
+        // Weekly review is saved to weekly_reviews with type='weekly-review' in the data field
+        const weeklyReviewComplete = Array.isArray(weeklyReviews) && weeklyReviews.some((r: { data: unknown }) => {
+          try {
+            const d = typeof r.data === 'string' ? JSON.parse(r.data) : r.data as Record<string, unknown>;
+            return (d as Record<string, unknown>)?.type === 'weekly-review';
+          } catch { return false; }
+        });
 
         // Sync to localStorage for offline support
         if (morningComplete) {
@@ -83,6 +96,7 @@ export function useRitualStatus(): RitualStatusData {
         }
         if (weeklyStartComplete) {
           localStorage.setItem(`weeklyStart_${year}_${weekNumber}`, 'true');
+          localStorage.setItem(`morningDone_${today}`, '1'); // keep morning done flag in sync
         }
         if (weeklyReviewComplete) {
           localStorage.setItem(`weeklyReview_${year}_${weekNumber}`, 'true');
