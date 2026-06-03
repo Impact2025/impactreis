@@ -87,6 +87,17 @@ export default function MorningPage() {
       } catch (err) {
         console.error('API save error:', err);
       }
+
+      // Fire-and-forget: sessie analyse email
+      const token = localStorage.getItem('token');
+      if (token) {
+        fetch('/api/email/sessie-analyse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(formData),
+        }).catch(() => {});
+      }
+
       setStep('done');
       setTimeout(() => { router.push('/dashboard'); }, 2000);
     } catch (err) {

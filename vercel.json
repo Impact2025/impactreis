@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/email/ochtend-motivatie",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/email/ochtend-herinnering",
+      "schedule": "30 6 * * *"
+    }
+  ]
+}
