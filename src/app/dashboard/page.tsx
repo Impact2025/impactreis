@@ -424,6 +424,19 @@ export default function DashboardPage() {
                 <ChevronRight size={17} className="text-[#00cc66]/60 group-hover:text-[#00cc66] transition-colors" />
               </Link>
               <Link
+                href="/adhd"
+                className="col-span-2 rounded-[16px] bg-[#f5f3ff] border border-[#e9d5ff] p-4 flex items-center justify-between group active:scale-[0.99] transition-transform"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-[10px] bg-[#a78bfa]/20 flex items-center justify-center text-base">🧠</div>
+                  <div>
+                    <p className="text-[13px] font-bold text-[#0a0a14]">ADHD Klachten</p>
+                    <p className="text-[10px] text-[#a78bfa] font-medium">Meting voor medicatiestart · 14 dagen</p>
+                  </div>
+                </div>
+                <ChevronRight size={17} className="text-[#a78bfa]/60 group-hover:text-[#a78bfa] transition-colors" />
+              </Link>
+              <Link
                 href="/courses"
                 className="col-span-2 rounded-[16px] bg-gradient-to-r from-[#ff6b35] to-[#e83e3e] p-4 flex items-center justify-between group active:scale-[0.99] transition-transform"
               >

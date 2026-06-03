@@ -3,22 +3,46 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Sunrise, ArrowLeft, ArrowRight, CheckCircle, Heart, Target, Zap } from 'lucide-react';
+import { Sunrise, ArrowLeft, ArrowRight, CheckCircle, Heart, Target, Zap, Brain } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
-import { isMorningRitualComplete } from '@/lib/weekflow.service';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
-type Step = 'intentie' | 'status' | 'dankbaarheid' | 'affirmatie' | 'done';
+type Step = 'intentie' | 'status' | 'dankbaarheid' | 'affirmatie' | 'adhd' | 'done';
 
-const STEPS: Step[] = ['intentie', 'status', 'dankbaarheid', 'affirmatie'];
+const STEPS: Step[] = ['intentie', 'status', 'dankbaarheid', 'affirmatie', 'adhd'];
 
 const STEP_LABELS: Record<Step, string> = {
   intentie: 'Intentie',
   status: 'Status',
   dankbaarheid: 'Dankbaarheid',
   affirmatie: 'Affirmatie',
+  adhd: 'ADHD Klachten',
   done: 'Klaar',
+};
+
+const SYMPTOMS = [
+  'Moeite met concentratie',
+  'Vergeetachtigheid',
+  'Hyperfocus',
+  'Onrust in hoofd',
+  'Onrust in lichaam',
+  'Beweeglijkheid',
+  'Snel praten',
+  'Prikkelbaarheid',
+  'Somberheid',
+  'Stemmingswisselingen',
+  'Impulsiviteit',
+  'Agressiviteit',
+  'Suïcidaliteit',
+  'Vreetbuien',
+];
+
+const SCORE_COLORS: Record<number, { selected: string; text: string }> = {
+  0: { selected: 'bg-[#e8e8ec] text-[#0a0a14]', text: 'geen' },
+  1: { selected: 'bg-[#fef3c7] text-[#92400e]', text: 'soms' },
+  2: { selected: 'bg-[#fed7aa] text-[#9a3412]', text: 'vaak' },
+  3: { selected: 'bg-[#fee2e2] text-[#991b1b]', text: 'continu' },
 };
 
 interface MorningData {
@@ -39,6 +63,7 @@ export default function MorningPage() {
   const today = new Date();
   const dayName = today.toLocaleDateString('nl-NL', { weekday: 'long' });
   const dateStr = today.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
+  const todayStr = today.toISOString().split('T')[0];
 
   const [formData, setFormData] = useState<MorningData>({
     intentie: '',
@@ -49,14 +74,20 @@ export default function MorningPage() {
     wakeTime: '06:30',
   });
 
+  const defaultScores = () =>
+    Object.fromEntries(SYMPTOMS.map((s) => [s, 0])) as Record<string, number>;
+
+  const [adhdScores, setAdhdScores] = useState<Record<string, number>>(defaultScores());
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const currentUser = AuthService.isAuthenticated() ? { email: 'user@example.com' } : null;
         if (!currentUser) { router.push('/auth/login'); return; }
-        const todayStr = new Date().toISOString().split('T')[0];
         const saved = localStorage.getItem(`morningRitual_${todayStr}`);
         if (saved) setFormData(JSON.parse(saved));
+        const savedAdhd = localStorage.getItem(`adhdLog_${todayStr}`);
+        if (savedAdhd) setAdhdScores(JSON.parse(savedAdhd));
       } catch {
         router.push('/auth/login');
       } finally {
@@ -64,7 +95,7 @@ export default function MorningPage() {
       }
     };
     checkAuth();
-  }, [router]);
+  }, [router, todayStr]);
 
   const updateDankbaarheid = (index: number, value: string) => {
     const updated = [...formData.dankbaarheid];
@@ -72,11 +103,19 @@ export default function MorningPage() {
     setFormData({ ...formData, dankbaarheid: updated });
   };
 
+  const setScore = (symptom: string, score: number) => {
+    setAdhdScores((prev) => {
+      const updated = { ...prev, [symptom]: score };
+      localStorage.setItem(`adhdLog_${todayStr}`, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const handleComplete = async () => {
     setSaving(true);
     try {
-      const todayStr = new Date().toISOString().split('T')[0];
       localStorage.setItem(`morningRitual_${todayStr}`, JSON.stringify(formData));
+
       try {
         await api.logs.create({
           type: 'morning',
@@ -88,8 +127,18 @@ export default function MorningPage() {
         console.error('API save error:', err);
       }
 
-      // Fire-and-forget: sessie analyse email
       const token = localStorage.getItem('token');
+
+      // Save ADHD scores
+      if (token) {
+        fetch('/api/adhd-logs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ date: todayStr, scores: adhdScores }),
+        }).catch(() => {});
+      }
+
+      // Fire-and-forget: sessie analyse email
       if (token) {
         fetch('/api/email/sessie-analyse', {
           method: 'POST',
@@ -109,11 +158,11 @@ export default function MorningPage() {
 
   const currentIndex = STEPS.indexOf(step);
   const progressPct = step === 'done' ? 100 : ((currentIndex + 1) / STEPS.length) * 100;
-  const isLastStep = step === 'affirmatie';
+  const isLastStep = step === 'adhd';
 
   const canGoNext = () => {
     if (step === 'intentie') return formData.intentie.trim().length > 0;
-    if (step === 'dankbaarheid') return formData.dankbaarheid.some(d => d.trim().length > 0);
+    if (step === 'dankbaarheid') return formData.dankbaarheid.some((d) => d.trim().length > 0);
     if (step === 'affirmatie') return formData.affirmatie.trim().length > 0;
     return true;
   };
@@ -173,7 +222,6 @@ export default function MorningPage() {
               {currentIndex + 1}/{STEPS.length}
             </span>
           </div>
-          {/* Progress bar */}
           <div className="h-1 w-full bg-[#f4f4f7] rounded-full overflow-hidden">
             <div
               className="h-full bg-[#00cc66] rounded-full transition-all duration-500"
@@ -184,6 +232,7 @@ export default function MorningPage() {
       </div>
 
       <div className="max-w-lg mx-auto px-5 pt-5">
+
         {/* Step: Intentie */}
         {step === 'intentie' && (
           <div className="space-y-4">
@@ -197,7 +246,6 @@ export default function MorningPage() {
               <p className="text-[17px] text-white font-semibold">Goedemorgen.</p>
               <p className="text-[13px] text-white/50 mt-1">Zet de toon voor een geweldige dag.</p>
             </div>
-
             <div className="rounded-[16px] border border-[#e8e8ec] p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Target size={16} className="text-[#00cc66]" />
@@ -222,7 +270,6 @@ export default function MorningPage() {
               <Zap size={16} className="text-[#f59e0b]" />
               <span className="text-[14px] font-semibold text-[#0a0a14]">Hoe voel je je vandaag?</span>
             </div>
-
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[13px] text-[#0a0a14]">Slaap kwaliteit</span>
@@ -240,7 +287,6 @@ export default function MorningPage() {
                 />
               </div>
             </div>
-
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[13px] text-[#0a0a14]">Energie niveau</span>
@@ -258,7 +304,6 @@ export default function MorningPage() {
                 />
               </div>
             </div>
-
             <div>
               <label className="block text-[13px] text-[#0a0a14] mb-2">Hoe laat ben je wakker geworden?</label>
               <input
@@ -288,7 +333,7 @@ export default function MorningPage() {
                     type="text"
                     value={formData.dankbaarheid[index]}
                     onChange={(e) => updateDankbaarheid(index, e.target.value)}
-                    placeholder={`Ik ben dankbaar voor...`}
+                    placeholder="Ik ben dankbaar voor..."
                     className="flex-1 px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] transition-colors"
                   />
                 </div>
@@ -318,9 +363,65 @@ export default function MorningPage() {
                 className="w-full resize-none bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] px-4 py-3 text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] transition-colors"
               />
               <p className="text-[11px] text-[#8a8a9a] mt-3 italic">
-                Tip: Schrijf in de tegenwoordige tijd. Bijv: "Ik ben een krachtige, impactvolle ondernemer."
+                Tip: Schrijf in de tegenwoordige tijd. Bijv: &quot;Ik ben een krachtige, impactvolle ondernemer.&quot;
               </p>
             </div>
+          </div>
+        )}
+
+        {/* Step: ADHD Klachten */}
+        {step === 'adhd' && (
+          <div className="space-y-3">
+            <div className="rounded-[16px] bg-[#0a0a14] p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Brain size={18} className="text-[#a78bfa]" />
+                <span className="text-[11px] text-white/40 uppercase tracking-widest">Dagelijkse meting</span>
+              </div>
+              <p className="text-[17px] text-white font-semibold">ADHD Klachten</p>
+              <p className="text-[13px] text-white/50 mt-1">
+                Hoe was je vandaag?
+              </p>
+              <div className="flex gap-3 mt-3">
+                {([0, 1, 2, 3] as const).map((n) => (
+                  <div key={n} className="flex items-center gap-1">
+                    <span className={`w-5 h-5 rounded-[6px] text-[10px] font-bold flex items-center justify-center ${SCORE_COLORS[n].selected}`}>{n}</span>
+                    <span className="text-[10px] text-white/40">{SCORE_COLORS[n].text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[16px] border border-[#e8e8ec] p-4">
+              <div className="space-y-1">
+                {SYMPTOMS.map((symptom) => (
+                  <div
+                    key={symptom}
+                    className="flex items-center justify-between py-2 border-b border-[#f4f4f7] last:border-0"
+                  >
+                    <span className="text-[13px] text-[#0a0a14] flex-1 pr-3 leading-tight">{symptom}</span>
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      {([0, 1, 2, 3] as const).map((score) => (
+                        <button
+                          key={score}
+                          onClick={() => setScore(symptom, score)}
+                          className={`w-9 h-9 rounded-[10px] text-[13px] font-bold transition-all active:scale-95 ${
+                            adhdScores[symptom] === score
+                              ? SCORE_COLORS[score].selected
+                              : 'bg-[#f4f4f7] text-[#c0c0cc]'
+                          }`}
+                        >
+                          {score}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-[11px] text-[#8a8a9a] text-center px-4">
+              Deze meting wordt 14 dagen bijgehouden voor de start van medicatie.
+            </p>
           </div>
         )}
 
