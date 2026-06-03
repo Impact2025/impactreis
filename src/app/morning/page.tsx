@@ -58,6 +58,7 @@ export default function MorningPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState<Step>('intentie');
+  const [alVoltooid, setAlVoltooid] = useState(false);
   const router = useRouter();
 
   const today = new Date();
@@ -104,6 +105,9 @@ export default function MorningPage() {
         if (savedAdhd) {
           try { setAdhdScores(JSON.parse(savedAdhd)); } catch { /* ignore */ }
         }
+        if (localStorage.getItem(`morningDone_${todayStr}`) === '1') {
+          setAlVoltooid(true);
+        }
       } catch {
         router.push('/auth/login');
       } finally {
@@ -131,6 +135,7 @@ export default function MorningPage() {
     setSaving(true);
     try {
       localStorage.setItem(`morningRitual_${todayStr}`, JSON.stringify(formData));
+      localStorage.setItem(`morningDone_${todayStr}`, '1');
 
       try {
         await api.logs.create({
@@ -198,6 +203,78 @@ export default function MorningPage() {
     return (
       <div className="min-h-screen bg-[#ffffff] flex items-center justify-center">
         <div className="w-6 h-6 rounded-full border-2 border-[#00cc66] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (alVoltooid && step === 'intentie') {
+    return (
+      <div className="min-h-screen bg-[#ffffff] pb-28">
+        <div className="sticky top-0 z-10 bg-[#ffffff] border-b border-[#e8e8ec]">
+          <div className="max-w-lg mx-auto px-5 py-4 flex items-center gap-3">
+            <Link href="/dashboard" className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#f4f4f7] transition-colors">
+              <ArrowLeft size={18} className="text-[#0a0a14]" />
+            </Link>
+            <div>
+              <h1 className="text-[17px] font-semibold text-[#0a0a14]">Ochtend Ritueel</h1>
+              <p className="text-[11px] text-[#8a8a9a]">Vandaag al voltooid</p>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-lg mx-auto px-5 pt-6 space-y-4">
+          <div className="rounded-[16px] bg-[#f0fdf4] border border-[#bbf7d0] p-5 flex items-center gap-4">
+            <CheckCircle size={28} className="text-[#00cc66] flex-shrink-0" />
+            <div>
+              <p className="text-[15px] font-semibold text-[#0a0a14]">Goed gedaan vandaag!</p>
+              <p className="text-[12px] text-[#5a5a6a] mt-0.5">Je ochtend ritueel is al voltooid voor {dateStr}.</p>
+            </div>
+          </div>
+
+          {formData.intentie ? (
+            <div className="rounded-[16px] border border-[#e8e8ec] p-5 space-y-4">
+              <div>
+                <p className="text-[11px] text-[#8a8a9a] uppercase tracking-widest mb-1">Intentie</p>
+                <p className="text-[14px] text-[#0a0a14] leading-relaxed">{formData.intentie}</p>
+              </div>
+              {formData.affirmatie ? (
+                <div className="border-t border-[#f4f4f7] pt-4">
+                  <p className="text-[11px] text-[#8a8a9a] uppercase tracking-widest mb-1">Affirmatie</p>
+                  <p className="text-[14px] text-[#00cc66] italic leading-relaxed">&quot;{formData.affirmatie}&quot;</p>
+                </div>
+              ) : null}
+              {formData.dankbaarheid?.some(d => d) ? (
+                <div className="border-t border-[#f4f4f7] pt-4">
+                  <p className="text-[11px] text-[#8a8a9a] uppercase tracking-widest mb-2">Dankbaarheid</p>
+                  <ul className="space-y-1">
+                    {formData.dankbaarheid.filter(d => d).map((d, i) => (
+                      <li key={i} className="text-[13px] text-[#0a0a14] flex items-start gap-2">
+                        <span className="text-[#00cc66] mt-0.5">✓</span>{d}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              <div className="border-t border-[#f4f4f7] pt-4 flex gap-4">
+                <div className="flex-1 text-center">
+                  <p className="text-[11px] text-[#8a8a9a]">Energie</p>
+                  <p className="text-[18px] font-bold text-[#00cc66]">{formData.energyLevel}<span className="text-[12px] text-[#8a8a9a]">/10</span></p>
+                </div>
+                <div className="flex-1 text-center">
+                  <p className="text-[11px] text-[#8a8a9a]">Slaap</p>
+                  <p className="text-[18px] font-bold text-[#00cc66]">{formData.sleepQuality}<span className="text-[12px] text-[#8a8a9a]">/10</span></p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <button
+            onClick={() => setAlVoltooid(false)}
+            className="w-full py-3.5 rounded-[14px] border border-[#e8e8ec] text-[14px] text-[#8a8a9a] font-medium active:scale-[0.98] transition-transform"
+          >
+            Opnieuw invullen
+          </button>
+        </div>
+        <BottomNav />
       </div>
     );
   }
