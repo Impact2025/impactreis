@@ -53,14 +53,21 @@ export default function LoginPage() {
             required
             className="w-full px-4 py-3.5 rounded-[14px] bg-[#f4f4f7] border border-transparent text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66] focus:bg-white transition-all"
           />
-          <input
-            type="password"
-            placeholder="Wachtwoord"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            className="w-full px-4 py-3.5 rounded-[14px] bg-[#f4f4f7] border border-transparent text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66] focus:bg-white transition-all"
-          />
+          <div className="relative">
+            <input
+              type="password"
+              placeholder="Wachtwoord"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              className="w-full px-4 py-3.5 rounded-[14px] bg-[#f4f4f7] border border-transparent text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66] focus:bg-white transition-all"
+            />
+          </div>
+          <div className="text-right">
+            <Link href="/auth/forgot-password" className="text-[12px] text-[#8a8a9a] hover:text-[#00cc66] transition-colors">
+              Wachtwoord vergeten?
+            </Link>
+          </div>
 
           {error && (
             <div className="flex items-center gap-2 px-3.5 py-3 rounded-[12px] bg-red-50 border border-red-100">

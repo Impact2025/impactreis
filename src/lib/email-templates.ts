@@ -239,3 +239,30 @@ export function sessieAnalyseEmail(data: SessieAnalyseData): { subject: string; 
 
   return { subject, html: base(`Sessie analyse — ${data.dayName}`, subject, body) };
 }
+
+// ─── Template 4: Wachtwoord reset ────────────────────────────────────────────
+
+export function resetWachtwoordEmail(resetUrl: string): { subject: string; html: string } {
+  const subject = '🔑 Wachtwoord resetten — Mijn Ondernemers OS';
+
+  const body = `
+    <p style="font-size:17px;font-weight:600;color:#0a0a14;margin:0 0 8px;">Wachtwoord vergeten?</p>
+    <p style="font-size:14px;color:#5a5a6a;line-height:1.7;margin:0 0 24px;">
+      Geen probleem. Klik op de knop hieronder om een nieuw wachtwoord in te stellen.
+      Deze link is <strong>1 uur</strong> geldig.
+    </p>
+
+    <div style="text-align:center;margin-bottom:28px;">
+      ${btn('Nieuw wachtwoord instellen →', resetUrl)}
+    </div>
+
+    <div style="background:#f4f4f7;border-radius:12px;padding:16px 20px;">
+      <p style="margin:0;font-size:12px;color:#8a8a9a;line-height:1.6;">
+        Heb jij dit niet aangevraagd? Dan kun je deze e-mail veilig negeren.
+        Je wachtwoord blijft ongewijzigd.
+      </p>
+    </div>
+  `;
+
+  return { subject, html: base('Wachtwoord resetten', subject, body) };
+}
