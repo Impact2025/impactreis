@@ -1,12 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { Resend } from 'resend';
 import { sql } from '@/lib/db';
 import { authenticateToken } from '@/lib/auth';
 import { sessieAnalyseEmail, SessieAnalyseData } from '@/lib/email-templates';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+async function openRouterChat(prompt: string): Promise<string> {
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://mijn-ondernemers-os.vercel.app',
+    },
+    body: JSON.stringify({
+      model: 'anthropic/claude-haiku-4-5',
+      max_tokens: 400,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  if (!res.ok) throw new Error(`OpenRouter error: ${res.status}`);
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content ?? 'Analyse niet beschikbaar.';
+}
 
 const DAY_NAMES = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
 
@@ -121,13 +138,7 @@ Schrijf een analyse van 150-200 woorden die:
 
 Schrijf in de jij-vorm, warm en direct. Geen bullet points — gewone paragrafen.`;
 
-  const message = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 400,
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  const aiAnalyse = message.content[0].type === 'text' ? message.content[0].text : 'Analyse niet beschikbaar.';
+  const aiAnalyse = await openRouterChat(prompt);
 
   const emailData: SessieAnalyseData = {
     todayDate,
