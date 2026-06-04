@@ -3,46 +3,21 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Sunrise, ArrowLeft, ArrowRight, CheckCircle, Heart, Target, Zap, Brain } from 'lucide-react';
+import { Sunrise, ArrowLeft, ArrowRight, CheckCircle, Heart, Target, Zap } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
-type Step = 'intentie' | 'status' | 'dankbaarheid' | 'affirmatie' | 'adhd' | 'done';
+type Step = 'intentie' | 'status' | 'dankbaarheid' | 'affirmatie' | 'done';
 
-const STEPS: Step[] = ['intentie', 'status', 'dankbaarheid', 'affirmatie', 'adhd'];
+const STEPS: Step[] = ['intentie', 'status', 'dankbaarheid', 'affirmatie'];
 
 const STEP_LABELS: Record<Step, string> = {
   intentie: 'Intentie',
   status: 'Status',
   dankbaarheid: 'Dankbaarheid',
   affirmatie: 'Affirmatie',
-  adhd: 'ADHD Klachten',
   done: 'Klaar',
-};
-
-const SYMPTOMS = [
-  'Moeite met concentratie',
-  'Vergeetachtigheid',
-  'Hyperfocus',
-  'Onrust in hoofd',
-  'Onrust in lichaam',
-  'Beweeglijkheid',
-  'Snel praten',
-  'Prikkelbaarheid',
-  'Somberheid',
-  'Stemmingswisselingen',
-  'Impulsiviteit',
-  'Agressiviteit',
-  'Suïcidaliteit',
-  'Vreetbuien',
-];
-
-const SCORE_COLORS: Record<number, { selected: string; text: string }> = {
-  0: { selected: 'bg-[#e8e8ec] text-[#0a0a14]', text: 'geen' },
-  1: { selected: 'bg-[#fef3c7] text-[#92400e]', text: 'soms' },
-  2: { selected: 'bg-[#fed7aa] text-[#9a3412]', text: 'vaak' },
-  3: { selected: 'bg-[#fee2e2] text-[#991b1b]', text: 'continu' },
 };
 
 interface MorningData {
@@ -75,11 +50,6 @@ export default function MorningPage() {
     wakeTime: '06:30',
   });
 
-  const defaultScores = () =>
-    Object.fromEntries(SYMPTOMS.map((s) => [s, 0])) as Record<string, number>;
-
-  const [adhdScores, setAdhdScores] = useState<Record<string, number>>(defaultScores());
-
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -100,10 +70,6 @@ export default function MorningPage() {
               wakeTime: typeof p.wakeTime === 'string' ? p.wakeTime : '06:30',
             });
           } catch { /* corrupt localStorage, use defaults */ }
-        }
-        const savedAdhd = localStorage.getItem(`adhdLog_${todayStr}`);
-        if (savedAdhd) {
-          try { setAdhdScores(JSON.parse(savedAdhd)); } catch { /* ignore */ }
         }
         // Verify with API: if server has no morning log for today, the localStorage flag is stale
         if (localStorage.getItem(`morningDone_${todayStr}`) === '1') {
@@ -134,14 +100,6 @@ export default function MorningPage() {
     setFormData({ ...formData, dankbaarheid: updated });
   };
 
-  const setScore = (symptom: string, score: number) => {
-    setAdhdScores((prev) => {
-      const updated = { ...prev, [symptom]: score };
-      localStorage.setItem(`adhdLog_${todayStr}`, JSON.stringify(updated));
-      return updated;
-    });
-  };
-
   const handleComplete = async () => {
     setSaving(true);
     try {
@@ -160,15 +118,6 @@ export default function MorningPage() {
       }
 
       const token = localStorage.getItem('token');
-
-      // Save ADHD scores
-      if (token) {
-        fetch('/api/adhd-logs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ date: todayStr, scores: adhdScores }),
-        }).catch(() => {});
-      }
 
       // Fire-and-forget: sessie analyse email
       if (token) {
@@ -190,7 +139,7 @@ export default function MorningPage() {
 
   const currentIndex = STEPS.indexOf(step);
   const progressPct = step === 'done' ? 100 : ((currentIndex + 1) / STEPS.length) * 100;
-  const isLastStep = step === 'adhd';
+  const isLastStep = step === 'affirmatie';
 
   const canGoNext = () => {
     if (step === 'intentie') return (formData.intentie ?? '').trim().length > 0;
@@ -470,62 +419,6 @@ export default function MorningPage() {
                 Tip: Schrijf in de tegenwoordige tijd. Bijv: &quot;Ik ben een krachtige, impactvolle ondernemer.&quot;
               </p>
             </div>
-          </div>
-        )}
-
-        {/* Step: ADHD Klachten */}
-        {step === 'adhd' && (
-          <div className="space-y-3">
-            <div className="rounded-[16px] bg-[#0a0a14] p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <Brain size={18} className="text-[#a78bfa]" />
-                <span className="text-[11px] text-white/40 uppercase tracking-widest">Dagelijkse meting</span>
-              </div>
-              <p className="text-[17px] text-white font-semibold">ADHD Klachten</p>
-              <p className="text-[13px] text-white/50 mt-1">
-                Hoe was je vandaag?
-              </p>
-              <div className="flex gap-3 mt-3">
-                {([0, 1, 2, 3] as const).map((n) => (
-                  <div key={n} className="flex items-center gap-1">
-                    <span className={`w-5 h-5 rounded-[6px] text-[10px] font-bold flex items-center justify-center ${SCORE_COLORS[n].selected}`}>{n}</span>
-                    <span className="text-[10px] text-white/40">{SCORE_COLORS[n].text}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[16px] border border-[#e8e8ec] p-4">
-              <div className="space-y-1">
-                {SYMPTOMS.map((symptom) => (
-                  <div
-                    key={symptom}
-                    className="flex items-center justify-between py-2 border-b border-[#f4f4f7] last:border-0"
-                  >
-                    <span className="text-[13px] text-[#0a0a14] flex-1 pr-3 leading-tight">{symptom}</span>
-                    <div className="flex gap-1.5 flex-shrink-0">
-                      {([0, 1, 2, 3] as const).map((score) => (
-                        <button
-                          key={score}
-                          onClick={() => setScore(symptom, score)}
-                          className={`w-9 h-9 rounded-[10px] text-[13px] font-bold transition-all active:scale-95 ${
-                            adhdScores[symptom] === score
-                              ? SCORE_COLORS[score].selected
-                              : 'bg-[#f4f4f7] text-[#c0c0cc]'
-                          }`}
-                        >
-                          {score}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <p className="text-[11px] text-[#8a8a9a] text-center px-4">
-              Deze meting wordt 14 dagen bijgehouden voor de start van medicatie.
-            </p>
           </div>
         )}
 
