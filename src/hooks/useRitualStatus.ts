@@ -96,7 +96,6 @@ export function useRitualStatus(): RitualStatusData {
         }
         if (weeklyStartComplete) {
           localStorage.setItem(`weeklyStart_${year}_${weekNumber}`, 'true');
-          localStorage.setItem(`morningDone_${today}`, '1'); // keep morning done flag in sync
         }
         if (weeklyReviewComplete) {
           localStorage.setItem(`weeklyReview_${year}_${weekNumber}`, 'true');
