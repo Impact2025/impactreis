@@ -26,6 +26,7 @@ interface MorningData {
   dankbaarheid: string[];
   energyLevel: number;
   sleepQuality: number;
+  sleepTime: string;
   wakeTime: string;
 }
 
@@ -47,6 +48,7 @@ export default function MorningPage() {
     dankbaarheid: ['', '', ''],
     energyLevel: 7,
     sleepQuality: 7,
+    sleepTime: '23:00',
     wakeTime: '06:30',
   });
 
@@ -67,6 +69,7 @@ export default function MorningPage() {
                 : ['', '', ''],
               energyLevel: typeof p.energyLevel === 'number' ? p.energyLevel : 7,
               sleepQuality: typeof p.sleepQuality === 'number' ? p.sleepQuality : 7,
+              sleepTime: typeof p.sleepTime === 'string' ? p.sleepTime : '23:00',
               wakeTime: typeof p.wakeTime === 'string' ? p.wakeTime : '06:30',
             });
           } catch { /* corrupt localStorage, use defaults */ }
@@ -357,14 +360,25 @@ export default function MorningPage() {
                 />
               </div>
             </div>
-            <div>
-              <label className="block text-[13px] text-[#0a0a14] mb-2">Hoe laat ben je wakker geworden?</label>
-              <input
-                type="time"
-                value={formData.wakeTime}
-                onChange={(e) => setFormData({ ...formData, wakeTime: e.target.value })}
-                className="px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] transition-colors"
-              />
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="block text-[13px] text-[#0a0a14] mb-2">Hoe laat ben je gaan slapen?</label>
+                <input
+                  type="time"
+                  value={formData.sleepTime}
+                  onChange={(e) => setFormData({ ...formData, sleepTime: e.target.value })}
+                  className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] transition-colors"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-[13px] text-[#0a0a14] mb-2">Hoe laat ben je wakker geworden?</label>
+                <input
+                  type="time"
+                  value={formData.wakeTime}
+                  onChange={(e) => setFormData({ ...formData, wakeTime: e.target.value })}
+                  className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] transition-colors"
+                />
+              </div>
             </div>
           </div>
         )}
