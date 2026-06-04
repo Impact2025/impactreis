@@ -105,8 +105,19 @@ export default function MorningPage() {
         if (savedAdhd) {
           try { setAdhdScores(JSON.parse(savedAdhd)); } catch { /* ignore */ }
         }
+        // Verify with API: if server has no morning log for today, the localStorage flag is stale
         if (localStorage.getItem(`morningDone_${todayStr}`) === '1') {
-          setAlVoltooid(true);
+          try {
+            const logs = await api.logs.getByTypeAndDate('morning', todayStr);
+            if (Array.isArray(logs) && logs.length > 0) {
+              setAlVoltooid(true);
+            } else {
+              localStorage.removeItem(`morningDone_${todayStr}`);
+            }
+          } catch {
+            // API unavailable — trust localStorage as fallback
+            setAlVoltooid(true);
+          }
         }
       } catch {
         router.push('/auth/login');
