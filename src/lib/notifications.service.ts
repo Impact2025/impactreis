@@ -11,7 +11,7 @@
 export interface NotificationPreferences {
   enabled: boolean;
   morningTime: string; // "06:30"
-  eveningTime: string; // "21:30"
+  eveningTime: string; // "21:30" — avondherinnering
   weeklyStartEnabled: boolean;
   createBeforeConsumeTime: string; // "06:30"
   createBeforeConsumeEnabled: boolean;

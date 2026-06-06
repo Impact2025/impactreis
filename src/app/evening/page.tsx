@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Moon, Lightbulb, TrendingDown, Calendar, Heart, ArrowLeft, CheckCircle, Brain } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { TimeGateScreen } from '@/components/weekflow/time-gate-screen';
-import { isAfter5PM, isEveningRitualComplete } from '@/lib/weekflow.service';
+import { isAfter5PM, isEveningRitualComplete, getToday } from '@/lib/weekflow.service';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
 const SYMPTOMS = [
@@ -47,12 +47,18 @@ interface EveningRitualData {
   gratitude: string;
 }
 
-export default function EveningPage() {
+function EveningContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [adhdScores, setAdhdScores] = useState<Record<string, number>>(defaultAdhdScores());
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Support ?date=YYYY-MM-DD for filling in a past evening ritual
+  const dateParam = searchParams.get('date');
+  const targetDate = dateParam || getToday();
+  const isRecovery = dateParam !== null && dateParam !== getToday();
 
   const [formData, setFormData] = useState<EveningRitualData>({
     whatWentWell: '',
@@ -72,13 +78,11 @@ export default function EveningPage() {
           router.push('/auth/login');
           return;
         }
-        const now = new Date();
-        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        const savedRitual = localStorage.getItem(`eveningRitual_${today}`);
+        const savedRitual = localStorage.getItem(`eveningRitual_${targetDate}`);
         if (savedRitual) {
           setFormData(JSON.parse(savedRitual));
         }
-        const savedAdhd = localStorage.getItem(`adhdLog_${today}`);
+        const savedAdhd = localStorage.getItem(`adhdLog_${targetDate}`);
         if (savedAdhd) {
           try { setAdhdScores(JSON.parse(savedAdhd)); } catch { /* ignore */ }
         }
@@ -89,14 +93,12 @@ export default function EveningPage() {
       }
     };
     checkAuth();
-  }, [router]);
+  }, [router, targetDate]);
 
   const setScore = (symptom: string, score: number) => {
     setAdhdScores((prev) => {
       const updated = { ...prev, [symptom]: score };
-      const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      localStorage.setItem(`adhdLog_${today}`, JSON.stringify(updated));
+      localStorage.setItem(`adhdLog_${targetDate}`, JSON.stringify(updated));
       return updated;
     });
   };
@@ -111,13 +113,11 @@ export default function EveningPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      localStorage.setItem(`eveningRitual_${today}`, JSON.stringify(formData));
-      localStorage.setItem(`adhdLog_${today}`, JSON.stringify(adhdScores));
+      localStorage.setItem(`eveningRitual_${targetDate}`, JSON.stringify(formData));
+      localStorage.setItem(`adhdLog_${targetDate}`, JSON.stringify(adhdScores));
       await api.logs.create({
         type: 'evening',
-        date: today,
+        date: targetDate,
         data: formData,
         createdAt: new Date().toISOString()
       });
@@ -126,7 +126,7 @@ export default function EveningPage() {
         fetch('/api/adhd-logs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ date: today, scores: adhdScores }),
+          body: JSON.stringify({ date: targetDate, scores: adhdScores }),
         }).catch(() => {});
       }
       setShowSuccess(true);
@@ -148,7 +148,7 @@ export default function EveningPage() {
     );
   }
 
-  if (!isAfter5PM()) {
+  if (!isRecovery && !isAfter5PM()) {
     return (
       <TimeGateScreen
         title="Avond Ritueel"
@@ -172,7 +172,7 @@ export default function EveningPage() {
     );
   }
 
-  const isAlreadyComplete = isEveningRitualComplete();
+  const isAlreadyComplete = isEveningRitualComplete(targetDate);
 
   return (
     <div className="min-h-screen bg-[#ffffff] pb-28">
@@ -186,7 +186,12 @@ export default function EveningPage() {
             >
               <ArrowLeft size={18} strokeWidth={2} />
             </Link>
-            <h1 className="text-[18px] font-bold text-[#0a0a14] tracking-tight">Avond Ritueel</h1>
+            <div>
+              <h1 className="text-[18px] font-bold text-[#0a0a14] tracking-tight">Avond Ritueel</h1>
+              {isRecovery && (
+                <p className="text-[11px] text-[#8a8a9a]">Inhalen van gisteren</p>
+              )}
+            </div>
           </div>
           <div className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-[#f4f4f7]">
             <Moon size={18} className="text-[#0a0a14]" />
@@ -195,6 +200,17 @@ export default function EveningPage() {
       </header>
 
       <div className="max-w-lg mx-auto px-5 py-5">
+        {/* Recovery banner */}
+        {isRecovery && !isAlreadyComplete && (
+          <div className="rounded-[16px] border border-[#6366f1]/20 bg-[#6366f1]/5 p-4 mb-5 flex items-center gap-3">
+            <Moon size={18} className="text-[#6366f1] flex-shrink-0" />
+            <div>
+              <p className="text-[13px] font-semibold text-[#0a0a14]">Avondritueel van gisteren inhalen</p>
+              <p className="text-[12px] text-[#8a8a9a]">Reflecteer alsnog op {new Date(targetDate + 'T12:00:00').toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+            </div>
+          </div>
+        )}
+
         {/* Already complete banner */}
         {isAlreadyComplete && (
           <div className="rounded-[16px] border border-[#00cc66]/20 bg-[#00cc66]/5 p-4 mb-5 flex items-center gap-3">
@@ -438,5 +454,17 @@ export default function EveningPage() {
 
       <BottomNav />
     </div>
+  );
+}
+
+export default function EveningPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#ffffff] flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-[#00cc66] border-t-transparent animate-spin" />
+      </div>
+    }>
+      <EveningContent />
+    </Suspense>
   );
 }

@@ -11,7 +11,7 @@ import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { Win } from '@/types';
 import { RitualGuard } from '@/components/weekflow/ritual-guard';
-import { getDayType } from '@/lib/weekflow.service';
+import { getDayType, isEveningRitualComplete } from '@/lib/weekflow.service';
 import { initializeNotifications } from '@/lib/notifications.service';
 import { canStillDoWeeklyStart } from '@/lib/ritual-recovery.service';
 import { useRitualStatus } from '@/hooks/useRitualStatus';
@@ -95,6 +95,15 @@ export default function DashboardPage() {
   const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
   const focusGoal  = goals[0];
 
+  const yesterday = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
+  const yesterdayDay = new Date(yesterday + 'T12:00:00').getDay();
+  const missedEveningYesterday =
+    yesterdayDay >= 1 && yesterdayDay <= 5 && !isEveningRitualComplete(yesterday);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -139,6 +148,22 @@ export default function DashboardPage() {
               &ldquo;The best way to predict the future is to create it.&rdquo;
             </p>
           </div>
+
+          {/* ══ GEMIST AVONDRITUEEL BANNER ══════════════════════ */}
+          {missedEveningYesterday && (
+            <Link
+              href={`/evening?date=${yesterday}`}
+              className="flex items-center gap-3 rounded-[16px] border border-[#6366f1]/25 bg-[#6366f1]/5 p-4 mb-5 active:scale-[0.99] transition-transform"
+            >
+              <div className="w-9 h-9 rounded-[10px] bg-[#6366f1]/15 flex items-center justify-center flex-shrink-0">
+                <Moon size={17} className="text-[#6366f1]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold text-[#0a0a14]">Avondritueel gemist</p>
+                <p className="text-[11px] text-[#6366f1]">Tik om gisteren alsnog in te vullen →</p>
+              </div>
+            </Link>
+          )}
 
           {/* ══ FOCUS CARD ══════════════════════════════════════ */}
           {focusGoal ? (

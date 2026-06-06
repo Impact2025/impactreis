@@ -161,8 +161,8 @@ export function detectMissedRituals(): MissedRitual[] {
         type: 'evening',
         date: yesterday,
         daysAgo: 1,
-        canRecover: false,
-        priority: 'low',
+        canRecover: true,
+        priority: 'medium',
       });
     }
   }

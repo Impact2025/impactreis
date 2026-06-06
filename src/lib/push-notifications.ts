@@ -32,7 +32,7 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   weeklyReview: true,
   streakReminders: true,
   morningTime: '07:00',
-  eveningTime: '21:00',
+  eveningTime: '21:30',
 };
 
 class PushNotificationService {
