@@ -3,22 +3,28 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Sunrise, ArrowLeft, ArrowRight, CheckCircle, Heart, Target, Zap } from 'lucide-react';
+import { Sunrise, ArrowLeft, ArrowRight, CheckCircle, Heart, Target, Zap, Brain } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
-type Step = 'intentie' | 'status' | 'dankbaarheid' | 'affirmatie' | 'done';
+type Step = 'intentie' | 'focusblokken' | 'status' | 'dankbaarheid' | 'affirmatie' | 'done';
 
-const STEPS: Step[] = ['intentie', 'status', 'dankbaarheid', 'affirmatie'];
+const STEPS: Step[] = ['intentie', 'focusblokken', 'status', 'dankbaarheid', 'affirmatie'];
 
 const STEP_LABELS: Record<Step, string> = {
   intentie: 'Intentie',
+  focusblokken: 'Focus Blokken',
   status: 'Status',
   dankbaarheid: 'Dankbaarheid',
   affirmatie: 'Affirmatie',
   done: 'Klaar',
 };
+
+interface FocusBlok {
+  onderwerp: string;
+  doel: string;
+}
 
 interface MorningData {
   intentie: string;
@@ -28,6 +34,8 @@ interface MorningData {
   sleepQuality: number;
   sleepTime: string;
   wakeTime: string;
+  focusBlok1: FocusBlok;
+  focusBlok2: FocusBlok;
 }
 
 export default function MorningPage() {
@@ -50,6 +58,8 @@ export default function MorningPage() {
     sleepQuality: 7,
     sleepTime: '23:00',
     wakeTime: '06:30',
+    focusBlok1: { onderwerp: '', doel: '' },
+    focusBlok2: { onderwerp: '', doel: '' },
   });
 
   useEffect(() => {
@@ -71,6 +81,12 @@ export default function MorningPage() {
               sleepQuality: typeof p.sleepQuality === 'number' ? p.sleepQuality : 7,
               sleepTime: typeof p.sleepTime === 'string' ? p.sleepTime : '23:00',
               wakeTime: typeof p.wakeTime === 'string' ? p.wakeTime : '06:30',
+              focusBlok1: p.focusBlok1 && typeof p.focusBlok1 === 'object'
+                ? { onderwerp: p.focusBlok1.onderwerp || '', doel: p.focusBlok1.doel || '' }
+                : { onderwerp: '', doel: '' },
+              focusBlok2: p.focusBlok2 && typeof p.focusBlok2 === 'object'
+                ? { onderwerp: p.focusBlok2.onderwerp || '', doel: p.focusBlok2.doel || '' }
+                : { onderwerp: '', doel: '' },
             });
           } catch { /* corrupt localStorage, use defaults */ }
         }
@@ -146,6 +162,7 @@ export default function MorningPage() {
 
   const canGoNext = () => {
     if (step === 'intentie') return (formData.intentie ?? '').trim().length > 0;
+    if (step === 'focusblokken') return formData.focusBlok1.onderwerp.trim().length > 0 && formData.focusBlok2.onderwerp.trim().length > 0;
     if (step === 'dankbaarheid') return (formData.dankbaarheid ?? []).some((d) => (d ?? '').trim().length > 0);
     if (step === 'affirmatie') return (formData.affirmatie ?? '').trim().length > 0;
     return true;
@@ -199,6 +216,29 @@ export default function MorningPage() {
                 <p className="text-[11px] text-[#8a8a9a] uppercase tracking-widest mb-1">Intentie</p>
                 <p className="text-[14px] text-[#0a0a14] leading-relaxed">{formData.intentie}</p>
               </div>
+              {(formData.focusBlok1?.onderwerp || formData.focusBlok2?.onderwerp) ? (
+                <div className="border-t border-[#f4f4f7] pt-4 space-y-2">
+                  <p className="text-[11px] text-[#8a8a9a] uppercase tracking-widest mb-2">Focus Blokken</p>
+                  {formData.focusBlok1?.onderwerp ? (
+                    <div className="flex items-start gap-3 bg-[#f4f4f7] rounded-[12px] p-3">
+                      <span className="text-[11px] font-bold text-[#00cc66] bg-[#f0fdf4] px-2 py-0.5 rounded-md shrink-0">08:30</span>
+                      <div>
+                        <p className="text-[13px] font-semibold text-[#0a0a14]">{formData.focusBlok1.onderwerp}</p>
+                        {formData.focusBlok1.doel ? <p className="text-[12px] text-[#8a8a9a] mt-0.5">Doel: {formData.focusBlok1.doel}</p> : null}
+                      </div>
+                    </div>
+                  ) : null}
+                  {formData.focusBlok2?.onderwerp ? (
+                    <div className="flex items-start gap-3 bg-[#f4f4f7] rounded-[12px] p-3">
+                      <span className="text-[11px] font-bold text-[#00cc66] bg-[#f0fdf4] px-2 py-0.5 rounded-md shrink-0">12:30</span>
+                      <div>
+                        <p className="text-[13px] font-semibold text-[#0a0a14]">{formData.focusBlok2.onderwerp}</p>
+                        {formData.focusBlok2.doel ? <p className="text-[12px] text-[#8a8a9a] mt-0.5">Doel: {formData.focusBlok2.doel}</p> : null}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               {formData.affirmatie ? (
                 <div className="border-t border-[#f4f4f7] pt-4">
                   <p className="text-[11px] text-[#8a8a9a] uppercase tracking-widest mb-1">Affirmatie</p>
@@ -316,6 +356,94 @@ export default function MorningPage() {
                 className="w-full resize-none bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] px-4 py-3 text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] transition-colors"
               />
             </div>
+          </div>
+        )}
+
+        {/* Step: Focus Blokken */}
+        {step === 'focusblokken' && (
+          <div className="space-y-4">
+            <div className="rounded-[16px] bg-[#0a0a14] p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Brain size={18} className="text-[#00cc66]" />
+                <span className="text-[11px] text-white/40 uppercase tracking-widest">Deep Work Planning</span>
+              </div>
+              <p className="text-[17px] text-white font-semibold">Jouw 2 focusblokken vandaag</p>
+              <p className="text-[13px] text-white/50 mt-1">Besluit nu — zodat je straks direct begint.</p>
+            </div>
+
+            {/* Blok 1 */}
+            <div className="rounded-[16px] border border-[#e8e8ec] p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-[8px] bg-[#0a0a14] flex items-center justify-center">
+                    <span className="text-[11px] font-bold text-white">1</span>
+                  </div>
+                  <span className="text-[14px] font-semibold text-[#0a0a14]">Focusblok 1</span>
+                </div>
+                <span className="text-[12px] font-semibold text-[#00cc66] bg-[#f0fdf4] px-3 py-1 rounded-full">
+                  08:30 – 10:00
+                </span>
+              </div>
+              <div>
+                <label className="block text-[12px] text-[#8a8a9a] mb-1.5 font-medium uppercase tracking-wide">Wat ga ik doen?</label>
+                <input
+                  type="text"
+                  value={formData.focusBlok1.onderwerp}
+                  onChange={(e) => setFormData({ ...formData, focusBlok1: { ...formData.focusBlok1, onderwerp: e.target.value } })}
+                  placeholder="Bijv: Voorstel schrijven voor klant X"
+                  className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-[12px] text-[#8a8a9a] mb-1.5 font-medium uppercase tracking-wide">Welk doel wil ik bereiken?</label>
+                <input
+                  type="text"
+                  value={formData.focusBlok1.doel}
+                  onChange={(e) => setFormData({ ...formData, focusBlok1: { ...formData.focusBlok1, doel: e.target.value } })}
+                  placeholder="Bijv: Eerste versie klaar hebben"
+                  className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Blok 2 */}
+            <div className="rounded-[16px] border border-[#e8e8ec] p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-[8px] bg-[#0a0a14] flex items-center justify-center">
+                    <span className="text-[11px] font-bold text-white">2</span>
+                  </div>
+                  <span className="text-[14px] font-semibold text-[#0a0a14]">Focusblok 2</span>
+                </div>
+                <span className="text-[12px] font-semibold text-[#00cc66] bg-[#f0fdf4] px-3 py-1 rounded-full">
+                  12:30 – 14:00
+                </span>
+              </div>
+              <div>
+                <label className="block text-[12px] text-[#8a8a9a] mb-1.5 font-medium uppercase tracking-wide">Wat ga ik doen?</label>
+                <input
+                  type="text"
+                  value={formData.focusBlok2.onderwerp}
+                  onChange={(e) => setFormData({ ...formData, focusBlok2: { ...formData.focusBlok2, onderwerp: e.target.value } })}
+                  placeholder="Bijv: Acquisitiegesprekken voorbereiden"
+                  className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-[12px] text-[#8a8a9a] mb-1.5 font-medium uppercase tracking-wide">Welk doel wil ik bereiken?</label>
+                <input
+                  type="text"
+                  value={formData.focusBlok2.doel}
+                  onChange={(e) => setFormData({ ...formData, focusBlok2: { ...formData.focusBlok2, doel: e.target.value } })}
+                  placeholder="Bijv: 3 concrete afspraken ingepland"
+                  className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] transition-colors"
+                />
+              </div>
+            </div>
+
+            <p className="text-center text-[12px] text-[#8a8a9a] italic px-2">
+              "Success is doing a few things well, consistently." — Tony Robbins
+            </p>
           </div>
         )}
 
