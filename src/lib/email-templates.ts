@@ -240,6 +240,232 @@ export function sessieAnalyseEmail(data: SessieAnalyseData): { subject: string; 
   return { subject, html: base(`Sessie analyse — ${data.dayName}`, subject, body) };
 }
 
+// ─── Template 5: Weekrapport ─────────────────────────────────────────────────
+
+export interface WeekrapportData {
+  weekStart: string;
+  weekEnd: string;
+  ritualsCompleted: number;
+  avgEnergy: number | null;
+  avgSleep: number | null;
+  focusBlokkengepland: number;
+  wins: { title: string; category: string; impactLevel: number }[];
+  topFocusBlokken: { time: string; onderwerp: string; doel: string }[];
+  aiSamenvatting: string;
+}
+
+export function weekrapportEmail(data: WeekrapportData, appUrl: string): { subject: string; html: string } {
+  const subject = `📊 Weekrapport ${data.weekStart}–${data.weekEnd} — jouw week in één oogopslag`;
+
+  const ritualColor = data.ritualsCompleted >= 5 ? '#00cc66' : data.ritualsCompleted >= 3 ? '#f59e0b' : '#ef4444';
+  const ritualLabel = data.ritualsCompleted >= 5 ? 'Top week! 🔥' : data.ritualsCompleted >= 3 ? 'Goed bezig 👍' : 'Volgende week beter 💪';
+
+  const winsHtml = data.wins.length === 0
+    ? '<p style="font-size:13px;color:#8a8a9a;margin:0;font-style:italic;">Geen wins gelogd deze week.</p>'
+    : data.wins.slice(0, 5).map(w =>
+        `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span style="font-size:14px;">🏆</span>
+          <span style="font-size:13px;color:#0a0a14;flex:1;">${w.title}</span>
+          <span style="font-size:11px;color:#f59e0b;">${'★'.repeat(w.impactLevel)}</span>
+        </div>`
+      ).join('');
+
+  const focusHtml = data.topFocusBlokken.length === 0
+    ? '<p style="font-size:13px;color:#8a8a9a;margin:0;font-style:italic;">Geen focusblokken geplanned.</p>'
+    : data.topFocusBlokken.slice(0, 4).map(f =>
+        `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
+          <span style="font-size:11px;font-weight:700;color:#00cc66;background:#f0fdf4;padding:2px 7px;border-radius:6px;flex-shrink:0;margin-top:1px;">${f.time}</span>
+          <div>
+            <p style="margin:0;font-size:13px;color:#0a0a14;font-weight:600;">${f.onderwerp}</p>
+            ${f.doel ? `<p style="margin:2px 0 0;font-size:12px;color:#8a8a9a;">Doel: ${f.doel}</p>` : ''}
+          </div>
+        </div>`
+      ).join('');
+
+  const body = `
+    <p style="font-size:17px;font-weight:600;color:#0a0a14;margin:0 0 6px;">Hier is jouw weekoverzicht.</p>
+    <p style="font-size:14px;color:#5a5a6a;line-height:1.7;margin:0 0 22px;">Elke week telt. Dit is wat jij hebt neergezet.</p>
+
+    <div style="background:#0a0a14;border-radius:14px;padding:20px 24px;margin-bottom:14px;display:table;width:100%;box-sizing:border-box;">
+      <div style="display:table-cell;vertical-align:middle;">
+        <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.1em;">Ochtend Rituelen</p>
+        <p style="margin:4px 0 0;font-size:32px;font-weight:700;color:#fff;line-height:1;">${data.ritualsCompleted}<span style="font-size:16px;color:rgba(255,255,255,0.4);font-weight:400;"> / 7</span></p>
+      </div>
+      <div style="display:table-cell;vertical-align:middle;text-align:right;">
+        <span style="background:${ritualColor};border-radius:10px;padding:7px 14px;font-size:13px;font-weight:700;color:#fff;">${ritualLabel}</span>
+      </div>
+    </div>
+
+    <div style="background:#f4f4f7;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+      ${data.avgEnergy !== null ? score('Gemiddelde energie', Math.round(data.avgEnergy * 10) / 10) : ''}
+      ${data.avgSleep !== null ? score('Gemiddelde slaap', Math.round(data.avgSleep * 10) / 10) : ''}
+      <div style="display:table;width:100%;margin-top:12px;">
+        <div style="display:table-cell;text-align:center;">
+          <p style="margin:0;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.08em;">Focus blokken</p>
+          <p style="margin:4px 0 0;font-size:26px;font-weight:700;color:#0a0a14;">${data.focusBlokkengepland}</p>
+          <p style="margin:0;font-size:11px;color:#8a8a9a;">gepland</p>
+        </div>
+        <div style="display:table-cell;text-align:center;">
+          <p style="margin:0;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.08em;">Wins</p>
+          <p style="margin:4px 0 0;font-size:26px;font-weight:700;color:#0a0a14;">${data.wins.length}</p>
+          <p style="margin:0;font-size:11px;color:#8a8a9a;">gelogd</p>
+        </div>
+      </div>
+    </div>
+
+    ${data.wins.length > 0 ? `
+    <div style="background:#f4f4f7;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+      <p style="margin:0 0 12px;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Wins deze week</p>
+      ${winsHtml}
+    </div>` : ''}
+
+    ${data.topFocusBlokken.length > 0 ? `
+    <div style="background:#f4f4f7;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+      <p style="margin:0 0 12px;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Focusblokken deze week</p>
+      ${focusHtml}
+    </div>` : ''}
+
+    <div style="background:#0a0a14;border-radius:14px;padding:24px;margin-bottom:16px;">
+      <p style="margin:0 0 12px;font-size:11px;color:#00cc66;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">AI Week Coaching</p>
+      <div style="font-size:14px;color:#e8e8ec;line-height:1.8;">${data.aiSamenvatting.replace(/\n/g, '<br/>')}</div>
+    </div>
+
+    <div style="text-align:center;">${btn('Open mijn app →', appUrl)}</div>
+  `;
+
+  return { subject, html: base(`Weekrapport ${data.weekStart}–${data.weekEnd}`, subject, body) };
+}
+
+// ─── Template 6: ADHD Rapport ─────────────────────────────────────────────────
+
+export interface AdhdRapportData {
+  weekNr: 1 | 2;
+  weekStart: string;
+  weekEnd: string;
+  loggedDays: number;
+  avgDagScore: number;
+  maxScore: number;
+  symptomAvgs: Record<string, number>;
+  top5: string[];
+  week1AvgDagScore?: number;
+  week1SymptomAvgs?: Record<string, number>;
+}
+
+function adhdColor(avg: number): string {
+  if (avg < 0.5) return '#00cc66';
+  if (avg < 1.5) return '#f59e0b';
+  if (avg < 2.5) return '#f97316';
+  return '#ef4444';
+}
+
+function adhdLabel(avg: number): string {
+  if (avg < 0.5) return 'geen last';
+  if (avg < 1.5) return 'zo nu en dan';
+  if (avg < 2.5) return 'duidelijk/vaak';
+  return 'continu';
+}
+
+export function adhdRapportEmail(data: AdhdRapportData, appUrl: string): { subject: string; html: string } {
+  const subject = `🧠 ADHD Meting Week ${data.weekNr} — ${data.weekStart} t/m ${data.weekEnd}`;
+
+  const symptoms = Object.keys(data.symptomAvgs);
+  const scorePercent = data.maxScore > 0 ? Math.round((data.avgDagScore / data.maxScore) * 100) : 0;
+  const scoreColor = scorePercent < 25 ? '#00cc66' : scorePercent < 50 ? '#f59e0b' : scorePercent < 75 ? '#f97316' : '#ef4444';
+
+  const symptomRows = symptoms.map(s => {
+    const avg = data.symptomAvgs[s];
+    const pct = Math.round((avg / 3) * 100);
+    const col = adhdColor(avg);
+    const w1avg = data.week1SymptomAvgs?.[s];
+    const diff = w1avg !== undefined ? avg - w1avg : null;
+    const diffHtml = diff !== null
+      ? `<span style="font-size:11px;color:${diff < -0.1 ? '#00cc66' : diff > 0.1 ? '#ef4444' : '#8a8a9a'};margin-left:8px;">${diff > 0 ? '▲' : diff < 0 ? '▼' : '='} ${Math.abs(diff).toFixed(1)}</span>`
+      : '';
+    return `<tr>
+      <td style="padding:5px 0;font-size:12px;color:#0a0a14;width:140px;vertical-align:middle;">${s}</td>
+      <td style="padding:5px 8px;vertical-align:middle;">
+        <div style="background:#f4f4f7;border-radius:999px;height:5px;width:120px;">
+          <div style="background:${col};border-radius:999px;height:5px;width:${pct}%;"></div>
+        </div>
+      </td>
+      <td style="padding:5px 0;font-size:12px;font-weight:700;color:${col};width:28px;text-align:right;vertical-align:middle;">${avg.toFixed(1)}</td>
+      <td style="padding:5px 0;font-size:11px;color:#8a8a9a;padding-left:8px;vertical-align:middle;">${adhdLabel(avg)}${diffHtml}</td>
+    </tr>`;
+  }).join('');
+
+  const top5Html = data.top5.map((s, i) => {
+    const avg = data.symptomAvgs[s];
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <span style="width:20px;height:20px;border-radius:50%;background:#f4f4f7;font-size:10px;font-weight:700;color:#8a8a9a;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i + 1}</span>
+      <span style="font-size:13px;color:#0a0a14;flex:1;">${s}</span>
+      <span style="font-size:12px;font-weight:700;color:${adhdColor(avg)};">${avg.toFixed(1)}</span>
+    </div>`;
+  }).join('');
+
+  const vergelijkingHtml = data.weekNr === 2 && data.week1AvgDagScore !== undefined ? `
+    <div style="background:#f4f4f7;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+      <p style="margin:0 0 12px;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Week 1 vs Week 2</p>
+      <div style="display:table;width:100%;">
+        <div style="display:table-cell;text-align:center;">
+          <p style="margin:0;font-size:11px;color:#8a8a9a;">Week 1 gemiddeld</p>
+          <p style="margin:4px 0 0;font-size:24px;font-weight:700;color:#0a0a14;">${data.week1AvgDagScore.toFixed(1)}<span style="font-size:12px;color:#8a8a9a;">/${data.maxScore}</span></p>
+        </div>
+        <div style="display:table-cell;text-align:center;">
+          <p style="margin:0;font-size:11px;color:#8a8a9a;">Week 2 gemiddeld</p>
+          <p style="margin:4px 0 0;font-size:24px;font-weight:700;color:#0a0a14;">${data.avgDagScore.toFixed(1)}<span style="font-size:12px;color:#8a8a9a;">/${data.maxScore}</span></p>
+        </div>
+        <div style="display:table-cell;text-align:center;">
+          <p style="margin:0;font-size:11px;color:#8a8a9a;">Verschil</p>
+          ${(() => {
+            const d = data.avgDagScore - data.week1AvgDagScore!;
+            const col = d < -1 ? '#00cc66' : d > 1 ? '#ef4444' : '#8a8a9a';
+            return `<p style="margin:4px 0 0;font-size:24px;font-weight:700;color:${col};">${d > 0 ? '+' : ''}${d.toFixed(1)}</p>`;
+          })()}
+        </div>
+      </div>
+    </div>
+  ` : '';
+
+  const body = `
+    <p style="font-size:17px;font-weight:600;color:#0a0a14;margin:0 0 6px;">ADHD Klachten Meting — Week ${data.weekNr}</p>
+    <p style="font-size:14px;color:#5a5a6a;line-height:1.7;margin:0 0 22px;">Periode: <strong>${data.weekStart} t/m ${data.weekEnd}</strong> · ${data.loggedDays} van 7 dagen gelogd${data.weekNr === 2 ? ' · Eindmeting voor Ritalin start' : ' · Nulmeting'}</p>
+
+    <div style="background:#0a0a14;border-radius:14px;padding:20px 24px;margin-bottom:14px;display:table;width:100%;box-sizing:border-box;">
+      <div style="display:table-cell;vertical-align:middle;">
+        <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.1em;">Gemiddelde dagscore</p>
+        <p style="margin:4px 0 0;font-size:32px;font-weight:700;color:#fff;line-height:1;">${data.avgDagScore.toFixed(1)}<span style="font-size:16px;color:rgba(255,255,255,0.4);font-weight:400;"> / ${data.maxScore}</span></p>
+      </div>
+      <div style="display:table-cell;vertical-align:middle;text-align:right;">
+        <span style="background:${scoreColor};border-radius:10px;padding:7px 14px;font-size:13px;font-weight:700;color:#fff;">${scorePercent}%</span>
+      </div>
+    </div>
+
+    ${vergelijkingHtml}
+
+    <div style="background:#f4f4f7;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+      <p style="margin:0 0 12px;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Top 5 zwaarste klachten</p>
+      ${top5Html}
+    </div>
+
+    <div style="background:#f4f4f7;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+      <p style="margin:0 0 14px;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Alle klachten — gemiddelde score (0–3)</p>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        ${symptomRows}
+      </table>
+      <p style="margin:12px 0 0;font-size:11px;color:#8a8a9a;">Schaal: 0 = geen last &nbsp;·&nbsp; 1 = zo nu en dan &nbsp;·&nbsp; 2 = duidelijk/vaak &nbsp;·&nbsp; 3 = continu</p>
+    </div>
+
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:20px 24px;margin-bottom:16px;">
+      <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#065f46;">📋 Neem dit mee naar je afspraak</p>
+      <p style="margin:0;font-size:13px;color:#047857;line-height:1.6;">Dit is jouw ${data.weekNr === 1 ? 'nulmeting vóór' : 'eindmeting na'} de meetperiode. Je kunt deze e-mail doorsturen naar je psychiater als referentie voor de medicatiedosering.</p>
+    </div>
+
+    <div style="text-align:center;">${btn('Bekijk ADHD pagina →', `${appUrl}/adhd`)}</div>
+  `;
+
+  return { subject, html: base(`ADHD Meting Week ${data.weekNr} — ${data.weekStart}–${data.weekEnd}`, subject, body) };
+}
+
 // ─── Template 4: Wachtwoord reset ────────────────────────────────────────────
 
 export function resetWachtwoordEmail(resetUrl: string): { subject: string; html: string } {

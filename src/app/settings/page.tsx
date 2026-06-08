@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Bell, Clock, Download, Check } from 'lucide-react';
+import { ArrowLeft, Bell, Clock, Download, Check, Mail, Loader2 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import {
   getPreferences,
@@ -33,6 +33,8 @@ export default function SettingsPage() {
     createBeforeConsumeEnabled: true,
   });
   const [streakData, setStreakData] = useState({ currentStreak: 0, longestStreak: 0, totalDaysCompleted: 0 });
+  const [emailSending, setEmailSending] = useState<'weekrapport' | 'adhd' | null>(null);
+  const [emailResult, setEmailResult] = useState<{ type: string; ok: boolean } | null>(null);
   const [isPWAInstalled, setIsPWAInstalled] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
@@ -83,6 +85,25 @@ export default function SettingsPage() {
     savePreferences({ [key]: value });
     setPreferences(prev => ({ ...prev, [key]: value }));
     if (preferences.enabled && notifPermission === 'granted') scheduleAllNotifications();
+  };
+
+  const handleSendEmail = async (type: 'weekrapport' | 'adhd') => {
+    setEmailSending(type);
+    setEmailResult(null);
+    try {
+      const token = localStorage.getItem('token');
+      const url = type === 'weekrapport' ? '/api/email/weekrapport' : '/api/email/adhd-rapport';
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+      setEmailResult({ type, ok: res.ok });
+    } catch {
+      setEmailResult({ type, ok: false });
+    } finally {
+      setEmailSending(null);
+    }
   };
 
   const handleInstallPWA = async () => {
@@ -234,6 +255,54 @@ export default function SettingsPage() {
               <p className="text-[22px] font-bold text-[#0a0a14]">{streakData.totalDaysCompleted}</p>
               <p className="text-[11px] text-[#8a8a9a] mt-0.5">dagen</p>
             </div>
+          </div>
+        </section>
+
+        {/* E-mail rapporten */}
+        <section>
+          <h2 className="text-[11px] font-bold text-[#8a8a9a] uppercase tracking-[0.18em] mb-3">
+            E-mail Rapporten
+          </h2>
+          <div className="rounded-[16px] border border-[#e8e8ec] bg-white divide-y divide-[#e8e8ec] overflow-hidden">
+            <div className="px-5 py-4 flex items-center justify-between">
+              <div>
+                <p className="text-[14px] font-medium text-[#0a0a14]">Weekrapport</p>
+                <p className="text-[12px] text-[#8a8a9a] mt-0.5">Rituelen, energie, focusblokken, wins</p>
+              </div>
+              <button
+                onClick={() => handleSendEmail('weekrapport')}
+                disabled={emailSending !== null}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-[#0a0a14] text-white text-[13px] font-semibold rounded-[10px] active:scale-95 transition-transform disabled:opacity-50"
+              >
+                {emailSending === 'weekrapport'
+                  ? <Loader2 size={14} className="animate-spin" />
+                  : <Mail size={14} />}
+                Stuur nu
+              </button>
+            </div>
+            <div className="px-5 py-4 flex items-center justify-between">
+              <div>
+                <p className="text-[14px] font-medium text-[#0a0a14]">ADHD Rapport</p>
+                <p className="text-[12px] text-[#8a8a9a] mt-0.5">Klachtenmeting week 1 of 2</p>
+              </div>
+              <button
+                onClick={() => handleSendEmail('adhd')}
+                disabled={emailSending !== null}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-[#a78bfa] text-white text-[13px] font-semibold rounded-[10px] active:scale-95 transition-transform disabled:opacity-50"
+              >
+                {emailSending === 'adhd'
+                  ? <Loader2 size={14} className="animate-spin" />
+                  : <Mail size={14} />}
+                Stuur nu
+              </button>
+            </div>
+            {emailResult && (
+              <div className={`px-5 py-3 text-[13px] font-medium ${emailResult.ok ? 'text-[#00cc66]' : 'text-red-500'}`}>
+                {emailResult.ok
+                  ? `✓ ${emailResult.type === 'weekrapport' ? 'Weekrapport' : 'ADHD rapport'} verstuurd naar je inbox`
+                  : `✗ Versturen mislukt — check Vercel logs`}
+              </div>
+            )}
           </div>
         </section>
 

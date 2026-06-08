@@ -7,6 +7,18 @@
     {
       "path": "/api/email/ochtend-herinnering",
       "schedule": "30 6 * * *"
+    },
+    {
+      "path": "/api/email/weekrapport",
+      "schedule": "0 7 * * 0"
+    },
+    {
+      "path": "/api/email/adhd-rapport",
+      "schedule": "0 18 9 6 *"
+    },
+    {
+      "path": "/api/email/adhd-rapport",
+      "schedule": "0 18 17 6 *"
     }
   ]
 }
