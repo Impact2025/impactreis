@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Bell, Sunrise, Moon, CalendarDays, BookOpen,
-  TrendingUp, Play, ChevronRight, Zap,
+  TrendingUp, Play, ChevronRight, Zap, BookHeart,
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -433,6 +433,18 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-[12px] font-bold text-[#0a0a14]">Controle</p>
                   <p className="text-[10px] text-[#8a8a9a]">Cirkel oefening</p>
+                </div>
+              </Link>
+              <Link
+                href="/dagboek"
+                className="rounded-[16px] border border-[#e8e8ec] bg-white p-4 flex items-center gap-3 hover:border-[#00cc66]/30 transition-colors"
+              >
+                <div className="w-9 h-9 rounded-[10px] bg-[#fdf4ff] flex items-center justify-center">
+                  <BookHeart size={17} className="text-[#a855f7]" />
+                </div>
+                <div>
+                  <p className="text-[12px] font-bold text-[#0a0a14]">Dagboek</p>
+                  <p className="text-[10px] text-[#8a8a9a]">Hoe voel je je?</p>
                 </div>
               </Link>
               <Link
