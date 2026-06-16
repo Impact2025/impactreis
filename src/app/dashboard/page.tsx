@@ -468,7 +468,7 @@ export default function DashboardPage() {
                   <div className="w-9 h-9 rounded-[10px] bg-[#a78bfa]/20 flex items-center justify-center text-base">🧠</div>
                   <div>
                     <p className="text-[13px] font-bold text-[#0a0a14]">ADHD Klachten</p>
-                    <p className="text-[10px] text-[#a78bfa] font-medium">Meting voor medicatiestart · 14 dagen</p>
+                    <p className="text-[10px] text-[#a78bfa] font-medium">Meting voor medicatiestart · 3 weken</p>
                   </div>
                 </div>
                 <ChevronRight size={17} className="text-[#a78bfa]/60 group-hover:text-[#a78bfa] transition-colors" />

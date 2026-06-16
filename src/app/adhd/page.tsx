@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, Brain, TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { BottomNav } from '@/components/ui/bottom-nav';
+import { ADHD_WEEKS, weekDates, currentWeekNr, weekByNr } from '@/lib/adhd-weeks';
 
 const SYMPTOMS = [
   'Moeite met concentratie',
@@ -24,23 +25,12 @@ const SYMPTOMS = [
   'Vreetbuien',
 ];
 
-const START_DATE = '2026-06-03';
 const MAX_TOTAL = SYMPTOMS.length * 3; // 42
 
 interface AdhdLog {
   date: string;
   scores: Record<string, number>;
   notes: string;
-}
-
-function dateRange(start: string, days: number): string[] {
-  const result: string[] = [];
-  const d = new Date(start);
-  for (let i = 0; i < days; i++) {
-    result.push(d.toISOString().split('T')[0]);
-    d.setDate(d.getDate() + 1);
-  }
-  return result;
 }
 
 function avgColor(avg: number): string {
@@ -78,14 +68,14 @@ function ScoreBar({ avg }: { avg: number }) {
 export default function AdhdPage() {
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<AdhdLog[]>([]);
-  const [activeWeek, setActiveWeek] = useState<1 | 2>(1);
+  const [activeWeek, setActiveWeek] = useState<number>(currentWeekNr());
   const router = useRouter();
 
   const fetchLogs = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-      const res = await fetch('/api/adhd-logs?days=14', {
+      const res = await fetch('/api/adhd-logs?days=21', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -102,12 +92,11 @@ export default function AdhdPage() {
     fetchLogs().finally(() => setLoading(false));
   }, [router, fetchLogs]);
 
-  const week1Dates = dateRange(START_DATE, 7);
-  const week2Dates = dateRange(
-    new Date(new Date(START_DATE).getTime() + 7 * 86400000).toISOString().split('T')[0],
-    7
-  );
-  const activeDates = activeWeek === 1 ? week1Dates : week2Dates;
+  const activeWeekDef = weekByNr(activeWeek);
+  const activeDates = weekDates(activeWeekDef);
+  const weekLength = activeDates.length;
+  const todayStr = new Date().toISOString().split('T')[0];
+  const weekStarted = todayStr >= activeWeekDef.start;
 
   const weekLogs = logs.filter((l) => activeDates.includes(l.date));
   const loggedCount = weekLogs.length;
@@ -123,17 +112,17 @@ export default function AdhdPage() {
     .sort((a, b) => symptomAvgs[b] - symptomAvgs[a])
     .slice(0, 5);
 
-  // Week-over-week trend
-  const week1Logs = logs.filter((l) => week1Dates.includes(l.date));
-  const week2Logs = logs.filter((l) => week2Dates.includes(l.date));
+  // Trend t.o.v. de nulmeting (week 1)
   const avgTotal = (wLogs: AdhdLog[]) =>
     wLogs.length === 0
       ? null
       : wLogs.reduce((sum, l) => sum + Object.values(l.scores).reduce((a, b) => a + b, 0), 0) /
         wLogs.length;
-  const w1avg = avgTotal(week1Logs);
-  const w2avg = avgTotal(week2Logs);
-  const trend = w1avg !== null && w2avg !== null ? w2avg - w1avg : null;
+  const baselineDates = weekDates(ADHD_WEEKS[0]);
+  const baselineAvg = avgTotal(logs.filter((l) => baselineDates.includes(l.date)));
+  const activeAvg = avgTotal(weekLogs);
+  const trend =
+    activeWeek > 1 && baselineAvg !== null && activeAvg !== null ? activeAvg - baselineAvg : null;
 
   if (loading) {
     return (
@@ -168,20 +157,18 @@ export default function AdhdPage() {
 
         {/* Week tabs */}
         <div className="flex gap-2 p-1 bg-[#f4f4f7] rounded-[14px]">
-          {([1, 2] as const).map((w) => (
+          {ADHD_WEEKS.map((w) => (
             <button
-              key={w}
-              onClick={() => setActiveWeek(w)}
-              className={`flex-1 py-2.5 rounded-[11px] text-[13px] font-semibold transition-all ${
-                activeWeek === w
+              key={w.nr}
+              onClick={() => setActiveWeek(w.nr)}
+              className={`flex-1 py-2 rounded-[11px] flex flex-col items-center leading-tight transition-all ${
+                activeWeek === w.nr
                   ? 'bg-white text-[#0a0a14] shadow-sm'
                   : 'text-[#8a8a9a]'
               }`}
             >
-              Week {w}
-              <span className="text-[10px] font-normal ml-1">
-                {w === 1 ? '3–9 jun' : '10–17 jun'}
-              </span>
+              <span className="text-[13px] font-semibold">Week {w.nr}</span>
+              <span className="text-[10px] font-normal mt-0.5">{w.label}</span>
             </button>
           ))}
         </div>
@@ -191,7 +178,7 @@ export default function AdhdPage() {
           <div className="flex items-center justify-between mb-1">
             <p className="text-[13px] text-white/50">Gelogd</p>
             <p className="text-[13px] text-white/50">
-              {loggedCount === 0 && activeWeek === 2 ? 'Nog niet begonnen' : `${loggedCount} / 7 dagen`}
+              {loggedCount === 0 && !weekStarted ? 'Nog niet begonnen' : `${loggedCount} / ${weekLength} dagen`}
             </p>
           </div>
           {loggedCount > 0 && (
@@ -203,7 +190,7 @@ export default function AdhdPage() {
                 <p className="text-[11px] text-white/40 mt-0.5">gemiddelde dagscore</p>
               </div>
               <p className="text-[14px] text-white/30 pb-0.5">/ {MAX_TOTAL}</p>
-              {trend !== null && activeWeek === 2 && (
+              {trend !== null && (
                 <div className={`ml-auto flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-semibold ${
                   trend < -1 ? 'bg-[#f0fdf4] text-[#00cc66]' :
                   trend > 1 ? 'bg-[#fee2e2] text-[#ef4444]' :
@@ -217,9 +204,9 @@ export default function AdhdPage() {
           )}
           {loggedCount === 0 && (
             <p className="text-[14px] text-white/60 mt-2">
-              {activeWeek === 1
-                ? 'Log elke ochtend via het Ochtend Ritueel.'
-                : 'Week 2 begint op 10 juni.'}
+              {weekStarted
+                ? 'Log elke avond via het Avondritueel.'
+                : `Week ${activeWeek} begint op ${new Date(activeWeekDef.start + 'T12:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })}.`}
             </p>
           )}
         </div>
@@ -310,15 +297,15 @@ export default function AdhdPage() {
           </div>
         )}
 
-        {/* CTA to morning ritual */}
-        {loggedCount === 0 && activeWeek === 1 && (
+        {/* CTA to evening ritual */}
+        {loggedCount === 0 && weekStarted && (
           <Link
-            href="/morning"
+            href="/evening"
             className="block rounded-[16px] bg-[#f5f3ff] border border-[#e9d5ff] p-5 text-center active:scale-[0.98] transition-transform"
           >
             <Brain size={24} className="text-[#a78bfa] mx-auto mb-2" />
-            <p className="text-[14px] font-semibold text-[#0a0a14]">Start je eerste meting</p>
-            <p className="text-[12px] text-[#8a8a9a] mt-1">Via het Ochtend Ritueel → stap 5</p>
+            <p className="text-[14px] font-semibold text-[#0a0a14]">Log je meting van vandaag</p>
+            <p className="text-[12px] text-[#8a8a9a] mt-1">Via het Avondritueel → ADHD Klachten</p>
           </Link>
         )}
 

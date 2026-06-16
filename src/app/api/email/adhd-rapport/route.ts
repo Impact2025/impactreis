@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import { sql } from '@/lib/db';
 import { authenticateToken } from '@/lib/auth';
 import { adhdRapportEmail, AdhdRapportData } from '@/lib/email-templates';
+import { ADHD_WEEKS, weekByNr, weekDayCount, currentWeekNr } from '@/lib/adhd-weeks';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -15,11 +16,6 @@ const SYMPTOMS = [
 ];
 
 const MAX_TOTAL = SYMPTOMS.length * 3; // 42
-
-const WEEK1_START = '2026-06-03';
-const WEEK1_END = '2026-06-09';
-const WEEK2_START = '2026-06-10';
-const WEEK2_END = '2026-06-17';
 
 function formatNL(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
@@ -59,13 +55,12 @@ async function computeWeekStats(userId: number, start: string, end: string) {
   return { loggedDays, avgDagScore, symptomAvgs };
 }
 
-async function buildAndSend(userId: number, toEmail: string, weekNr: 1 | 2) {
+async function buildAndSend(userId: number, toEmail: string, weekNr: number) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mijn-ondernemers-os.vercel.app';
 
-  const start = weekNr === 1 ? WEEK1_START : WEEK2_START;
-  const end = weekNr === 1 ? WEEK1_END : WEEK2_END;
+  const week = weekByNr(weekNr);
 
-  const { loggedDays, avgDagScore, symptomAvgs } = await computeWeekStats(userId, start, end);
+  const { loggedDays, avgDagScore, symptomAvgs } = await computeWeekStats(userId, week.start, week.end);
 
   const top5 = [...SYMPTOMS]
     .sort((a, b) => symptomAvgs[b] - symptomAvgs[a])
@@ -74,16 +69,19 @@ async function buildAndSend(userId: number, toEmail: string, weekNr: 1 | 2) {
   let week1AvgDagScore: number | undefined;
   let week1SymptomAvgs: Record<string, number> | undefined;
 
-  if (weekNr === 2) {
-    const week1 = await computeWeekStats(userId, WEEK1_START, WEEK1_END);
+  if (weekNr > 1) {
+    const baseline = ADHD_WEEKS[0];
+    const week1 = await computeWeekStats(userId, baseline.start, baseline.end);
     week1AvgDagScore = week1.avgDagScore;
     week1SymptomAvgs = week1.symptomAvgs;
   }
 
   const emailData: AdhdRapportData = {
     weekNr,
-    weekStart: formatNL(start),
-    weekEnd: formatNL(end),
+    totalWeeks: ADHD_WEEKS.length,
+    weekDays: weekDayCount(week),
+    weekStart: formatNL(week.start),
+    weekEnd: formatNL(week.end),
     loggedDays,
     avgDagScore,
     maxScore: MAX_TOTAL,
@@ -105,12 +103,7 @@ async function buildAndSend(userId: number, toEmail: string, weekNr: 1 | 2) {
   if (error) throw new Error(JSON.stringify(error));
 }
 
-function detectWeek(): 1 | 2 {
-  const today = new Date().toISOString().split('T')[0];
-  return today <= WEEK1_END ? 1 : 2;
-}
-
-// GET — triggered by Vercel cron (June 9 and June 17)
+// GET — triggered by Vercel cron (eind van elke meetweek)
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -122,7 +115,7 @@ export async function GET(request: NextRequest) {
   if (users.length === 0) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
   try {
-    await buildAndSend(users[0].id as number, email, detectWeek());
+    await buildAndSend(users[0].id as number, email, currentWeekNr());
     return NextResponse.json({ ok: true });
   } catch (err: any) {
     console.error('ADHD rapport error:', err);
@@ -138,10 +131,10 @@ export async function POST(request: NextRequest) {
   const users = await sql`SELECT email FROM users WHERE id = ${userId} LIMIT 1`;
   if (users.length === 0) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-  let weekNr: 1 | 2 = detectWeek();
+  let weekNr: number = currentWeekNr();
   try {
     const body = await request.json();
-    if (body.week === 1 || body.week === 2) weekNr = body.week;
+    if (ADHD_WEEKS.some((w) => w.nr === body.week)) weekNr = body.week;
   } catch { /* use auto-detected week */ }
 
   try {

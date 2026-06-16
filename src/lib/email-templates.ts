@@ -339,7 +339,9 @@ export function weekrapportEmail(data: WeekrapportData, appUrl: string): { subje
 // ─── Template 6: ADHD Rapport ─────────────────────────────────────────────────
 
 export interface AdhdRapportData {
-  weekNr: 1 | 2;
+  weekNr: number;
+  totalWeeks: number;
+  weekDays: number;
   weekStart: string;
   weekEnd: string;
   loggedDays: number;
@@ -347,6 +349,7 @@ export interface AdhdRapportData {
   maxScore: number;
   symptomAvgs: Record<string, number>;
   top5: string[];
+  // Nulmeting (week 1) ter vergelijking, alleen gevuld voor weken > 1
   week1AvgDagScore?: number;
   week1SymptomAvgs?: Record<string, number>;
 }
@@ -402,16 +405,19 @@ export function adhdRapportEmail(data: AdhdRapportData, appUrl: string): { subje
     </div>`;
   }).join('');
 
-  const vergelijkingHtml = data.weekNr === 2 && data.week1AvgDagScore !== undefined ? `
+  const isFirst = data.weekNr === 1;
+  const isLast = data.weekNr === data.totalWeeks;
+
+  const vergelijkingHtml = !isFirst && data.week1AvgDagScore !== undefined ? `
     <div style="background:#f4f4f7;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
-      <p style="margin:0 0 12px;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Week 1 vs Week 2</p>
+      <p style="margin:0 0 12px;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Week 1 vs Week ${data.weekNr}</p>
       <div style="display:table;width:100%;">
         <div style="display:table-cell;text-align:center;">
           <p style="margin:0;font-size:11px;color:#8a8a9a;">Week 1 gemiddeld</p>
           <p style="margin:4px 0 0;font-size:24px;font-weight:700;color:#0a0a14;">${data.week1AvgDagScore.toFixed(1)}<span style="font-size:12px;color:#8a8a9a;">/${data.maxScore}</span></p>
         </div>
         <div style="display:table-cell;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#8a8a9a;">Week 2 gemiddeld</p>
+          <p style="margin:0;font-size:11px;color:#8a8a9a;">Week ${data.weekNr} gemiddeld</p>
           <p style="margin:4px 0 0;font-size:24px;font-weight:700;color:#0a0a14;">${data.avgDagScore.toFixed(1)}<span style="font-size:12px;color:#8a8a9a;">/${data.maxScore}</span></p>
         </div>
         <div style="display:table-cell;text-align:center;">
@@ -428,7 +434,7 @@ export function adhdRapportEmail(data: AdhdRapportData, appUrl: string): { subje
 
   const body = `
     <p style="font-size:17px;font-weight:600;color:#0a0a14;margin:0 0 6px;">ADHD Klachten Meting — Week ${data.weekNr}</p>
-    <p style="font-size:14px;color:#5a5a6a;line-height:1.7;margin:0 0 22px;">Periode: <strong>${data.weekStart} t/m ${data.weekEnd}</strong> · ${data.loggedDays} van 7 dagen gelogd${data.weekNr === 2 ? ' · Eindmeting voor Ritalin start' : ' · Nulmeting'}</p>
+    <p style="font-size:14px;color:#5a5a6a;line-height:1.7;margin:0 0 22px;">Periode: <strong>${data.weekStart} t/m ${data.weekEnd}</strong> · ${data.loggedDays} van ${data.weekDays} dagen gelogd${isFirst ? ' · Nulmeting' : isLast ? ' · Eindmeting voor Ritalin start' : ' · Tussenmeting'}</p>
 
     <div style="background:#0a0a14;border-radius:14px;padding:20px 24px;margin-bottom:14px;display:table;width:100%;box-sizing:border-box;">
       <div style="display:table-cell;vertical-align:middle;">
@@ -457,7 +463,7 @@ export function adhdRapportEmail(data: AdhdRapportData, appUrl: string): { subje
 
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:20px 24px;margin-bottom:16px;">
       <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#065f46;">📋 Neem dit mee naar je afspraak</p>
-      <p style="margin:0;font-size:13px;color:#047857;line-height:1.6;">Dit is jouw ${data.weekNr === 1 ? 'nulmeting vóór' : 'eindmeting na'} de meetperiode. Je kunt deze e-mail doorsturen naar je psychiater als referentie voor de medicatiedosering.</p>
+      <p style="margin:0;font-size:13px;color:#047857;line-height:1.6;">Dit is jouw ${isFirst ? 'nulmeting aan het begin van' : isLast ? 'eindmeting aan het eind van' : 'tussenmeting tijdens'} de meetperiode. Je kunt deze e-mail doorsturen naar je psychiater als referentie voor de medicatiedosering.</p>
     </div>
 
     <div style="text-align:center;">${btn('Bekijk ADHD pagina →', `${appUrl}/adhd`)}</div>

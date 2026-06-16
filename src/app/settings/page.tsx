@@ -283,7 +283,7 @@ export default function SettingsPage() {
             <div className="px-5 py-4 flex items-center justify-between">
               <div>
                 <p className="text-[14px] font-medium text-[#0a0a14]">ADHD Rapport</p>
-                <p className="text-[12px] text-[#8a8a9a] mt-0.5">Klachtenmeting week 1 of 2</p>
+                <p className="text-[12px] text-[#8a8a9a] mt-0.5">Klachtenmeting van de huidige week</p>
               </div>
               <button
                 onClick={() => handleSendEmail('adhd')}
