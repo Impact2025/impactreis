@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
+import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { sql } from '@/lib/db';
 import { herinneringEmail } from '@/lib/email-templates';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 function getWeekNumber(date: Date): number {
   const start = new Date(date.getFullYear(), 0, 1);
@@ -65,8 +63,8 @@ export async function GET(request: NextRequest) {
   const { subject, html } = herinneringEmail(appUrl, isWeekend);
 
   try {
-    const { data, error } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'Mijn Ondernemers OS <onboarding@resend.dev>',
+    const { data, error } = await getResend().emails.send({
+      from: FROM_EMAIL,
       to: notificationEmail,
       subject,
       html,

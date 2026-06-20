@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
+import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { sql } from '@/lib/db';
 import { authenticateToken } from '@/lib/auth';
 import { weekrapportEmail, WeekrapportData } from '@/lib/email-templates';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function openRouterChat(prompt: string): Promise<string> {
   try {
@@ -133,8 +131,8 @@ Schrijf in de jij-vorm, warm en direct. Geen bullet points — gewone paragrafen
 
   const { subject, html } = weekrapportEmail(emailData, appUrl);
 
-  const { error } = await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL || 'Mijn Ondernemers OS <onboarding@resend.dev>',
+  const { error } = await getResend().emails.send({
+    from: FROM_EMAIL,
     to: toEmail,
     subject,
     html,

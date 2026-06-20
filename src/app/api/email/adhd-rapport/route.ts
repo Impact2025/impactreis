@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
+import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { sql } from '@/lib/db';
 import { authenticateToken } from '@/lib/auth';
 import { adhdRapportEmail, AdhdRapportData } from '@/lib/email-templates';
 import { ADHD_WEEKS, weekByNr, weekDayCount, currentWeekNr } from '@/lib/adhd-weeks';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 const SYMPTOMS = [
   'Moeite met concentratie', 'Vergeetachtigheid', 'Hyperfocus',
@@ -93,8 +91,8 @@ async function buildAndSend(userId: number, toEmail: string, weekNr: number) {
 
   const { subject, html } = adhdRapportEmail(emailData, appUrl);
 
-  const { error } = await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL || 'Mijn Ondernemers OS <onboarding@resend.dev>',
+  const { error } = await getResend().emails.send({
+    from: FROM_EMAIL,
     to: toEmail,
     subject,
     html,
