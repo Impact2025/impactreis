@@ -1,14 +1,19 @@
-// Auth.js scaffold voor de multi-tenant magic-link login (vervangt uiteindelijk JWT/bcrypt in
-// src/lib/auth.ts). NIET NOG GEWIRED in de API-routes — zie MULTI_TENANT_MIGRATION.md stap 4
-// voor de cutover-volgorde. Draai eerst de migratie in migrations/manual/, en verifieer
-// lokaal met een testmail voordat dit de bestaande login vervangt.
+// Auth.js — multi-tenant magic-link login. Loopt naast de bestaande JWT-auth
+// (src/lib/auth.ts); routes migreren er één voor één naartoe, zie MULTI_TENANT_MIGRATION.md.
 import NextAuth from 'next-auth';
 import Resend from 'next-auth/providers/resend';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { db } from './lib/db/client';
+import { authUsers, authAccounts, authSessions, authVerificationTokens, users, organizations } from './lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: DrizzleAdapter(db),
+  adapter: DrizzleAdapter(db, {
+    usersTable: authUsers,
+    accountsTable: authAccounts,
+    sessionsTable: authSessions,
+    verificationTokensTable: authVerificationTokens,
+  }),
   providers: [
     Resend({
       apiKey: process.env.RESEND_API_KEY,
@@ -19,12 +24,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: '/auth',
   },
-});
+  callbacks: {
+    async session({ session, user }) {
+      // Koppel de Auth.js-identiteit aan onze bestaande users/organizations-tabellen via e-mail.
+      const [row] = await db
+        .select({ organizationId: users.organizationId, orgSlug: organizations.slug, role: users.role })
+        .from(users)
+        .leftJoin(organizations, eq(users.organizationId, organizations.id))
+        .where(eq(users.email, user.email!))
+        .limit(1);
 
-// TODO vóór activatie (zie MULTI_TENANT_MIGRATION.md):
-// 1. Voeg de Auth.js-adaptertabellen toe aan schema.ts (accounts, sessions, verification_token)
-//    en map ze op de bestaande `users`-tabel i.p.v. een tweede user-tabel te introduceren.
-// 2. Draai migrations/manual/0001_add_multi_tenant_columns.sql tegen productie.
-// 3. Test lokaal: npm run dev, magic link aanvragen, inloggen, sessie bevat organizationId.
-// 4. Pas daarna de 32 API-routes onder src/app/api die nu authenticateToken() gebruiken
-//    aan naar auth() uit dit bestand — één route per keer, met een test per route.
+      return {
+        ...session,
+        user: {
+          ...session.user,
+          organizationId: row?.organizationId ?? null,
+          organizationSlug: row?.orgSlug ?? null,
+          role: row?.role ?? null,
+        },
+      };
+    },
+  },
+});
