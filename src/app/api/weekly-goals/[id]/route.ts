@@ -30,7 +30,7 @@ export async function PUT(
       SET goals = ${JSON.stringify(goals)},
           status = ${status || null},
           updated_at = NOW()
-      WHERE id = ${id} AND user_id = ${userId}
+      WHERE id = ${id} AND user_id = ${userId} AND organization_id = ${organizationId}
       RETURNING *
     `;
 
@@ -64,7 +64,7 @@ export async function DELETE(
 
     const result = await sql`
       DELETE FROM weekly_goals
-      WHERE id = ${id} AND user_id = ${userId}
+      WHERE id = ${id} AND user_id = ${userId} AND organization_id = ${organizationId}
       RETURNING *
     `;
 

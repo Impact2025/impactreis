@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     const logs = await sql`
       SELECT * FROM daily_logs
       WHERE user_id = ${userId}
+        AND organization_id = ${organizationId}
         AND type = 'feiten_verhalen'
       ORDER BY timestamp DESC
       LIMIT 20

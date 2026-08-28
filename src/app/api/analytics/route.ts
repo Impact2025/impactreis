@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
       SELECT type, date_string, data, timestamp
       FROM daily_logs
       WHERE user_id = ${userId}
+        AND organization_id = ${organizationId}
         AND timestamp > ${cutoffDateStr}::timestamp
       ORDER BY timestamp DESC
     `;
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
       SELECT id, title, category, impact_level, date, created_at
       FROM wins
       WHERE user_id = ${userId}
+        AND organization_id = ${organizationId}
         AND created_at > ${cutoffDateStr}::timestamp
       ORDER BY date DESC
     `;
@@ -40,7 +42,7 @@ export async function GET(request: NextRequest) {
     // Get all goals
     const goals = await sql`
       SELECT * FROM goals
-      WHERE user_id = ${userId}
+      WHERE user_id = ${userId} AND organization_id = ${organizationId}
     `;
 
     // Get focus sessions (wrap in try-catch since table might not exist)
@@ -50,6 +52,7 @@ export async function GET(request: NextRequest) {
         SELECT date, start_time, goal, completed, created_at
         FROM focus_sessions
         WHERE user_id = ${userId}
+          AND organization_id = ${organizationId}
           AND created_at > ${cutoffDateStr}::timestamp
         ORDER BY created_at DESC
       `;

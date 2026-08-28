@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     const habits = await sql`
       SELECT * FROM habits
-      WHERE user_id = ${userId}
+      WHERE user_id = ${userId} AND organization_id = ${organizationId}
       ORDER BY created_at DESC
     `;
 

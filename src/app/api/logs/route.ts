@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
       const logs = await sql`
         SELECT * FROM daily_logs
         WHERE user_id = ${userId}
+          AND organization_id = ${organizationId}
           AND type = ${type}
           AND date_string = ${date}
         LIMIT 1
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
     // Otherwise return all logs
     const logs = await sql`
       SELECT * FROM daily_logs
-      WHERE user_id = ${userId}
+      WHERE user_id = ${userId} AND organization_id = ${organizationId}
       ORDER BY timestamp DESC
       LIMIT 50
     `;
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
     // Upsert - update if exists, insert if not
     const existing = await sql`
       SELECT id FROM daily_logs
-      WHERE user_id = ${userId} AND type = ${type} AND date_string = ${actualDate}
+      WHERE user_id = ${userId} AND organization_id = ${organizationId} AND type = ${type} AND date_string = ${actualDate}
     `;
 
     let result;
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
       result = await sql`
         UPDATE daily_logs
         SET data = ${JSON.stringify(data)}, timestamp = NOW()
-        WHERE user_id = ${userId} AND type = ${type} AND date_string = ${actualDate}
+        WHERE user_id = ${userId} AND organization_id = ${organizationId} AND type = ${type} AND date_string = ${actualDate}
         RETURNING *
       `;
     } else {

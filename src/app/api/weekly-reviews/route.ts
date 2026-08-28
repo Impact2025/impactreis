@@ -19,13 +19,14 @@ export async function GET(request: NextRequest) {
       reviews = await sql`
         SELECT * FROM weekly_reviews
         WHERE user_id = ${userId}
+          AND organization_id = ${organizationId}
           AND week_number = ${weekNumber}
         ORDER BY timestamp DESC
       `;
     } else {
       reviews = await sql`
         SELECT * FROM weekly_reviews
-        WHERE user_id = ${userId}
+        WHERE user_id = ${userId} AND organization_id = ${organizationId}
         ORDER BY timestamp DESC
         LIMIT 50
       `;

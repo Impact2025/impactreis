@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const logs = await sql`
       SELECT date_string AS date, data
       FROM daily_logs
-      WHERE user_id = ${userId}
+      WHERE user_id = ${userId} AND organization_id = ${organizationId}
         AND type = 'adhd'
         AND date_string >= ${cutoffStr}
       ORDER BY date_string ASC
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     const existing = await sql`
       SELECT id FROM daily_logs
-      WHERE user_id = ${userId} AND type = 'adhd' AND date_string = ${date}
+      WHERE user_id = ${userId} AND organization_id = ${organizationId} AND type = 'adhd' AND date_string = ${date}
     `;
 
     let result;
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       result = await sql`
         UPDATE daily_logs
         SET data = ${data}, timestamp = NOW()
-        WHERE user_id = ${userId} AND type = 'adhd' AND date_string = ${date}
+        WHERE user_id = ${userId} AND organization_id = ${organizationId} AND type = 'adhd' AND date_string = ${date}
         RETURNING *
       `;
     } else {

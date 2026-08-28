@@ -20,6 +20,7 @@ export async function DELETE(
       DELETE FROM daily_logs
       WHERE id = ${id}
         AND user_id = ${userId}
+        AND organization_id = ${organizationId}
         AND type = 'feiten_verhalen'
     `;
 

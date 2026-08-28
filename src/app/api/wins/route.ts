@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     // Fetch all wins for the user first
     let wins = await sql`
       SELECT * FROM wins
-      WHERE user_id = ${userId}
+      WHERE user_id = ${userId} AND organization_id = ${organizationId}
       ORDER BY date DESC, created_at DESC
     `;
 

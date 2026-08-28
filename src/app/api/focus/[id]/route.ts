@@ -28,7 +28,7 @@ export async function PUT(
     const result = await sql`
       UPDATE focus_sessions
       SET completed = ${completed}
-      WHERE id = ${id} AND user_id = ${userId}
+      WHERE id = ${id} AND user_id = ${userId} AND organization_id = ${organizationId}
       RETURNING *
     `;
 
@@ -62,7 +62,7 @@ export async function DELETE(
 
     const result = await sql`
       DELETE FROM focus_sessions
-      WHERE id = ${id} AND user_id = ${userId}
+      WHERE id = ${id} AND user_id = ${userId} AND organization_id = ${organizationId}
       RETURNING *
     `;
 

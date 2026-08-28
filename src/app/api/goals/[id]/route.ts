@@ -10,6 +10,7 @@ export async function PUT(
   try {
     const authCtx = await getAuthContext(request);
     const userId = authCtx?.userId ?? null;
+    const organizationId = authCtx?.organizationId ?? null;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -18,7 +19,7 @@ export async function PUT(
     const updates = updateGoalSchema.parse(await request.json());
 
     const existing = await sql`
-      SELECT data FROM goals WHERE id = ${id} AND user_id = ${userId}
+      SELECT data FROM goals WHERE id = ${id} AND user_id = ${userId} AND organization_id = ${organizationId}
     `;
     if (existing.length === 0) {
       return NextResponse.json({ error: 'Goal not found' }, { status: 404 });
@@ -29,7 +30,7 @@ export async function PUT(
     const result = await sql`
       UPDATE goals
       SET data = ${JSON.stringify(mergedData)}, updated_at = NOW()
-      WHERE id = ${id} AND user_id = ${userId}
+      WHERE id = ${id} AND user_id = ${userId} AND organization_id = ${organizationId}
       RETURNING id, data, updated_at
     `;
 
@@ -48,6 +49,7 @@ export async function DELETE(
   try {
     const authCtx = await getAuthContext(request);
     const userId = authCtx?.userId ?? null;
+    const organizationId = authCtx?.organizationId ?? null;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -56,7 +58,7 @@ export async function DELETE(
 
     const result = await sql`
       DELETE FROM goals
-      WHERE id = ${id} AND user_id = ${userId}
+      WHERE id = ${id} AND user_id = ${userId} AND organization_id = ${organizationId}
       RETURNING id
     `;
 

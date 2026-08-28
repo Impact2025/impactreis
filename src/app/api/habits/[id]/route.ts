@@ -28,7 +28,7 @@ export async function PUT(
     const result = await sql`
       UPDATE habits
       SET streak = ${streak}, last_completed = ${lastCompleted || null}
-      WHERE id = ${id} AND user_id = ${userId}
+      WHERE id = ${id} AND user_id = ${userId} AND organization_id = ${organizationId}
       RETURNING *
     `;
 
@@ -62,7 +62,7 @@ export async function DELETE(
 
     const result = await sql`
       DELETE FROM habits
-      WHERE id = ${id} AND user_id = ${userId}
+      WHERE id = ${id} AND user_id = ${userId} AND organization_id = ${organizationId}
       RETURNING *
     `;
 

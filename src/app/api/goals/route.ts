@@ -14,13 +14,14 @@ export async function GET(request: NextRequest) {
   try {
     const authCtx = await getAuthContext(request);
     const userId = authCtx?.userId ?? null;
+    const organizationId = authCtx?.organizationId ?? null;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const rows = await sql`
       SELECT id, data, updated_at FROM goals
-      WHERE user_id = ${userId}
+      WHERE user_id = ${userId} AND organization_id = ${organizationId}
       ORDER BY updated_at DESC
     `;
 

@@ -22,6 +22,7 @@ export async function PUT(
       SELECT data FROM daily_logs
       WHERE id = ${id}
         AND user_id = ${userId}
+        AND organization_id = ${organizationId}
         AND type = 'controle_cirkel'
     `;
 
@@ -40,6 +41,7 @@ export async function PUT(
       SET data = ${JSON.stringify(updatedData)}, timestamp = NOW()
       WHERE id = ${id}
         AND user_id = ${userId}
+        AND organization_id = ${organizationId}
         AND type = 'controle_cirkel'
       RETURNING *
     `;

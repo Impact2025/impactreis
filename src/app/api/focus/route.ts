@@ -18,14 +18,14 @@ export async function GET(request: NextRequest) {
     if (date) {
       sessions = await sql`
         SELECT * FROM focus_sessions
-        WHERE user_id = ${userId}
+        WHERE user_id = ${userId} AND organization_id = ${organizationId}
           AND date = ${date}
         ORDER BY start_time ASC
       `;
     } else {
       sessions = await sql`
         SELECT * FROM focus_sessions
-        WHERE user_id = ${userId}
+        WHERE user_id = ${userId} AND organization_id = ${organizationId}
         ORDER BY date DESC, start_time DESC
         LIMIT 50
       `;

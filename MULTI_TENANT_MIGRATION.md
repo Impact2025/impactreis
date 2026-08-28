@@ -83,11 +83,19 @@ bescherming totdat de context überhaupt ergens gezet wordt.
 
 ## Wat nog moet gebeuren
 
-1. **Applicatielaag-tenant-isolatie op reads** (vervangt RLS voor deze architectuur). Voeg
-   `AND organization_id = ${authCtx.organizationId}` toe aan de WHERE-clause van elke SELECT in de
-   32 routes, naast de bestaande `user_id`-filter. Vandaag is dit onschadelijk om over te slaan
-   (één organisatie, user_id filtert al correct) maar het is de echte isolatie-garantie zodra er
-   een tweede tenant is — niet de RLS-policy die hierboven als niet-haalbaar staat aangemerkt.
+1. ~~Applicatielaag-tenant-isolatie op reads~~ — **gedaan (28-08-2026).** Elke SELECT/UPDATE/DELETE
+   met `user_id = ${userId}` in de WHERE-clause, over de 12 tenant-tabellen, heeft nu ook
+   `organization_id = ${organizationId}` — in: goals (beide routes), weekly-goals (beide),
+   habits (beide), focus (beide), adhd-logs, reflectie (beide), controle-cirkel (beide), dagboek
+   (beide), analytics (3 queries), weekly-reviews (beide), logs (alle), wins (beide).
+   Bewust overgeslagen: `email/weekrapport`, `email/sessie-analyse`, `email/adhd-rapport`,
+   `email/ochtend-herinnering` (cron-jobs, hardcoded aan `NOTIFICATION_EMAIL` — zelfde
+   single-user-patroon als de ImpactOS-bridge, geen organizationId beschikbaar zonder de
+   functiesignatuur te verbouwen); `coach/*` en `energy-log/*` (aparte, nog niet gecommitte
+   feature van Vincent, niet aangeraakt); `practice`/`assessments`/`courses/*` (buiten de 12
+   tenant-tabellen). Geverifieerd met een smoketest-account: eigen schrijf/lees-cyclus werkt,
+   en de founder-organisatie (3 habits) blijft onzichtbaar voor het nieuwe account. Type-check,
+   45/45 tests en productie-build blijven groen.
 
 2. ~~Magic-link-inlogscherm bouwen in de UI~~ — **gedaan (28-08-2026).** `/auth/login` heeft nu
    een toggle "Inloggen via magic link" die `signIn('resend', {...})` uit `next-auth/react`
@@ -104,9 +112,12 @@ bescherming totdat de context überhaupt ergens gezet wordt.
    Zet deze zelf via het Vercel-dashboard (Project Settings → Environment Variables) met dezelfde
    waarde als `NEXTAUTH_SECRET` — betrouwbaarder dan de non-interactieve CLI hier bleek.
 
-4. **ImpactOS-bridge scopen.** `COACH_BRIDGE_TOKEN`/`IMPACTOS_BASE_URL` mag alleen data koppelen
-   binnen de founder-organisatie (`impact-reis`), nooit impliciet aan nieuwe tenants. Voeg een
-   expliciete `organization_id`-check toe waar deze bridge wordt aangeroepen.
+4. ~~ImpactOS-bridge scopen~~ — **besloten (28-08-2026): blijft single-user, met opzet.**
+   `src/lib/coach.ts`'s `loadSingleUserId()` (`ORDER BY id ASC LIMIT 1`) is een bewuste,
+   gedocumenteerde ontwerpkeuze ("Eén-gebruiker-app: geen tenant-model nodig") voor Vincents
+   eigen ImpactOS-koppeling, geen product-feature voor andere tenants. Niet onveilig zoals hij nu
+   is: hij pakt altijd het OUDSTE account, dus een nieuwe tenant kan er nooit in lekken. Bewust
+   niet aangepast.
 
 5. ~~`/api/goals` repareren~~ — gedaan, zie hierboven.
 

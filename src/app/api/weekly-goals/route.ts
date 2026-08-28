@@ -17,14 +17,14 @@ export async function GET(request: NextRequest) {
     if (weekNumber) {
       const weeklyGoals = await sql`
         SELECT * FROM weekly_goals
-        WHERE user_id = ${userId}
+        WHERE user_id = ${userId} AND organization_id = ${organizationId}
           AND week_number = ${weekNumber}
       `;
       return NextResponse.json(weeklyGoals[0] || {});
     } else {
       const weeklyGoals = await sql`
         SELECT * FROM weekly_goals
-        WHERE user_id = ${userId}
+        WHERE user_id = ${userId} AND organization_id = ${organizationId}
         ORDER BY week_number DESC
         LIMIT 20
       `;

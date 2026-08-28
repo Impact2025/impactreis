@@ -23,7 +23,7 @@ export async function GET(
 
     const result = await sql`
       SELECT * FROM wins
-      WHERE id = ${winId} AND user_id = ${userId}
+      WHERE id = ${winId} AND user_id = ${userId} AND organization_id = ${organizationId}
     `;
 
     if (result.length === 0) {
@@ -86,7 +86,7 @@ export async function PUT(
     // Check if win exists and belongs to user
     const existingWin = await sql`
       SELECT * FROM wins
-      WHERE id = ${winId} AND user_id = ${userId}
+      WHERE id = ${winId} AND user_id = ${userId} AND organization_id = ${organizationId}
     `;
 
     if (existingWin.length === 0) {
@@ -114,7 +114,7 @@ export async function PUT(
         impact_level = ${updatedWin.impact_level},
         date = ${updatedWin.date},
         tags = ${updatedWin.tags}
-      WHERE id = ${winId} AND user_id = ${userId}
+      WHERE id = ${winId} AND user_id = ${userId} AND organization_id = ${organizationId}
       RETURNING *
     `;
 
@@ -147,7 +147,7 @@ export async function DELETE(
 
     const result = await sql`
       DELETE FROM wins
-      WHERE id = ${winId} AND user_id = ${userId}
+      WHERE id = ${winId} AND user_id = ${userId} AND organization_id = ${organizationId}
       RETURNING *
     `;
 
