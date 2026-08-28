@@ -29,7 +29,7 @@ export const organizations = pgTable('organizations', {
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
-  organizationId: integer('organization_id').references(() => organizations.id),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash'), // nullable: Auth.js magic-link users hebben geen wachtwoord
   role: text('role').notNull().default('member'), // member | owner | program_manager
@@ -38,7 +38,7 @@ export const users = pgTable('users', {
 
 export const habits = pgTable('habits', {
   id: serial('id').primaryKey(),
-  organizationId: integer('organization_id').references(() => organizations.id),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
   userId: text('user_id').notNull(),
   name: text('name').notNull(),
   streak: integer('streak').default(0),
@@ -50,7 +50,7 @@ export const habits = pgTable('habits', {
 
 export const dailyLogs = pgTable('daily_logs', {
   id: serial('id').primaryKey(),
-  organizationId: integer('organization_id').references(() => organizations.id),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
   userId: text('user_id').notNull(),
   type: text('type').notNull(), // 'morning' | 'evening'
   dateString: text('date_string').notNull(),
@@ -69,7 +69,7 @@ export const dailyLogs = pgTable('daily_logs', {
 export const goals = pgTable('goals', {
   userId: text('user_id').notNull(),
   id: text('id').notNull(),
-  organizationId: integer('organization_id').references(() => organizations.id),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
   data: jsonb('data'),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (t) => ({
@@ -78,7 +78,7 @@ export const goals = pgTable('goals', {
 
 export const weeklyGoals = pgTable('weekly_goals', {
   id: serial('id').primaryKey(),
-  organizationId: integer('organization_id').references(() => organizations.id),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
   userId: text('user_id').notNull(),
   weekNumber: text('week_number').notNull(),
   goals: jsonb('goals'),
@@ -89,7 +89,7 @@ export const weeklyGoals = pgTable('weekly_goals', {
 
 export const weeklyReviews = pgTable('weekly_reviews', {
   id: serial('id').primaryKey(),
-  organizationId: integer('organization_id').references(() => organizations.id),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
   userId: text('user_id').notNull(),
   weekNumber: text('week_number').notNull(),
   data: jsonb('data'),
@@ -100,7 +100,7 @@ export const weeklyReviews = pgTable('weekly_reviews', {
 
 export const focusSessions = pgTable('focus_sessions', {
   id: serial('id').primaryKey(),
-  organizationId: integer('organization_id').references(() => organizations.id),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
   userId: text('user_id').notNull(),
   date: date('date').notNull(),
   startTime: time('start_time').notNull(),
@@ -111,7 +111,7 @@ export const focusSessions = pgTable('focus_sessions', {
 
 export const wins = pgTable('wins', {
   id: serial('id').primaryKey(),
-  organizationId: integer('organization_id').references(() => organizations.id),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
   userId: text('user_id').notNull(),
   title: text('title').notNull(),
   description: text('description'),
@@ -127,7 +127,7 @@ export const wins = pgTable('wins', {
 
 export const userContext = pgTable('user_context', {
   userId: text('user_id').primaryKey(),
-  organizationId: integer('organization_id').references(() => organizations.id),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
   currentEnergyLevel: integer('current_energy_level').default(5),
   currentStressLevel: integer('current_stress_level').default(5),
   recentMood: text('recent_mood').default('neutral'),
@@ -141,7 +141,7 @@ export const userContext = pgTable('user_context', {
 
 export const coachLessons = pgTable('coach_lessons', {
   id: serial('id').primaryKey(),
-  organizationId: integer('organization_id').references(() => organizations.id),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
   userId: text('user_id').notNull(),
   patternKey: text('pattern_key').notNull(),
   technique: text('technique').notNull(),
@@ -160,7 +160,7 @@ export const coachLessons = pgTable('coach_lessons', {
 
 export const energyLog = pgTable('energy_log', {
   id: serial('id').primaryKey(),
-  organizationId: integer('organization_id').references(() => organizations.id),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
   userId: text('user_id').notNull(),
   dateString: text('date_string').notNull(),
   activity: text('activity').notNull(),
@@ -174,7 +174,7 @@ export const energyLog = pgTable('energy_log', {
 
 export const coachPredictions = pgTable('coach_predictions', {
   id: serial('id').primaryKey(),
-  organizationId: integer('organization_id').references(() => organizations.id),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
   userId: text('user_id').notNull(),
   lessonId: integer('lesson_id').references(() => coachLessons.id, { onDelete: 'set null' }),
   statement: text('statement').notNull(),

@@ -1,7 +1,9 @@
 # Multi-tenant fundament — uitvoeringsplan (Fase 1)
 
-Status: schema en migratie geschreven, **nog niet tegen productie gedraaid**. Dit document is de
-concrete vervolgstap op AIPACOACH_BOUWPLAN — lees dit voordat je verder bouwt aan fase 2+.
+Status: **live in productie** (reis.weareimpact.nl, gedeployed 28-08-2026). Schema, migratie,
+Auth.js, alle 32 routes en de NOT NULL-constraint staan er. RLS staat bewust nog uit — zie
+onderaan waarom. Dit document is de concrete vervolgstap op AIPACOACH_BOUWPLAN — lees dit voordat
+je verder bouwt aan fase 2+.
 
 ## Wat er nu al staat
 
@@ -45,9 +47,19 @@ draait of gedeployed wordt.
   12 tenant-tabellen krijgt `organization_id` mee. End-to-end gesmoketest tegen productie
   (nieuwe registratie → eigen organisatie → win met juiste organization_id).
   `auth/register` maakt nu ook een organisatie aan per nieuwe registratie (was eerder een gat).
-- [ ] Stap 4 — NOT NULL + RLS aanzetten
+- [x] **Stap 4a — NOT NULL aangezet** (28-08-2026) op `organization_id` in alle 12 tabellen.
+  Geverifieerd met een nieuwe smoketest-registratie ná het aanzetten: write slaagt gewoon.
+- [ ] **Stap 4b — RLS: bewust NIET aangezet.** Geverifieerd dat `neon()` (de HTTP-driver die
+  `src/lib/db.ts` en alle 32 routes gebruiken) een `SET` in de ene call niet laat doorwerken naar
+  de volgende — elke tagged-template-aanroep is een aparte connectie. Het standaard RLS-patroon
+  (`SET app.current_org_id` vóór de query) werkt hier dus principieel niet, met of zonder `FORCE`.
+  Om RLS alsnog te doen: óf alle 32 routes herschrijven om `SET` + query te bundelen in
+  `sql.transaction([...])`, óf tenant-isolatie in de applicatielaag afdwingen
+  (`WHERE organization_id = ...` expliciet in elke query, i.p.v. Postgres session state). Dat
+  laatste is waarschijnlijk de betere fit voor deze architectuur.
 - [ ] Stap 5 — ImpactOS-bridge scopen
-- [ ] Stap 6 — oude JWT-auth verwijderen
+- [ ] Stap 6 — oude JWT-auth verwijderen (niet eerder dan wanneer er een lopende, geteste
+  magic-link-inlogpagina in de UI is — vandaag bestaat die nog niet)
 
 **Nieuw gevonden tijdens stap 3, niet opgelost (buiten scope):** `src/app/api/goals/route.ts`
 verwacht kolommen (`type`, `title`, `period`, `completed`) die niet bestaan in de echte
@@ -68,44 +80,32 @@ zet is even riskant: de app verbindt als `neondb_owner` (tabel-eigenaar), en RLS
 pas voor de eigenaar als je ook `FORCE ROW LEVEL SECURITY` zet — dat is dus geen sluitende
 bescherming totdat de context überhaupt ergens gezet wordt.
 
-## Volgende stappen, in volgorde
+## Wat nog moet gebeuren
 
-1. ~~Migratie tegen productie draaien~~ — gedaan, zie Voortgang hierboven.
+1. **Applicatielaag-tenant-isolatie op reads** (vervangt RLS voor deze architectuur). Voeg
+   `AND organization_id = ${authCtx.organizationId}` toe aan de WHERE-clause van elke SELECT in de
+   32 routes, naast de bestaande `user_id`-filter. Vandaag is dit onschadelijk om over te slaan
+   (één organisatie, user_id filtert al correct) maar het is de echte isolatie-garantie zodra er
+   een tweede tenant is — niet de RLS-policy die hierboven als niet-haalbaar staat aangemerkt.
 
-2. **Auth.js lokaal testen, los van de live app**
-   - Vul `AUTH_SECRET` in (`npx auth secret`) en test met een lokale `.env.local`.
-   - `npm run dev`, ga naar `/api/auth/signin`, vraag een magic link aan, verifieer dat een sessie
-     met `organizationId` binnenkomt.
-   - Doe dit *voordat* je een bestaande route omzet — dit is de eerste keer dat de nieuwe auth-flow
-     echt met de Resend-key praat.
+2. **Magic-link-inlogscherm bouwen in de UI.** Auth.js werkt aantoonbaar server-side, maar er is
+   nog geen frontend-pagina die een e-mailadres vraagt en `signIn('resend', { email })` aanroept.
+   Zonder die pagina is Auth.js alleen bruikbaar via directe API-calls, niet voor een echte
+   gebruiker. Bouw dit vóórdat je een tweede klant onboardt.
 
-3. **De 32 routes onder `src/app/api` omzetten** van `authenticateToken()`
-   (`src/lib/auth.ts`) naar `auth()` (`src/auth.ts`), én elke INSERT/UPDATE aanvullen met
-   `organization_id`. Eén route per keer, met een handmatige test erna. Belangrijkste kandidaten
-   om als eerste te doen (meest gebruikt): `wins`, `focus`, `dagboek`, `coach`.
+3. **AUTH_SECRET expliciet zetten in Vercel** (naast de bestaande `NEXTAUTH_SECRET`). Productie
+   werkt nu blijkbaar via een fallback, maar dat is niet gedocumenteerd Auth.js-v5-gedrag om op te
+   vertrouwen. `vercel env add AUTH_SECRET production` met dezelfde waarde als `NEXTAUTH_SECRET`.
 
-4. **NOT NULL + Row Level Security aanzetten** (pas als stap 3 voor alle routes klaar is)
-   ```sql
-   ALTER TABLE wins ALTER COLUMN organization_id SET NOT NULL;
-   -- herhaal per tabel
-   ALTER TABLE wins ENABLE ROW LEVEL SECURITY;
-   ALTER TABLE wins FORCE ROW LEVEL SECURITY; -- anders geldt de policy niet voor neondb_owner
-   CREATE POLICY tenant_isolation ON wins
-     USING (organization_id = current_setting('app.current_org_id')::int);
-   -- herhaal per tabel
-   ```
-   Elke API-route moet vóór een query `SET app.current_org_id = ...` zetten binnen dezelfde
-   Postgres-sessie — dit hoort in de vervangende auth-middleware, niet per route los. Let op: de
-   Neon HTTP-driver (`neon()` in `src/lib/db.ts`) opent per statement mogelijk een nieuwe sessie;
-   verifieer dit expliciet voordat je FORCE RLS aanzet, anders lijkt tenant-isolatie actief terwijl
-   ze het niet is.
-
-5. **ImpactOS-bridge scopen.** `COACH_BRIDGE_TOKEN`/`IMPACTOS_BASE_URL` mag alleen data koppelen
+4. **ImpactOS-bridge scopen.** `COACH_BRIDGE_TOKEN`/`IMPACTOS_BASE_URL` mag alleen data koppelen
    binnen de founder-organisatie (`impact-reis`), nooit impliciet aan nieuwe tenants. Voeg een
    expliciete `organization_id`-check toe waar deze bridge wordt aangeroepen.
 
-6. **Oude auth verwijderen** (`src/lib/auth.ts`, `bcrypt`/`jsonwebtoken`-dependencies) pas nadat
-   alle 32 routes zijn omgezet en getest — niet ervoor.
+5. **`/api/goals` repareren** — zie hierboven, bestaande productiebug die share-naar-doel breekt.
+
+6. **Oude JWT-auth verwijderen** (`src/lib/auth.ts`, `bcrypt`/`jsonwebtoken`-dependencies) pas
+   nadat stap 2 hierboven (UI voor magic link) live is en getest — niet ervoor, anders kan niemand
+   meer inloggen.
 
 ## Wat ik bewust niet heb gedaan
 
