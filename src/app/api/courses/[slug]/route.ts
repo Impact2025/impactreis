@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
-import { authenticateToken } from '@/lib/auth';
+import { getAuthContext } from '@/lib/auth-context';
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -13,7 +13,9 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const userId = await authenticateToken(request);
+    const authCtx = await getAuthContext(request);
+    const userId = authCtx?.userId ?? null;
+    const organizationId = authCtx?.organizationId ?? null;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

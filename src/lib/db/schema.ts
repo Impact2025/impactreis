@@ -61,13 +61,16 @@ export const dailyLogs = pgTable('daily_logs', {
   tsIdx: index('idx_daily_logs_timestamp').on(t.timestamp),
 }));
 
+// LET OP: dit spiegelt de ECHTE productiekolommen, niet schema.sql — die twee zijn uiteengelopen
+// (schema.sql beschrijft bhag/yearly_goals/monthly_goals, wat nooit is toegepast). Bovendien
+// verwacht src/app/api/goals/route.ts weer een DERDE vorm (type/title/period/completed), die
+// evenmin bestaat in de live tabel — die route lijkt al kapot, los van dit werk. Zie
+// MULTI_TENANT_MIGRATION.md voor een aantekening; niet in deze migratie opgelost.
 export const goals = pgTable('goals', {
   userId: text('user_id').notNull(),
-  id: text('id').notNull(), // 'current'
+  id: text('id').notNull(),
   organizationId: integer('organization_id').references(() => organizations.id),
-  bhag: text('bhag'),
-  yearlyGoals: jsonb('yearly_goals'),
-  monthlyGoals: jsonb('monthly_goals'),
+  data: jsonb('data'),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (t) => ({
   pk: uniqueIndex('goals_pk').on(t.userId, t.id),

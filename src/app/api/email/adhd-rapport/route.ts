@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { sql } from '@/lib/db';
-import { authenticateToken } from '@/lib/auth';
+import { getAuthContext } from '@/lib/auth-context';
 import { adhdRapportEmail, AdhdRapportData } from '@/lib/email-templates';
 import { ADHD_WEEKS, weekByNr, weekDayCount, currentWeekNr } from '@/lib/adhd-weeks';
 
@@ -123,7 +123,9 @@ export async function GET(request: NextRequest) {
 
 // POST — manual trigger via JWT auth (for testing from settings)
 export async function POST(request: NextRequest) {
-  const userId = await authenticateToken(request);
+  const authCtx = await getAuthContext(request);
+  const userId = authCtx?.userId ?? null;
+  const organizationId = authCtx?.organizationId ?? null;
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const users = await sql`SELECT email FROM users WHERE id = ${userId} LIMIT 1`;

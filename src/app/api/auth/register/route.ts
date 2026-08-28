@@ -21,10 +21,22 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // Elke nieuwe registratie krijgt een eigen organisatie (self-serve Starter-tier).
+    // Slug is niet gegarandeerd uniek op basis van het e-mail-lokale-deel alleen, dus we
+    // botsen desnoods met een suffix — organizations.slug heeft een UNIQUE constraint.
+    const emailLocalPart = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const orgSlug = `${emailLocalPart}-${Date.now().toString(36)}`;
+    const orgResult = await sql`
+      INSERT INTO organizations (slug, name, plan)
+      VALUES (${orgSlug}, ${email}, 'starter')
+      RETURNING id
+    `;
+    const organizationId = orgResult[0].id;
+
     // Create user
     const result = await sql`
-      INSERT INTO users (email, password_hash)
-      VALUES (${email}, ${hashedPassword})
+      INSERT INTO users (email, password_hash, organization_id)
+      VALUES (${email}, ${hashedPassword}, ${organizationId})
       RETURNING id, email, created_at
     `;
 

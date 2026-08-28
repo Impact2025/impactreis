@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { authenticateToken } from '@/lib/auth';
+import { getAuthContext } from '@/lib/auth-context';
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = await authenticateToken(request);
+    const authCtx = await getAuthContext(request);
+    const userId = authCtx?.userId ?? null;
+    const organizationId = authCtx?.organizationId ?? null;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -43,7 +45,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = await authenticateToken(request);
+    const authCtx = await getAuthContext(request);
+    const userId = authCtx?.userId ?? null;
+    const organizationId = authCtx?.organizationId ?? null;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -59,8 +63,8 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await sql`
-      INSERT INTO focus_sessions (user_id, date, start_time, goal, completed)
-      VALUES (${userId}, ${date}, ${startTime}, ${goal || null}, ${false})
+      INSERT INTO focus_sessions (user_id, date, start_time, goal, completed, organization_id)
+      VALUES (${userId}, ${date}, ${startTime}, ${goal || null}, ${false}, ${organizationId})
       RETURNING *
     `;
 

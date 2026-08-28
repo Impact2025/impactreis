@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
-import { authenticateToken } from '@/lib/auth';
+import { getAuthContext } from '@/lib/auth-context';
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -16,7 +16,9 @@ const sql = neon(process.env.DATABASE_URL!);
  */
 export async function GET(request: NextRequest) {
   try {
-    const userId = await authenticateToken(request);
+    const authCtx = await getAuthContext(request);
+    const userId = authCtx?.userId ?? null;
+    const organizationId = authCtx?.organizationId ?? null;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -85,7 +87,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const userId = await authenticateToken(request);
+    const authCtx = await getAuthContext(request);
+    const userId = authCtx?.userId ?? null;
+    const organizationId = authCtx?.organizationId ?? null;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -117,16 +121,16 @@ export async function POST(request: NextRequest) {
 
     // Insert win
     const result = await sql`
-      INSERT INTO wins (user_id, title, description, category, impact_level, date, tags)
-      VALUES (${userId}, ${title}, ${description || null}, ${category}, ${impactLevel}, ${date}, ${JSON.stringify(tags || [])})
+      INSERT INTO wins (user_id, title, description, category, impact_level, date, tags, organization_id)
+      VALUES (${userId}, ${title}, ${description || null}, ${category}, ${impactLevel}, ${date}, ${JSON.stringify(tags || [])}, ${organizationId})
       RETURNING *
     `;
 
     // Update user context with last major win date if impact >= 4
     if (impactLevel >= 4) {
       await sql`
-        INSERT INTO user_context (user_id, last_major_win_date, updated_at)
-        VALUES (${userId}, ${date}, NOW())
+        INSERT INTO user_context (user_id, last_major_win_date, updated_at, organization_id)
+        VALUES (${userId}, ${date}, NOW(), ${organizationId})
         ON CONFLICT (user_id)
         DO UPDATE SET
           last_major_win_date = ${date},

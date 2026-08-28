@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { sql } from '@/lib/db';
-import { authenticateToken } from '@/lib/auth';
+import { getAuthContext } from '@/lib/auth-context';
 import { sessieAnalyseEmail, SessieAnalyseData } from '@/lib/email-templates';
 
 async function openRouterChat(prompt: string): Promise<string> {
@@ -47,7 +47,9 @@ function getCurrentStreak(logs: { date_string: string }[]): number {
 }
 
 export async function POST(request: NextRequest) {
-  const userId = await authenticateToken(request);
+  const authCtx = await getAuthContext(request);
+  const userId = authCtx?.userId ?? null;
+  const organizationId = authCtx?.organizationId ?? null;
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

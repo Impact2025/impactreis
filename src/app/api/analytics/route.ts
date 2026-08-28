@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { authenticateToken } from '@/lib/auth';
+import { getAuthContext } from '@/lib/auth-context';
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = await authenticateToken(request);
+    const authCtx = await getAuthContext(request);
+    const userId = authCtx?.userId ?? null;
+    const organizationId = authCtx?.organizationId ?? null;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
