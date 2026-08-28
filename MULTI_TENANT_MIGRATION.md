@@ -26,14 +26,31 @@ Vercel. Een migratie of auth-cutover die faalt halverwege is duur om terug te dr
 elke stap hieronder is los uitvoerbaar en je bevestigt expliciet voordat iets tegen productie
 draait of gedeployed wordt.
 
+## Voortgang
+
+- [x] **Stap 1 — migratie gedraaid tegen productie** (28-08-2026, via
+  `scripts/run-multi-tenant-migration.mjs`). `organizations`-tabel bevat 1 rij (`impact-reis`,
+  id 1, plan `pro`). Alle 12 tabellen geverifieerd op 0 rijen met `organization_id IS NULL`.
+  Let op: het eerste scriptrun miste 3 statements door een bug in de commentaar-splitsing
+  (INSERT organizations, `password_hash` nullable maken, `UPDATE users`) — met de hand
+  nagelopen en alsnog uitgevoerd; script inmiddels gecorrigeerd voor toekomstig gebruik.
+- [ ] Stap 2 — Auth.js lokaal testen
+- [ ] Stap 3 — routes omzetten naar organization-aware writes
+- [ ] Stap 4 — NOT NULL + RLS aanzetten
+- [ ] Stap 5 — ImpactOS-bridge scopen
+- [ ] Stap 6 — oude JWT-auth verwijderen
+
+**Volgorde-correctie t.o.v. de eerste versie van dit document:** NOT NULL en RLS kunnen pas ná de
+routes zijn omgezet, niet ervoor. De 32 bestaande routes doen nu INSERT/UPDATE zonder
+`organization_id` mee te geven — zet je nu al NOT NULL, dan faalt de eerstvolgende schrijfactie
+(nieuwe win, nieuw logboek) meteen. RLS aanzetten zonder dat elke request eerst de tenant-context
+zet is even riskant: de app verbindt als `neondb_owner` (tabel-eigenaar), en RLS-policies gelden
+pas voor de eigenaar als je ook `FORCE ROW LEVEL SECURITY` zet — dat is dus geen sluitende
+bescherming totdat de context überhaupt ergens gezet wordt.
+
 ## Volgende stappen, in volgorde
 
-1. **Migratie tegen productie draaien**
-   ```
-   psql "$DATABASE_URL" -f migrations/manual/0001_add_multi_tenant_columns.sql
-   ```
-   Maak vooraf een Neon-snapshot/branch als extra vangnet. Verifieer erna:
-   `SELECT count(*) FROM wins WHERE organization_id IS NULL;` moet 0 zijn (en zo voor elke tabel).
+1. ~~Migratie tegen productie draaien~~ — gedaan, zie Voortgang hierboven.
 
 2. **Auth.js lokaal testen, los van de live app**
    - Vul `AUTH_SECRET` in (`npx auth secret`) en test met een lokale `.env.local`.
@@ -42,22 +59,26 @@ draait of gedeployed wordt.
    - Doe dit *voordat* je een bestaande route omzet — dit is de eerste keer dat de nieuwe auth-flow
      echt met de Resend-key praat.
 
-3. **NOT NULL + Row Level Security aanzetten** (pas na stap 1 geverifieerd)
+3. **De 32 routes onder `src/app/api` omzetten** van `authenticateToken()`
+   (`src/lib/auth.ts`) naar `auth()` (`src/auth.ts`), én elke INSERT/UPDATE aanvullen met
+   `organization_id`. Eén route per keer, met een handmatige test erna. Belangrijkste kandidaten
+   om als eerste te doen (meest gebruikt): `wins`, `focus`, `dagboek`, `coach`.
+
+4. **NOT NULL + Row Level Security aanzetten** (pas als stap 3 voor alle routes klaar is)
    ```sql
    ALTER TABLE wins ALTER COLUMN organization_id SET NOT NULL;
    -- herhaal per tabel
    ALTER TABLE wins ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE wins FORCE ROW LEVEL SECURITY; -- anders geldt de policy niet voor neondb_owner
    CREATE POLICY tenant_isolation ON wins
      USING (organization_id = current_setting('app.current_org_id')::int);
    -- herhaal per tabel
    ```
-   Elke API-route moet vóór een query `SET app.current_org_id = ...` zetten (via een Postgres
-   sessie-transactie) — dit hoort in de vervangende auth-middleware, niet per route los.
-
-4. **De 32 routes onder `src/app/api` omzetten** van `authenticateToken()`
-   (`src/lib/auth.ts`) naar `auth()` (`src/auth.ts`). Eén route per keer, met een handmatige test
-   erna. Belangrijkste kandidaten om als eerste te doen (meest gebruikt): `wins`, `focus`,
-   `dagboek`, `coach`.
+   Elke API-route moet vóór een query `SET app.current_org_id = ...` zetten binnen dezelfde
+   Postgres-sessie — dit hoort in de vervangende auth-middleware, niet per route los. Let op: de
+   Neon HTTP-driver (`neon()` in `src/lib/db.ts`) opent per statement mogelijk een nieuwe sessie;
+   verifieer dit expliciet voordat je FORCE RLS aanzet, anders lijkt tenant-isolatie actief terwijl
+   ze het niet is.
 
 5. **ImpactOS-bridge scopen.** `COACH_BRIDGE_TOKEN`/`IMPACTOS_BASE_URL` mag alleen data koppelen
    binnen de founder-organisatie (`impact-reis`), nooit impliciet aan nieuwe tenants. Voeg een
