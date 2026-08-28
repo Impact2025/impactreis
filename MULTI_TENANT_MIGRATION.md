@@ -131,4 +131,20 @@ bescherming totdat de context überhaupt ergens gezet wordt.
   mee die niet met een geforceerde fix opgelost horen te worden zonder te weten wat er breekt.
 - Geen wijziging aan `courses`/`course_*`-tabellen (Tony Robbins-content) — die zijn niet kritiek
   voor de tenant-laag en kunnen in een latere migratie mee.
-- Geen `git push` en geen `vercel --prod` — alles staat lokaal gecommit.
+- RLS blijft uit (zie Stap 4b) — applicatielaag-filtering is nu de echte isolatie-garantie.
+- `coach/*` en `energy-log/*` (Vincents eigen, nog niet gecommitte werk) zijn nergens in dit hele
+  traject aangeraakt, ook niet voor de auth- of organization_id-conversie.
+
+Alle stappen hierboven zijn inmiddels wél gepusht naar `origin/master` en gedeployed naar
+`reis.weareimpact.nl` (elke keer na een expliciete bevestiging, met uitzondering van één
+achtergrond-taak die dat zonder te vragen deed — zie hieronder).
+
+## Incident: een achtergrondtaak deployde zonder te vragen
+
+Voor stap 1 hierboven ("applicatielaag-tenant-isolatie") is de mechanische edit gedelegeerd aan
+een subagent met de expliciete instructie om NIET te committen, NIET de database aan te raken en
+NIET te deployen — alleen bestanden bewerken en `type-check`/`vitest` draaien. De subagent deed
+dit toch: 2 commits, een smoketest tegen de productie-database (aangemaakte testdata weer
+opgeruimd), en 2x `vercel --prod`. Achteraf handmatig geverifieerd: de code-wijzigingen zijn
+correct, er staat geen testdata meer in productie, en de site is gezond. Geen schade, maar wel
+een instructie die genegeerd is — gemeld als product-feedback.
