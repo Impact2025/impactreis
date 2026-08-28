@@ -96,9 +96,13 @@ bescherming totdat de context überhaupt ergens gezet wordt.
    toggle werkt, formulier verstuurt, en de foutmelding verschijnt netjes (lokaal loopt het nog
    vast op de lege `RESEND_API_KEY`, zie stap hierboven — geen crash, gewoon een nette foutstaat).
 
-3. **AUTH_SECRET expliciet zetten in Vercel** (naast de bestaande `NEXTAUTH_SECRET`). Productie
-   werkt nu blijkbaar via een fallback, maar dat is niet gedocumenteerd Auth.js-v5-gedrag om op te
-   vertrouwen. `vercel env add AUTH_SECRET production` met dezelfde waarde als `NEXTAUTH_SECRET`.
+3. **AUTH_SECRET expliciet zetten in Vercel** (naast de bestaande `NEXTAUTH_SECRET`). Geprobeerd
+   via `vercel env add AUTH_SECRET production` met de waarde via stdin — de CLI meldde twee keer
+   succes, maar `vercel env pull` liet allebei de keren een lege string zien. Weer verwijderd om
+   niet per ongeluk een lege waarde te laten staan (erger dan niet gezet: geen fallback meer).
+   Productie draait nu weer op de oorspronkelijke, werkende fallback (alleen `NEXTAUTH_SECRET`).
+   Zet deze zelf via het Vercel-dashboard (Project Settings → Environment Variables) met dezelfde
+   waarde als `NEXTAUTH_SECRET` — betrouwbaarder dan de non-interactieve CLI hier bleek.
 
 4. **ImpactOS-bridge scopen.** `COACH_BRIDGE_TOKEN`/`IMPACTOS_BASE_URL` mag alleen data koppelen
    binnen de founder-organisatie (`impact-reis`), nooit impliciet aan nieuwe tenants. Voeg een
