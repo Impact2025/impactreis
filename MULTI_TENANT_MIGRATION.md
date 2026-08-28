@@ -61,16 +61,17 @@ draait of gedeployed wordt.
 - [ ] Stap 6 — oude JWT-auth verwijderen (niet eerder dan wanneer er een lopende, geteste
   magic-link-inlogpagina in de UI is — vandaag bestaat die nog niet)
 
-**Nieuw gevonden tijdens stap 3, niet opgelost (buiten scope):** `src/app/api/goals/route.ts`
-verwacht kolommen (`type`, `title`, `period`, `completed`) die niet bestaan in de echte
-`goals`-tabel (die heeft `user_id`/`id`/`data`/`updated_at`/`organization_id`). Dit lijkt een
-restant van de oude Express-migratie (`server-old/routes/goals.routes.ts` had dezelfde vorm) dat
-nooit is rechtgetrokken. `schema.ts` is aangepast om de ECHTE tabel te spiegelen; de route zelf
-is niet aangepast omdat onduidelijk is wat de bedoelde vorm moet zijn. Bevestigd: `/api/goals` wordt wél nog echt aangeroepen, door `src/app/share/page.tsx` (de
-PWA-share-target, als je iets deelt naar "doel"). Die actie faalt vermoedelijk nu al met een
-SQL-fout, los van dit werk — dit is een bestaande productiebug, geen regressie door mij
-geïntroduceerd. Los op door `goals.schema.ts`/`goals/route.ts` te herschrijven naar de echte
-`data jsonb`-kolom, of de share-flow naar `weekly-goals` te wijzen.
+**`/api/goals`-bug: opgelost (28-08-2026).** De route verwachtte kolommen (`type`, `title`,
+`period`, `completed`) die niet bestaan in de echte `goals`-tabel (die heeft
+`user_id`/`id`/`data`/`updated_at`/`organization_id`) — een restant van de oude
+Express-migratie dat nooit is rechtgetrokken. De tabel was leeg (0 rijen, dus geen data-risico).
+`goals/route.ts`, `goals/[id]/route.ts` en `goals.schema.ts` herschreven om de echte `data
+jsonb`-kolom te gebruiken (elk doel is een eigen rij met eigen `id`, inhoud in `data`).
+Bevestigd dat `/api/goals` wél echt wordt aangeroepen, door `src/app/share/page.tsx` (de
+PWA-share-target, "Doel"). Geverifieerd met een volledige CRUD-smoketest tegen productie
+(POST → GET → PUT → DELETE), daarna opgeruimd. `src/app/goals/page.tsx` gebruikt deze route
+overigens niet — die pagina heeft een eigen databron; `/api/goals` bestaat alleen voor de
+share-target.
 
 **Volgorde-correctie t.o.v. de eerste versie van dit document:** NOT NULL en RLS kunnen pas ná de
 routes zijn omgezet, niet ervoor. De 32 bestaande routes doen nu INSERT/UPDATE zonder
@@ -101,7 +102,7 @@ bescherming totdat de context überhaupt ergens gezet wordt.
    binnen de founder-organisatie (`impact-reis`), nooit impliciet aan nieuwe tenants. Voeg een
    expliciete `organization_id`-check toe waar deze bridge wordt aangeroepen.
 
-5. **`/api/goals` repareren** — zie hierboven, bestaande productiebug die share-naar-doel breekt.
+5. ~~`/api/goals` repareren~~ — gedaan, zie hierboven.
 
 6. **Oude JWT-auth verwijderen** (`src/lib/auth.ts`, `bcrypt`/`jsonwebtoken`-dependencies) pas
    nadat stap 2 hierboven (UI voor magic link) live is en getest — niet ervoor, anders kan niemand

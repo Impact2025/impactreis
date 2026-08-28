@@ -10,29 +10,31 @@ export async function PUT(
   try {
     const authCtx = await getAuthContext(request);
     const userId = authCtx?.userId ?? null;
-    const organizationId = authCtx?.organizationId ?? null;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
-    const body = await request.json();
-    const { title, completed } = updateGoalSchema.parse(body);
+    const updates = updateGoalSchema.parse(await request.json());
 
-    const result = await sql`
-      UPDATE goals
-      SET
-        title = COALESCE(${title}, title),
-        completed = COALESCE(${completed}, completed)
-      WHERE id = ${id} AND user_id = ${userId}
-      RETURNING *
+    const existing = await sql`
+      SELECT data FROM goals WHERE id = ${id} AND user_id = ${userId}
     `;
-
-    if (result.length === 0) {
+    if (existing.length === 0) {
       return NextResponse.json({ error: 'Goal not found' }, { status: 404 });
     }
 
-    return NextResponse.json(result[0]);
+    const mergedData = { ...existing[0].data, ...updates };
+
+    const result = await sql`
+      UPDATE goals
+      SET data = ${JSON.stringify(mergedData)}, updated_at = NOW()
+      WHERE id = ${id} AND user_id = ${userId}
+      RETURNING id, data, updated_at
+    `;
+
+    const goal = result[0];
+    return NextResponse.json({ id: goal.id, updatedAt: goal.updated_at, ...goal.data });
   } catch (error) {
     console.error('Update goal error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -46,7 +48,6 @@ export async function DELETE(
   try {
     const authCtx = await getAuthContext(request);
     const userId = authCtx?.userId ?? null;
-    const organizationId = authCtx?.organizationId ?? null;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
