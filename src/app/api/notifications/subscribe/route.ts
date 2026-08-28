@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
+import { getAuthContext } from '@/lib/auth-context';
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -23,15 +24,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user ID from auth header (if authenticated)
-    const authHeader = request.headers.get('authorization');
-    let userId: number | null = null;
-
-    if (authHeader?.startsWith('Bearer ')) {
-      // Verify JWT and extract user ID
-      // For now, we'll store without user association
-      // In production, decode the JWT here
-    }
+    // Client (src/lib/push-notifications.ts) always sends the JWT bearer token, but this
+    // route never decoded it — every subscription was stored with user_id = NULL, so
+    // per-user push targeting (notifications/send's payload.userId filter) could never work.
+    const authCtx = await getAuthContext(request);
+    const userId = authCtx?.userId ?? null;
 
     // Check if subscription already exists
     const existing = await sql`
@@ -46,6 +43,7 @@ export async function POST(request: NextRequest) {
         SET
           p256dh = ${subscription.keys.p256dh},
           auth = ${subscription.keys.auth},
+          user_id = ${userId},
           updated_at = NOW()
         WHERE endpoint = ${subscription.endpoint}
       `;

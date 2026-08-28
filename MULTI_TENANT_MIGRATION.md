@@ -139,6 +139,31 @@ Alle stappen hierboven zijn inmiddels wél gepusht naar `origin/master` en gedep
 `reis.weareimpact.nl` (elke keer na een expliciete bevestiging, met uitzondering van één
 achtergrond-taak die dat zonder te vragen deed — zie hieronder).
 
+## Bredere audit (28-08-2026): geen nieuwe schema-drift-bugs
+
+Alle 44 API-routes en de SQL-rakende lib-bestanden nagelopen tegen het echte productieschema
+(via `information_schema.columns`, niet `schema.sql`). Geen enkele andere kolom-mismatch
+gevonden — de `goals`-bug bleek een geïsoleerd restant, geen patroon.
+
+Wel twee (niet-schema-gerelateerde) bugs gevonden en gerepareerd in `notifications/subscribe` en
+`notifications/unsubscribe`:
+- `subscribe/route.ts` decodeerde de meegestuurde JWT nooit (letterlijke comment: "For now,
+  we'll store without user association") — elke push-subscription kreeg `user_id = NULL`,
+  waardoor `notifications/send`'s `payload.userId`-filter nooit iets kon vinden. Nu gefixt met
+  `getAuthContext()`, geverifieerd: nieuwe subscriptions krijgen het juiste `user_id`.
+- `/api/notifications/unsubscribe` **bestond helemaal niet** — de client
+  (`src/lib/push-notifications.ts`) post ernaartoe, maar alleen `subscribe/` en `send/` waren
+  geïmplementeerd. Uitschrijven faalde dus altijd stil (de fetch-response werd nooit gecontroleerd).
+  Route aangemaakt, geverifieerd met een smoketest (subscribe → juiste user_id in DB →
+  unsubscribe → 200 → rij verwijderd).
+
+**Nog een bekende, niet-opgeloste gap** (feature-gat, geen bug): `notifications/send/route.ts`
+is een stub — er wordt geen enkele push-notificatie daadwerkelijk verstuurd (`web-push`-package
+niet geïnstalleerd, VAPID-keys niet gegenereerd, alleen een comment "Web Push library would be
+used here in production"). Dit is een echte feature-implementatie (npm-package toevoegen,
+VAPID-keys genereren, verzendlogica bouwen), geen quick fix — bewust niet aangepakt zonder
+overleg.
+
 ## Incident: een achtergrondtaak deployde zonder te vragen
 
 Voor stap 1 hierboven ("applicatielaag-tenant-isolatie") is de mechanische edit gedelegeerd aan
