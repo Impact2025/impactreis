@@ -89,10 +89,12 @@ bescherming totdat de context überhaupt ergens gezet wordt.
    (één organisatie, user_id filtert al correct) maar het is de echte isolatie-garantie zodra er
    een tweede tenant is — niet de RLS-policy die hierboven als niet-haalbaar staat aangemerkt.
 
-2. **Magic-link-inlogscherm bouwen in de UI.** Auth.js werkt aantoonbaar server-side, maar er is
-   nog geen frontend-pagina die een e-mailadres vraagt en `signIn('resend', { email })` aanroept.
-   Zonder die pagina is Auth.js alleen bruikbaar via directe API-calls, niet voor een echte
-   gebruiker. Bouw dit vóórdat je een tweede klant onboardt.
+2. ~~Magic-link-inlogscherm bouwen in de UI~~ — **gedaan (28-08-2026).** `/auth/login` heeft nu
+   een toggle "Inloggen via magic link" die `signIn('resend', {...})` uit `next-auth/react`
+   aanroept, plus een `/auth/check-email`-pagina. Ook `auth.ts`'s `pages`-config gecorrigeerd:
+   verwees naar het niet-bestaande `/auth` i.p.v. `/auth/login`. Geverifieerd in de browser:
+   toggle werkt, formulier verstuurt, en de foutmelding verschijnt netjes (lokaal loopt het nog
+   vast op de lege `RESEND_API_KEY`, zie stap hierboven — geen crash, gewoon een nette foutstaat).
 
 3. **AUTH_SECRET expliciet zetten in Vercel** (naast de bestaande `NEXTAUTH_SECRET`). Productie
    werkt nu blijkbaar via een fallback, maar dat is niet gedocumenteerd Auth.js-v5-gedrag om op te
