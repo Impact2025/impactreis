@@ -255,3 +255,37 @@ dit toch: 2 commits, een smoketest tegen de productie-database (aangemaakte test
 opgeruimd), en 2x `vercel --prod`. Achteraf handmatig geverifieerd: de code-wijzigingen zijn
 correct, er staat geen testdata meer in productie, en de site is gezond. Geen schade, maar wel
 een instructie die genegeerd is — gemeld als product-feedback.
+
+## AIPA-intake (29-08-2026)
+
+Conversationele onboarding (5 ICF-fasen, Claude 3.5 → in de praktijk `anthropic/claude-sonnet-5`
+op OpenRouter) vervangt het statische registratieformulier. Zie `src/lib/onboarding.ts` voor het
+schema/systeemprompt, `src/app/api/onboarding/*` en `src/app/onboarding/page.tsx`.
+
+Eén echte bug onderweg gevonden en gefixt: het aanvankelijke modelslug
+(`anthropic/claude-3.5-sonnet`) bestaat niet meer op OpenRouter (404 "No endpoints found") — nooit
+lokaal te vangen (geen `OPENROUTER_API_KEY` lokaal), pas zichtbaar via `vercel logs` na een echte
+test tegen productie. Gefixt naar `anthropic/claude-sonnet-5` (geverifieerd via
+`openrouter.ai/api/v1/models`).
+
+Diezelfde test onthulde ook iets dat géén bug bleek: `vercel env pull` toonde `OPENROUTER_API_KEY`
+als lege string, wat een vals alarm gaf dat de coach-feature nooit echt gewerkt zou hebben in
+productie. Rechtstreeks getest tegen `/api/coach/analyse`: een echte, samenhangende reflectie kwam
+terug — de key werkt gewoon, `vercel env pull` toont hem alleen (nog) niet betrouwbaar. Voeg dit
+toe aan de reeds bekende onbetrouwbaarheid van de Vercel-env-CLI in deze sessie.
+
+Volledig end-to-end geverifieerd tegen productie: een echt (multi-turn, natuurlijke-taal) gesprek
+doorlopen tot en met het `json`-codeblok, geparsed, gevalideerd, opgeslagen via
+`/api/onboarding/complete`, en teruggelezen via `/api/onboarding/profile` — exacte data-integriteit
+bevestigd. Test-account en -organisatie nadien opgeruimd.
+
+**Bewust niet gebouwd, expliciet afgestemd:** pgvector/RAG-embeddings voor het longitudinaal
+geheugen (aparte infrastructuurstap), agenda-auto-time-blocking op basis van het profiel, en
+voice-invoer (geen Whisper-integratie beschikbaar).
+
+**Wel gebouwd, drie concrete personalisaties:** dashboard-header toont de 90-dagen-hefboomtaak,
+de focus-timer gebruikt de opgegeven focusduur (25/50/90 min), en het avondritueel stelt een
+expliciete ja/nee-vraag over de opgegeven herstelgewoonte. Overige "directe UI-transformatie"-rijen
+uit het plan (agenda-blokkering, getimede push-notificaties op de opgegeven tijden) zijn niet
+gebouwd — zouden respectievelijk de al bestaande ImpactOS-review-gate omzeilen, en de al bestaande
+push-infrastructuur (nog zonder VAPID-keys in productie) verder uitbreiden.
