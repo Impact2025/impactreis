@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Moon, Lightbulb, TrendingDown, Calendar, Heart, ArrowLeft, CheckCircle, Brain } from 'lucide-react';
+import { Moon, Lightbulb, TrendingDown, Calendar, Heart, ArrowLeft, CheckCircle, Brain, Zap } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { TimeGateScreen } from '@/components/weekflow/time-gate-screen';
@@ -45,6 +45,8 @@ interface EveningRitualData {
   energyLevel: number;
   tomorrowTop3: string[];
   gratitude: string;
+  energyGains: string;
+  energyCosts: string;
 }
 
 function EveningContent() {
@@ -67,7 +69,9 @@ function EveningContent() {
     challenges: '',
     energyLevel: 5,
     tomorrowTop3: ['', '', ''],
-    gratitude: ''
+    gratitude: '',
+    energyGains: '',
+    energyCosts: ''
   });
 
   useEffect(() => {
@@ -80,7 +84,7 @@ function EveningContent() {
         }
         const savedRitual = localStorage.getItem(`eveningRitual_${targetDate}`);
         if (savedRitual) {
-          setFormData(JSON.parse(savedRitual));
+          setFormData((prev) => ({ ...prev, ...JSON.parse(savedRitual) }));
         }
         const savedAdhd = localStorage.getItem(`adhdLog_${targetDate}`);
         if (savedAdhd) {
@@ -128,6 +132,20 @@ function EveningContent() {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ date: targetDate, scores: adhdScores }),
         }).catch(() => {});
+
+        const gains = formData.energyGains.split('\n').map((s) => s.trim()).filter(Boolean);
+        const costs = formData.energyCosts.split('\n').map((s) => s.trim()).filter(Boolean);
+        const entries = [
+          ...gains.map((activity) => ({ activity, direction: 'gain' as const })),
+          ...costs.map((activity) => ({ activity, direction: 'cost' as const })),
+        ];
+        if (entries.length > 0) {
+          fetch('/api/energy-log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ date: targetDate, entries }),
+          }).catch(() => {});
+        }
       }
       setShowSuccess(true);
       setTimeout(() => { router.push('/dashboard'); }, 2000);
@@ -332,6 +350,41 @@ function EveningContent() {
             <div className="flex justify-between text-[11px] text-[#8a8a9a] mt-2">
               <span>Uitgeput</span>
               <span>Energiek</span>
+            </div>
+          </div>
+
+          {/* Energie-attributie: niet alleen het cijfer, ook de bron */}
+          <div className="rounded-[16px] border border-[#e8e8ec] p-5">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-[10px] bg-[#00cc66]/10 flex items-center justify-center">
+                <Zap size={15} className="text-[#00cc66]" />
+              </div>
+              <div>
+                <label className="block text-[14px] font-semibold text-[#0a0a14]">Wat gaf en kostte energie?</label>
+                <p className="text-[11px] text-[#8a8a9a]">Eén per regel — dit is wat de coach later kan herkennen als patroon</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <span className="text-[12px] font-medium text-[#00cc66] mb-1.5 block">Gaf energie</span>
+                <textarea
+                  value={formData.energyGains}
+                  onChange={(e) => setFormData({ ...formData, energyGains: e.target.value })}
+                  className="w-full px-4 py-3 bg-[#f0fdf4] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] resize-none transition-colors"
+                  rows={2}
+                  placeholder={'Bijv. "Gesprek met een klant"\n"Een uur zonder telefoon werken"'}
+                />
+              </div>
+              <div>
+                <span className="text-[12px] font-medium text-red-500 mb-1.5 block">Kostte energie</span>
+                <textarea
+                  value={formData.energyCosts}
+                  onChange={(e) => setFormData({ ...formData, energyCosts: e.target.value })}
+                  className="w-full px-4 py-3 bg-red-50 border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] resize-none transition-colors"
+                  rows={2}
+                  placeholder={'Bijv. "Vergadering die uitliep"\n"Een lastig besluit blijven uitstellen"'}
+                />
+              </div>
             </div>
           </div>
 

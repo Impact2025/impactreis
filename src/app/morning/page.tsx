@@ -138,12 +138,16 @@ export default function MorningPage() {
 
       const token = localStorage.getItem('token');
 
-      // Fire-and-forget: sessie analyse email
+      // Fire-and-forget: sessie analyse email + coach-reflectie (De Sparringpartner)
       if (token) {
         fetch('/api/email/sessie-analyse', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify(formData),
+        }).catch(() => {});
+        fetch('/api/coach/analyse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         }).catch(() => {});
       }
 

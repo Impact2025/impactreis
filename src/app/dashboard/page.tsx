@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Bell, Sunrise, Moon, CalendarDays, BookOpen,
-  TrendingUp, Play, ChevronRight, Zap, BookHeart,
+  TrendingUp, Play, ChevronRight, Zap, BookHeart, Sparkles,
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -315,6 +315,23 @@ export default function DashboardPage() {
               )}
             </div>
           </section>
+
+          {/* ══ DE SPARRINGPARTNER ══════════════════════════════ */}
+          <Link
+            href="/coach"
+            className="block rounded-[16px] bg-[#0a0a14] p-4 mb-6 hover:opacity-95 transition-opacity"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-[10px] bg-[#00cc66]/15 flex items-center justify-center flex-shrink-0">
+                <Sparkles size={18} className="text-[#00cc66]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-bold text-white">De Sparringpartner</p>
+                <p className="text-[11px] text-white/50 leading-snug">Business- en welzijnscoach — vraag een reflectie op je dag</p>
+              </div>
+              <ChevronRight size={16} className="text-white/40 flex-shrink-0" />
+            </div>
+          </Link>
 
           {/* ══ ACTUELE DOELEN ══════════════════════════════════ */}
           {goals.length > 0 && (
