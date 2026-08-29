@@ -333,6 +333,16 @@ export default function DashboardPage() {
             </div>
           </Link>
 
+          {/* Insights kreeg zijn plek in de bottom-nav af aan Coach — houd hem bereikbaar */}
+          <Link
+            href="/insights"
+            className="flex items-center gap-2 text-[12px] text-[#8a8a9a] hover:text-[#0a0a14] transition-colors mb-6 -mt-3"
+          >
+            <TrendingUp size={14} />
+            Bekijk je insights en trends
+            <ChevronRight size={13} />
+          </Link>
+
           {/* ══ ACTUELE DOELEN ══════════════════════════════════ */}
           {goals.length > 0 && (
             <section className="mb-6">

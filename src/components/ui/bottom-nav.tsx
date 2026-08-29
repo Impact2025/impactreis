@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Target, Trophy, BarChart3, Settings } from 'lucide-react';
+import { LayoutDashboard, Target, Trophy, Sparkles, Settings } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/goals',     icon: Target,          label: 'Doelen'    },
   { href: '/wins',      icon: Trophy,          label: 'Wins'      },
-  { href: '/insights',  icon: BarChart3,       label: 'Insights'  },
+  { href: '/coach',     icon: Sparkles,        label: 'Coach'     },
   { href: '/settings',  icon: Settings,        label: 'Systeem'   },
 ];
 
