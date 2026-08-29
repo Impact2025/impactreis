@@ -303,8 +303,9 @@ Schrijf een coach-reflectie van 120-180 woorden in het Nederlands, in de jij-vor
 }
 
 /** Legt een observatie vast als coach_lesson: dedupe op pattern_key, confidence groeit met bewijs
- *  (Laplace-gladgestreken, zelfde formule als iris_lessons) i.p.v. bij elke run een nieuwe rij. */
-export async function rememberLesson(userId: string, patternKey: string, technique: Technique, insight: string) {
+ *  (Laplace-gladgestreken, zelfde formule als iris_lessons) i.p.v. bij elke run een nieuwe rij.
+ *  organizationId alleen nodig voor de INSERT-tak — coach_lessons.organization_id is NOT NULL. */
+export async function rememberLesson(userId: string, organizationId: number | null, patternKey: string, technique: Technique, insight: string) {
   const existing = await sql`SELECT id, times_confirmed FROM coach_lessons WHERE user_id = ${userId} AND pattern_key = ${patternKey} LIMIT 1`;
   if (existing.length > 0) {
     const confirmed = (existing[0].times_confirmed as number) + 1;
@@ -313,8 +314,8 @@ export async function rememberLesson(userId: string, patternKey: string, techniq
       times_confirmed = ${confirmed}, confidence = ${confidence}, updated_at = NOW()
       WHERE id = ${existing[0].id}`;
   } else {
-    await sql`INSERT INTO coach_lessons (user_id, pattern_key, technique, insight, confidence, times_confirmed, source)
-      VALUES (${userId}, ${patternKey}, ${technique}, ${insight}, 0.5, 1, 'coach_analyse')`;
+    await sql`INSERT INTO coach_lessons (user_id, pattern_key, technique, insight, confidence, times_confirmed, source, organization_id)
+      VALUES (${userId}, ${patternKey}, ${technique}, ${insight}, 0.5, 1, 'coach_analyse', ${organizationId})`;
   }
 }
 
@@ -355,15 +356,17 @@ export function detectProactiveSignal(
   return { signal: false, patternKey: '', message: '' };
 }
 
-/** Zet user_context recht na elke coachrun, zodat de tabel niet langer ongebruikt in het schema staat. */
-export async function updateUserContext(userId: string, ctx: CoachContext) {
+/** Zet user_context recht na elke coachrun, zodat de tabel niet langer ongebruikt in het schema
+ *  staat. organizationId alleen relevant voor de eerste keer (INSERT-tak) — user_context.
+ *  organization_id is NOT NULL, en verandert toch niet meer op een bestaande rij. */
+export async function updateUserContext(userId: string, organizationId: number | null, ctx: CoachContext) {
   const mood = (ctx.today.energyLevel ?? 5) >= 7 ? 'energized'
     : (ctx.today.energyLevel ?? 5) <= 3 ? 'overwhelmed'
     : 'neutral';
 
   await sql`
-    INSERT INTO user_context (user_id, current_energy_level, current_stress_level, recent_mood, updated_at)
-    VALUES (${userId}, ${ctx.today.energyLevel ?? 5}, ${ctx.userContext.current_stress_level}, ${mood}, NOW())
+    INSERT INTO user_context (user_id, current_energy_level, current_stress_level, recent_mood, updated_at, organization_id)
+    VALUES (${userId}, ${ctx.today.energyLevel ?? 5}, ${ctx.userContext.current_stress_level}, ${mood}, NOW(), ${organizationId})
     ON CONFLICT (user_id) DO UPDATE SET
       current_energy_level = EXCLUDED.current_energy_level,
       recent_mood = EXCLUDED.recent_mood,
@@ -388,6 +391,14 @@ export async function loadSingleUserId(): Promise<string | null> {
   return users.length > 0 ? String(users[0].id) : null;
 }
 
+/** organization_id bij een userId — alleen nodig voor de bridge-analyse-route, die (anders dan
+ *  bridge/lessons en signal) ook schrijft naar coach_lessons/user_context, en die kolom is
+ *  NOT NULL. */
+export async function loadUserOrganizationId(userId: string): Promise<number | null> {
+  const rows = await sql`SELECT organization_id FROM users WHERE id = ${userId}`;
+  return rows[0]?.organization_id ?? null;
+}
+
 function slugifyPattern(text: string): string {
   return text
     .toLowerCase()
@@ -405,7 +416,7 @@ export type CoachAnalysisResult =
  *  (/api/coach/bridge/analyse). Cijfers eerst (deterministisch gekozen techniek), dan pas het
  *  LLM-oordeel erbovenop — zelfde volgorde als Iris' briefing. Legt de observatie vast als
  *  coach_lesson en werkt user_context bij. */
-export async function runCoachAnalysis(userId: string): Promise<CoachAnalysisResult> {
+export async function runCoachAnalysis(userId: string, organizationId: number | null): Promise<CoachAnalysisResult> {
   const ctx = await loadCoachContext(userId);
 
   if (!ctx.today.energyLevel) {
@@ -434,8 +445,8 @@ export async function runCoachAnalysis(userId: string): Promise<CoachAnalysisRes
   }
 
   const patternKey = `${technique}:${slugifyPattern(reason)}`;
-  await rememberLesson(userId, patternKey, technique, reason);
-  await updateUserContext(userId, ctx);
+  await rememberLesson(userId, organizationId, patternKey, technique, reason);
+  await updateUserContext(userId, organizationId, ctx);
 
   return {
     ok: true,

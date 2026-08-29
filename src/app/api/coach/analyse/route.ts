@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const result = await runCoachAnalysis(String(userId));
+  const result = await runCoachAnalysis(String(userId), organizationId);
   if (!result.ok) {
     const { ok, status, ...body } = result;
     return NextResponse.json(body, { status });

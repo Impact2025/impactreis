@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkBridgeToken, loadSingleUserId, runCoachAnalysis } from '@/lib/coach';
+import { checkBridgeToken, loadSingleUserId, loadUserOrganizationId, runCoachAnalysis } from '@/lib/coach';
 
 /** Zelfde reflectie als /api/coach/analyse, maar aangeroepen vanuit ImpactOS' Control Room
  * (server-naar-server, gedeeld token) in plaats van vanuit de browser (JWT). Vincent wilde de
@@ -14,7 +14,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Nog geen gebruiker in mijn-ondernemers-os.' }, { status: 404 });
   }
 
-  const result = await runCoachAnalysis(userId);
+  const organizationId = await loadUserOrganizationId(userId);
+  const result = await runCoachAnalysis(userId, organizationId);
   if (!result.ok) {
     const { ok, status, ...body } = result;
     return NextResponse.json(body, { status });
