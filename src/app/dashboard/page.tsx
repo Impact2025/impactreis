@@ -25,12 +25,22 @@ interface Goal {
   status: string;
 }
 
+interface CalendarEvent {
+  id: string;
+  summary: string;
+  start: string | null;
+  end: string | null;
+  isAllDay: boolean;
+}
+
 export default function DashboardPage() {
   const [user, setUser]             = useState<any>(null);
   const [loading, setLoading]       = useState(true);
   const [goals, setGoals]           = useState<Goal[]>([]);
   const [recentWins, setRecentWins] = useState<Win[]>([]);
   const [stats, setStats]           = useState({ activeGoals: 0, weeklyProgress: 0, streak: 12 });
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [calendarConfigured, setCalendarConfigured] = useState(false);
   const router                      = useRouter();
 
   const ritualStatuses = useRitualStatus();
@@ -46,11 +56,17 @@ export default function DashboardPage() {
 
   const fetchData = async (retry = 0) => {
     try {
-      const [goalsRes, focusRes, winsRes] = await Promise.allSettled([
+      const [goalsRes, focusRes, winsRes, calendarRes] = await Promise.allSettled([
         api.goals.getAll(),
         api.focus.getAll(),
         api.wins.getAll(),
+        api.calendar.today(),
       ]);
+
+      if (calendarRes.status === 'fulfilled') {
+        setCalendarConfigured(calendarRes.value.configured);
+        setCalendarEvents(calendarRes.value.events ?? []);
+      }
 
       const allGoals    = goalsRes.status === 'fulfilled' ? goalsRes.value : [];
       const activeGoals = allGoals.filter((g: any) => g.status === 'active');
@@ -315,6 +331,30 @@ export default function DashboardPage() {
               )}
             </div>
           </section>
+
+          {/* ══ VANDAAG IN JE AGENDA ════════════════════════════ */}
+          {calendarConfigured && calendarEvents.length > 0 && (
+            <div className="rounded-[16px] border border-[#e8e8ec] p-5 mb-6">
+              <div className="flex items-center gap-2.5 mb-3.5">
+                <div className="w-8 h-8 rounded-[10px] bg-[#00cc66]/10 flex items-center justify-center">
+                  <CalendarDays size={15} className="text-[#00cc66]" />
+                </div>
+                <p className="text-[14px] font-semibold text-[#0a0a14]">Vandaag in je agenda</p>
+              </div>
+              <div className="space-y-2.5">
+                {calendarEvents.map((ev) => (
+                  <div key={ev.id} className="flex items-center gap-3">
+                    <span className="text-[12px] font-medium text-[#8a8a9a] w-12 flex-shrink-0 tabular-nums">
+                      {ev.isAllDay || !ev.start
+                        ? 'Hele dag'
+                        : new Date(ev.start).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <span className="text-[13px] text-[#0a0a14] truncate">{ev.summary}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ══ DE SPARRINGPARTNER ══════════════════════════════ */}
           <Link

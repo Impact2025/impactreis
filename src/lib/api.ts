@@ -375,6 +375,10 @@ class ApiClient {
   // Alias for backwards compatibility
   focusSessions = this.focus;
 
+  calendar = {
+    today: () => this.request<{ configured: boolean; events: any[] }>('/calendar/today'),
+  };
+
   // Courses
   courses = {
     getAll: () => this.request<any[]>('/courses'),
