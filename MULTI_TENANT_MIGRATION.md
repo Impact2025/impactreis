@@ -164,6 +164,45 @@ used here in production"). Dit is een echte feature-implementatie (npm-package t
 VAPID-keys genereren, verzendlogica bouwen), geen quick fix — bewust niet aangepakt zonder
 overleg.
 
+## Push-notificaties echt werkend gemaakt (29-08-2026)
+
+`notifications/send/route.ts` was een stub (zie hierboven) — nu geïmplementeerd met de
+`web-push`-package. VAPID-keys gegenereerd via `npx web-push generate-vapid-keys` en lokaal
+gezet in `.env.local`. Server-side geverifieerd met een echte VAPID-ondertekende aanroep naar
+FCM tegen een nep-endpoint: FCM wees hem specifiek af als "endpoint bestaat niet" (niet als
+"verzoek onjuist gevormd"), wat bevestigt dat de VAPID-signing en de aanroep zelf correct zijn.
+De opschoon-logica (ongeldige subscriptions verwijderen bij 404/410) werkte ook meteen goed.
+
+**Niet volledig end-to-end getest:** een echte browser-melding op een scherm zien verschijnen
+kon niet via de automatisering — het native "Notificaties toestaan?"-dialoog van Chrome zit
+buiten de pagina en kan niet door dit soort tools worden weggeklikt. Test dit zelf: ga naar
+instellingen in de app, zet notificaties aan (dat vraagt je échte toestemming), en vraag mij dan
+een test-push te sturen — of ik voeg een "verstuur test-push"-knop toe als je dat liever hebt.
+
+**Nog te doen door jou: VAPID-keys in Vercel zetten.** De `vercel env add`-CLI bleek hier
+onbetrouwbaar (zie het volgende incident) — zet deze drie zelf via het dashboard
+(Project Settings → Environment Variables, environment "Production"). De publieke sleutel staat
+hieronder (die is per ontwerp niet geheim); `VAPID_PRIVATE_KEY` staat alleen in je lokale
+`.env.local` — kopieer die vandaar, zet hem niet in dit bestand of ergens anders dat naar git gaat.
+```
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=BDVzqJWRHeYi-WJAm-CJMJyr_2J8hWfEQTNhyM6HRrwNQSTmUcEQRBWW1KW14Rgab1htKaZ6fx_q7Iy_5Bq1PsQ
+VAPID_PRIVATE_KEY=<zie .env.local>
+VAPID_SUBJECT=mailto:v.munster@weareimpact.nl
+```
+Zonder deze env vars in productie blijft `notifications/send` daar falen met "VAPID keys not
+configured" — de code is klaar, de configuratie nog niet.
+
+Er is geen cron geconfigureerd die deze route aanroept (gecontroleerd in `vercel.json` — alleen
+de e-mail-crons staan erin), dus deze wijziging kan niets ongevraagd gaan versturen.
+
+## Incident: `vercel env add` schrijft stil een lege waarde weg
+
+Drie keer meegemaakt in deze sessie (`AUTH_SECRET` 2x, `NEXT_PUBLIC_VAPID_PUBLIC_KEY` 1x): de
+CLI meldt succes ("Added Environment Variable..."), maar `vercel env pull` laat daarna een lege
+string zien. Beide keren de lege variabele weer verwijderd om verwarring te voorkomen. Gemeld als
+product-feedback. **Zet secrets voortaan zelf via het Vercel-dashboard**, niet via deze CLI met
+stdin — dat lijkt hier structureel niet te werken.
+
 ## Incident: een achtergrondtaak deployde zonder te vragen
 
 Voor stap 1 hierboven ("applicatielaag-tenant-isolatie") is de mechanische edit gedelegeerd aan

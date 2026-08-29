@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
+import webpush from 'web-push';
 
 const sql = neon(process.env.DATABASE_URL!);
-
-// Web Push library would be used here in production
-// npm install web-push
-// import webpush from 'web-push';
 
 interface NotificationPayload {
   title: string;
@@ -18,7 +15,6 @@ interface NotificationPayload {
   userId?: number;
 }
 
-// VAPID keys should be set in environment variables
 // Generate with: npx web-push generate-vapid-keys
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
@@ -27,6 +23,44 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
 function verifyCronSecret(request: NextRequest): boolean {
   const authHeader = request.headers.get('authorization');
   return authHeader === `Bearer ${process.env.CRON_SECRET}`;
+}
+
+interface SubscriptionRow {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+
+async function sendToSubscriptions(subscriptions: SubscriptionRow[], notificationPayload: string) {
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    throw new Error('VAPID keys not configured');
+  }
+
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+
+  const results = await Promise.allSettled(
+    subscriptions.map(async (sub) => {
+      const pushSubscription = {
+        endpoint: sub.endpoint,
+        keys: { p256dh: sub.p256dh, auth: sub.auth },
+      };
+
+      try {
+        await webpush.sendNotification(pushSubscription, notificationPayload);
+        return { success: true, endpoint: sub.endpoint };
+      } catch (error: any) {
+        // Expired/invalid subscriptions are reported by the push service as 404/410 —
+        // clean those up so we stop wasting sends on dead endpoints.
+        if (error.statusCode === 410 || error.statusCode === 404) {
+          await sql`DELETE FROM push_subscriptions WHERE endpoint = ${sub.endpoint}`;
+        }
+        return { success: false, endpoint: sub.endpoint, error: error.message };
+      }
+    })
+  );
+
+  const sent = results.filter((r) => r.status === 'fulfilled' && r.value.success).length;
+  return { sent, failed: results.length - sent };
 }
 
 // POST - Send push notification
@@ -45,29 +79,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get subscriptions (optionally filtered by user)
-    let subscriptions;
-    if (payload.userId) {
-      subscriptions = await sql`
-        SELECT endpoint, p256dh, auth
-        FROM push_subscriptions
-        WHERE user_id = ${payload.userId}
-      `;
-    } else {
-      subscriptions = await sql`
-        SELECT endpoint, p256dh, auth
-        FROM push_subscriptions
-      `;
-    }
+    const subscriptions = payload.userId
+      ? await sql`SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ${payload.userId}`
+      : await sql`SELECT endpoint, p256dh, auth FROM push_subscriptions`;
 
     if (subscriptions.length === 0) {
-      return NextResponse.json(
-        { message: 'No subscriptions found', sent: 0 },
-        { status: 200 }
-      );
+      return NextResponse.json({ message: 'No subscriptions found', sent: 0 }, { status: 200 });
     }
 
-    // Prepare notification payload
     const notificationPayload = JSON.stringify({
       title: payload.title,
       body: payload.body,
@@ -78,65 +97,13 @@ export async function POST(request: NextRequest) {
       data: payload.data || {},
     });
 
-    // In production, use web-push library
-    // For now, log the intent and return success
-    console.log(`Would send push to ${subscriptions.length} subscribers:`, notificationPayload);
+    const { sent, failed } = await sendToSubscriptions(subscriptions as SubscriptionRow[], notificationPayload);
 
-    /*
-    // Production implementation with web-push:
-    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
-      return NextResponse.json(
-        { error: 'VAPID keys not configured' },
-        { status: 500 }
-      );
-    }
-
-    webpush.setVapidDetails(
-      VAPID_SUBJECT,
-      VAPID_PUBLIC_KEY,
-      VAPID_PRIVATE_KEY
-    );
-
-    const results = await Promise.allSettled(
-      subscriptions.map(async (sub) => {
-        const pushSubscription = {
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth,
-          },
-        };
-
-        try {
-          await webpush.sendNotification(pushSubscription, notificationPayload);
-          return { success: true, endpoint: sub.endpoint };
-        } catch (error) {
-          // Remove invalid subscriptions
-          if (error.statusCode === 410 || error.statusCode === 404) {
-            await sql`
-              DELETE FROM push_subscriptions
-              WHERE endpoint = ${sub.endpoint}
-            `;
-          }
-          return { success: false, endpoint: sub.endpoint, error: error.message };
-        }
-      })
-    );
-
-    const sent = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
-    const failed = results.length - sent;
-    */
-
-    return NextResponse.json({
-      success: true,
-      sent: subscriptions.length,
-      failed: 0,
-      message: 'Notifications queued (web-push library needed for actual delivery)',
-    });
-  } catch (error) {
+    return NextResponse.json({ success: true, sent, failed });
+  } catch (error: any) {
     console.error('Error sending push notification:', error);
     return NextResponse.json(
-      { error: 'Failed to send notification' },
+      { error: error.message || 'Failed to send notification' },
       { status: 500 }
     );
   }
@@ -159,7 +126,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const notifications: Record<string, { title: string; body: string; type: string }> = {
+    const notifications: Record<string, { title: string; body: string; type: NotificationPayload['type'] }> = {
       morning: {
         title: 'Goedemorgen!',
         body: 'Start je dag met je ochtend ritueel',
@@ -178,25 +145,29 @@ export async function GET(request: NextRequest) {
     };
 
     const notification = notifications[type];
+    const subscriptions = await sql`SELECT endpoint, p256dh, auth FROM push_subscriptions`;
 
-    // Get all subscriptions
-    const subscriptions = await sql`
-      SELECT endpoint, p256dh, auth
-      FROM push_subscriptions
-    `;
+    if (subscriptions.length === 0) {
+      return NextResponse.json({ success: true, type, subscribers: 0, sent: 0, failed: 0 });
+    }
 
-    console.log(`Sending ${type} reminder to ${subscriptions.length} subscribers`);
-
-    return NextResponse.json({
-      success: true,
-      type,
-      subscribers: subscriptions.length,
-      notification,
+    const notificationPayload = JSON.stringify({
+      title: notification.title,
+      body: notification.body,
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-72x72.png',
+      tag: notification.type,
+      type: notification.type,
+      data: {},
     });
-  } catch (error) {
+
+    const { sent, failed } = await sendToSubscriptions(subscriptions as SubscriptionRow[], notificationPayload);
+
+    return NextResponse.json({ success: true, type, subscribers: subscriptions.length, sent, failed });
+  } catch (error: any) {
     console.error('Error sending scheduled notification:', error);
     return NextResponse.json(
-      { error: 'Failed to send scheduled notification' },
+      { error: error.message || 'Failed to send scheduled notification' },
       { status: 500 }
     );
   }
