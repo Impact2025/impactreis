@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://reis.weareimpact.nl',
     },
     body: JSON.stringify({
-      model: 'anthropic/claude-3.5-sonnet',
+      model: 'anthropic/claude-sonnet-5',
       max_tokens: 1000,
       stream: true,
       messages: [
