@@ -41,6 +41,7 @@ export default function DashboardPage() {
   const [stats, setStats]           = useState({ activeGoals: 0, weeklyProgress: 0, streak: 12 });
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [calendarConfigured, setCalendarConfigured] = useState(false);
+  const [leverageGoal, setLeverageGoal] = useState<string | null>(null);
   const router                      = useRouter();
 
   const ritualStatuses = useRitualStatus();
@@ -56,16 +57,21 @@ export default function DashboardPage() {
 
   const fetchData = async (retry = 0) => {
     try {
-      const [goalsRes, focusRes, winsRes, calendarRes] = await Promise.allSettled([
+      const [goalsRes, focusRes, winsRes, calendarRes, onboardingRes] = await Promise.allSettled([
         api.goals.getAll(),
         api.focus.getAll(),
         api.wins.getAll(),
         api.calendar.today(),
+        api.onboarding.profile(),
       ]);
 
       if (calendarRes.status === 'fulfilled') {
         setCalendarConfigured(calendarRes.value.configured);
         setCalendarEvents(calendarRes.value.events ?? []);
+      }
+
+      if (onboardingRes.status === 'fulfilled' && onboardingRes.value.profile) {
+        setLeverageGoal(onboardingRes.value.profile.impactProfile?.quarterlyLeverageGoal ?? null);
       }
 
       const allGoals    = goalsRes.status === 'fulfilled' ? goalsRes.value : [];
@@ -160,9 +166,18 @@ export default function DashboardPage() {
             <h1 className="text-[30px] font-bold leading-tight text-[#0a0a14] tracking-tight">
               {getGreeting()}, {displayName}
             </h1>
-            <p className="text-[13px] text-[#8a8a9a] mt-2 italic leading-relaxed">
-              &ldquo;The best way to predict the future is to create it.&rdquo;
-            </p>
+            {leverageGoal ? (
+              <div className="mt-2.5">
+                <p className="text-[10px] font-bold tracking-[0.15em] text-[#00cc66] uppercase mb-1">
+                  90-dagen hefboom
+                </p>
+                <p className="text-[13px] text-[#0a0a14] leading-relaxed">{leverageGoal}</p>
+              </div>
+            ) : (
+              <p className="text-[13px] text-[#8a8a9a] mt-2 italic leading-relaxed">
+                &ldquo;The best way to predict the future is to create it.&rdquo;
+              </p>
+            )}
           </div>
 
           {/* ══ GEMIST AVONDRITUEEL BANNER ══════════════════════ */}

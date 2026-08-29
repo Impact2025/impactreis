@@ -190,6 +190,20 @@ export const coachPredictions = pgTable('coach_predictions', {
   dueIdx: index('idx_coach_predictions_due').on(t.userId, t.dueDate),
 }));
 
+// De AIPA-intake: één gesprek i.p.v. een statisch registratieformulier, dat het hele
+// UserOnboardingProfile als JSONB opslaat (zelfde stijl als goals/daily_logs — één blob i.p.v.
+// alle geneste velden normaliseren). RAG-embeddings (pgvector) zijn hier bewust NIET
+// meegenomen — dat is losstaande infrastructuur, geen onderdeel van deze intake-opslag.
+export const onboardingProfiles = pgTable('onboarding_profiles', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
+  userId: integer('user_id').references(() => users.id).notNull().unique(),
+  completed: boolean('completed').notNull().default(false),
+  profile: jsonb('profile').notNull(), // UserOnboardingProfile, zie src/lib/onboarding.ts
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
 // --- Auth.js adaptertabellen ---
 //
 // Bewust GESCHEIDEN van de bestaande `users`-tabel (die heeft een integer id en geen

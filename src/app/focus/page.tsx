@@ -8,6 +8,7 @@ import {
   CheckCircle, Clock, Zap, HelpCircle, Flame
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
+import { api } from '@/lib/api';
 import { MovementBreakMini } from '@/components/robbins/movement-break';
 import { Celebration } from '@/components/robbins/celebration';
 import { BottomNav } from '@/components/ui/bottom-nav';
@@ -30,6 +31,9 @@ const powerQuestions = [
 ];
 
 export default function FocusPage() {
+  // Standaard 25 min (Pomodoro); overschreven zodra de AIPA-intake een voorkeur oplevert
+  // (focusBlockDurationMinutes: 25 | 50 | 90) — zie fetchWorkMinutes hieronder.
+  const [workMinutes, setWorkMinutes] = useState(25);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
@@ -54,6 +58,17 @@ export default function FocusPage() {
         if (!currentUser) { router.push('/auth/login'); return; }
         const savedSessions = localStorage.getItem('focusSessions');
         if (savedSessions) setSessions(JSON.parse(savedSessions));
+
+        try {
+          const { profile } = await api.onboarding.profile();
+          const minutes = profile?.schedule?.focusBlockDurationMinutes;
+          if (minutes) {
+            setWorkMinutes(minutes);
+            setTimeLeft(minutes * 60);
+          }
+        } catch {
+          // geen profiel of onboarding nog niet gedaan — gewoon de standaard 25 min
+        }
       } catch { router.push('/auth/login'); }
       finally { setLoading(false); }
     };
@@ -82,7 +97,7 @@ export default function FocusPage() {
       setShowCelebration(true);
       const session: FocusSession = {
         id: Date.now().toString(),
-        duration: 25,
+        duration: workMinutes,
         completedAt: new Date().toISOString(),
         type: 'work',
         energyBefore,
@@ -96,7 +111,7 @@ export default function FocusPage() {
     } else {
       setIsBreak(false);
       setCurrentSession('work');
-      setTimeLeft(25 * 60);
+      setTimeLeft(workMinutes * 60);
       setShowGoalInput(true);
     }
   };
@@ -118,7 +133,7 @@ export default function FocusPage() {
 
   const resetTimer = () => {
     setIsActive(false);
-    setTimeLeft(currentSession === 'work' ? 25 * 60 : 5 * 60);
+    setTimeLeft(currentSession === 'work' ? workMinutes * 60 : 5 * 60);
     setShowGoalInput(true);
     setSessionGoal('');
   };
@@ -127,7 +142,7 @@ export default function FocusPage() {
     setIsActive(false);
     setIsBreak(false);
     setCurrentSession('work');
-    setTimeLeft(25 * 60);
+    setTimeLeft(workMinutes * 60);
     setShowGoalInput(true);
   };
 
@@ -157,7 +172,7 @@ export default function FocusPage() {
   const workSessions = todaySessions.filter(s => s.type === 'work');
   const totalFocusTime = workSessions.reduce((t, s) => t + s.duration, 0);
   const completedSessions = workSessions.length;
-  const totalDuration = currentSession === 'work' ? 25 * 60 : 5 * 60;
+  const totalDuration = currentSession === 'work' ? workMinutes * 60 : 5 * 60;
   const progress = (1 - timeLeft / totalDuration) * 100;
 
   const radius = 88;
@@ -178,7 +193,7 @@ export default function FocusPage() {
       <Celebration
         type="focus"
         message="Focus Sessie Voltooid!"
-        subMessage={`${completedSessions + 1} sessies vandaag — ${totalFocusTime + 25} minuten deep work`}
+        subMessage={`${completedSessions + 1} sessies vandaag — ${totalFocusTime + workMinutes} minuten deep work`}
         autoCloseDelay={3000}
       />
     );

@@ -379,6 +379,10 @@ class ApiClient {
     today: () => this.request<{ configured: boolean; events: any[] }>('/calendar/today'),
   };
 
+  onboarding = {
+    profile: () => this.request<{ completed: boolean; profile: any | null }>('/onboarding/profile'),
+  };
+
   // Courses
   courses = {
     getAll: () => this.request<any[]>('/courses'),

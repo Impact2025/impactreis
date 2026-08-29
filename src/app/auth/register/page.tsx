@@ -19,7 +19,7 @@ export default function RegisterPage() {
     setError('');
     try {
       await AuthService.register(email, password);
-      router.push('/dashboard');
+      router.push('/onboarding');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registratie mislukt');
     } finally {

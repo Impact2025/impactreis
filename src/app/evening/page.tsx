@@ -47,6 +47,7 @@ interface EveningRitualData {
   gratitude: string;
   energyGains: string;
   energyCosts: string;
+  recoveryHabitDone: boolean | null;
 }
 
 function EveningContent() {
@@ -54,6 +55,7 @@ function EveningContent() {
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [adhdScores, setAdhdScores] = useState<Record<string, number>>(defaultAdhdScores());
+  const [recoveryHabit, setRecoveryHabit] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -71,8 +73,15 @@ function EveningContent() {
     tomorrowTop3: ['', '', ''],
     gratitude: '',
     energyGains: '',
-    energyCosts: ''
+    energyCosts: '',
+    recoveryHabitDone: null
   });
+
+  useEffect(() => {
+    api.onboarding.profile()
+      .then(({ profile }) => setRecoveryHabit(profile?.vitalityProfile?.nonNegotiableRecoveryHabit ?? null))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -417,6 +426,37 @@ function EveningContent() {
               ))}
             </div>
           </div>
+
+          {/* Herstelbewaking — alleen zichtbaar als de AIPA-intake een gewoonte heeft opgeleverd */}
+          {recoveryHabit && (
+            <div className="rounded-[16px] border border-[#e8e8ec] p-5">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-8 h-8 rounded-[10px] bg-[#eff6ff] flex items-center justify-center">
+                  <Moon size={15} className="text-[#3b82f6]" />
+                </div>
+                <div>
+                  <label className="block text-[14px] font-semibold text-[#0a0a14]">Herstelbewaking</label>
+                  <p className="text-[11px] text-[#8a8a9a]">Ben je gelukt: {recoveryHabit.toLowerCase()}?</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {[{ v: true, label: 'Ja' }, { v: false, label: 'Nee' }].map((opt) => (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, recoveryHabitDone: opt.v })}
+                    className={`flex-1 py-2.5 rounded-[12px] text-[13px] font-semibold transition-colors ${
+                      formData.recoveryHabitDone === opt.v
+                        ? 'bg-[#0a0a14] text-white'
+                        : 'bg-[#f4f4f7] text-[#8a8a9a] hover:bg-[#e8e8ec]'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Gratitude */}
           <div className="rounded-[16px] border border-[#e8e8ec] p-5">
