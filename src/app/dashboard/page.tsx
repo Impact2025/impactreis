@@ -333,13 +333,28 @@ export default function DashboardPage() {
           </section>
 
           {/* ══ VANDAAG IN JE AGENDA ════════════════════════════ */}
-          {calendarConfigured && calendarEvents.length > 0 && (
+          {calendarConfigured && calendarEvents.length > 0 && (() => {
+            const meetingMinutes = calendarEvents.reduce((sum, ev) => {
+              if (ev.isAllDay || !ev.start || !ev.end) return sum;
+              return sum + Math.max(0, (new Date(ev.end).getTime() - new Date(ev.start).getTime()) / 60000);
+            }, 0);
+            const hours = Math.round((meetingMinutes / 60) * 10) / 10;
+            const druk = meetingMinutes >= 300 ? 'Drukke dag' : meetingMinutes >= 150 ? 'Gemiddelde vergaderdruk' : 'Rustige dag';
+
+            return (
             <div className="rounded-[16px] border border-[#e8e8ec] p-5 mb-6">
-              <div className="flex items-center gap-2.5 mb-3.5">
-                <div className="w-8 h-8 rounded-[10px] bg-[#00cc66]/10 flex items-center justify-center">
-                  <CalendarDays size={15} className="text-[#00cc66]" />
+              <div className="flex items-center justify-between mb-3.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-[10px] bg-[#00cc66]/10 flex items-center justify-center">
+                    <CalendarDays size={15} className="text-[#00cc66]" />
+                  </div>
+                  <p className="text-[14px] font-semibold text-[#0a0a14]">Vandaag in je agenda</p>
                 </div>
-                <p className="text-[14px] font-semibold text-[#0a0a14]">Vandaag in je agenda</p>
+                {meetingMinutes > 0 && (
+                  <span className="text-[10px] font-medium text-[#8a8a9a] bg-[#f4f4f7] rounded-full px-2.5 py-1 whitespace-nowrap">
+                    {druk} &middot; {hours}u
+                  </span>
+                )}
               </div>
               <div className="space-y-2.5">
                 {calendarEvents.map((ev) => (
@@ -354,7 +369,8 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* ══ DE SPARRINGPARTNER ══════════════════════════════ */}
           <Link
