@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
@@ -39,9 +39,12 @@ jobs:
       - name: Run tests
         run: npm run test:coverage
 
+      # Geen CODECOV_TOKEN secret geconfigureerd in deze repo — deze stap kan sowieso nooit
+      # slagen totdat die er is, dus niet-blokkerend houden i.p.v. elke push laten falen.
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
         if: always()
+        continue-on-error: true
         with:
           files: ./coverage/coverage-final.json
           flags: unittests
@@ -59,7 +62,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
