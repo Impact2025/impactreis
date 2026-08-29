@@ -233,8 +233,18 @@ gebruikte testconfig, ondanks de `@vitejs/plugin-react`-naam.
 en zijn vermoedelijk ook dode Docker-infrastructuur (nooit gebruikt, deploy gaat via Vercel) —
 buiten de scope van deze opruiming, laat het weten als je wil dat ik die ook opruim.
 
-Na deze fixes: `type-check`, `test:coverage` en `build` slagen allemaal lokaal, exact zoals CI ze
-zou draaien. Volgende push naar `master` is de eerste keer ooit dat deze CI-workflow echt draait.
+**Update: CI slaagt nu daadwerkelijk in het echt** (geverifieerd via `gh run view`, niet alleen
+lokaal). Onderweg nog twee rondes nodig gehad, beide keren pas zichtbaar zodra CI voor het eerst
+echt draaide (lokaal Node 24 verborg ze):
+- Node 20 (eerste fix) loste de Next.js-versie-eis op, maar crashte alsnog op
+  `webidl.util.markAsUncloneable is not a function` — een jsdom/undici-incompatibiliteit met die
+  specifieke Node 20.x-patch. Opgelost door CI net als lokaal op Node 24 te zetten.
+- Daarna faalde de aparte `Build`-job nog: `neon()` gooit een fout bij module-evaluatie zodra
+  `DATABASE_URL` ontbreekt, en Next.js raakt elke route-module aan tijdens page-data-collection.
+  Opgelost met een nep-maar-geldige `DATABASE_URL` alleen voor de build-stap in CI.
+
+Run https://github.com/Impact2025/impactreis/actions/runs/33239137807 is de eerste groene CI-run
+in de geschiedenis van deze repo.
 
 ## Incident: een achtergrondtaak deployde zonder te vragen
 
