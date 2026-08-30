@@ -354,7 +354,20 @@ export default function DashboardPage() {
               return sum + Math.max(0, (new Date(ev.end).getTime() - new Date(ev.start).getTime()) / 60000);
             }, 0);
             const hours = Math.round((meetingMinutes / 60) * 10) / 10;
-            const druk = meetingMinutes >= 300 ? 'Drukke dag' : meetingMinutes >= 150 ? 'Gemiddelde vergaderdruk' : 'Rustige dag';
+            const isDrukkeDag = meetingMinutes >= 300;
+            const druk = isDrukkeDag ? 'Drukke dag' : meetingMinutes >= 150 ? 'Gemiddelde vergaderdruk' : 'Rustige dag';
+
+            // Synergie coach ↔ PA, zonder de bestaande ImpactOS-review-gate te omzeilen: geen
+            // automatische agenda-schrijfactie, wél een concrete, één-klik-voorstel dat Google
+            // Calendar's eigen "nieuw event"-scherm opent — Vincent bevestigt en bewaart zelf.
+            const toGCal = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+            const timedEvents = calendarEvents.filter((ev) => !ev.isAllDay && ev.end);
+            const lastEventEnd = timedEvents.length > 0
+              ? new Date(Math.max(...timedEvents.map((ev) => new Date(ev.end!).getTime())))
+              : new Date();
+            const recoveryStart = new Date(lastEventEnd.getTime() + 15 * 60000);
+            const recoveryEnd = new Date(recoveryStart.getTime() + 60 * 60000);
+            const recoveryUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Hersteltijd (voorgesteld door Aipa)')}&dates=${toGCal(recoveryStart)}/${toGCal(recoveryEnd)}&details=${encodeURIComponent('Voorgesteld na een drukke dag met veel vergaderingen — even geen scherm, even geen taak.')}`;
 
             return (
             <div className="rounded-[16px] border border-[#e8e8ec] p-5 mb-6">
@@ -383,6 +396,20 @@ export default function DashboardPage() {
                   </div>
                 ))}
               </div>
+              {isDrukkeDag && (
+                <a
+                  href={recoveryUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 flex items-center gap-2.5 rounded-[12px] bg-[#00cc66]/10 px-4 py-3 hover:bg-[#00cc66]/15 transition-colors"
+                >
+                  <Sparkles size={14} className="text-[#00cc66] flex-shrink-0" />
+                  <span className="text-[12px] font-medium text-[#0a0a14] flex-1">
+                    Drukke dag — Aipa stelt een uur hersteltijd voor na je laatste afspraak
+                  </span>
+                  <ChevronRight size={14} className="text-[#00cc66] flex-shrink-0" />
+                </a>
+              )}
             </div>
             );
           })()}

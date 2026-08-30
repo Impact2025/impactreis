@@ -48,6 +48,7 @@ export default function FocusPage() {
   const [energyAfter, setEnergyAfter] = useState(7);
   const [sessionGoal, setSessionGoal] = useState('');
   const [showGoalInput, setShowGoalInput] = useState(true);
+  const [goalFromCoach, setGoalFromCoach] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
@@ -68,6 +69,22 @@ export default function FocusPage() {
           }
         } catch {
           // geen profiel of onboarding nog niet gedaan — gewoon de standaard 25 min
+        }
+
+        // Synergie coach ↔ PA: de #1-prioriteit die vanochtend is gezet (ochtendritueel)
+        // wordt het voorgestelde focus-sessiedoel, i.p.v. een leeg invoerveld.
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const logs = await api.logs.getByTypeAndDate('morning', today);
+          const rawData = logs?.[0]?.data;
+          const parsedData = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+          const intentie = parsedData?.intentie ?? logs?.[0]?.intentie;
+          if (intentie && typeof intentie === 'string' && intentie.trim()) {
+            setSessionGoal(intentie.trim());
+            setGoalFromCoach(true);
+          }
+        } catch {
+          // geen ochtendritueel vandaag — gewoon een leeg invoerveld
         }
       } catch { router.push('/auth/login'); }
       finally { setLoading(false); }
@@ -284,7 +301,7 @@ export default function FocusPage() {
             <p className="text-[11px] text-[#8a8a9a] font-medium mt-0.5">Minuten</p>
           </div>
           <div className="bg-[#f4f4f7] rounded-[14px] p-4 text-center">
-            <p className="text-[22px] font-bold text-[#00cc66]">{Math.round(totalFocusTime / 25)}</p>
+            <p className="text-[22px] font-bold text-[#00cc66]">{Math.round(totalFocusTime / workMinutes)}</p>
             <p className="text-[11px] text-[#8a8a9a] font-medium mt-0.5">Pomodoros</p>
           </div>
         </div>
@@ -298,10 +315,16 @@ export default function FocusPage() {
                 Wat ga je focussen deze sessie?
               </span>
             </div>
+            {goalFromCoach && (
+              <div className="flex items-center gap-1.5 mb-2.5">
+                <Brain size={12} className="text-[#00cc66]" />
+                <span className="text-[11px] font-medium text-[#00cc66]">Voorgesteld vanuit je ochtendritueel</span>
+              </div>
+            )}
             <input
               type="text"
               value={sessionGoal}
-              onChange={(e) => setSessionGoal(e.target.value)}
+              onChange={(e) => { setSessionGoal(e.target.value); setGoalFromCoach(false); }}
               placeholder="Bijv: Hoofdstuk 3 schrijven, emails beantwoorden..."
               className="w-full bg-[#f4f4f7] border border-transparent focus:border-[#00cc66] outline-none rounded-[14px] px-4 py-3.5 text-[14px] text-[#0a0a14] placeholder:text-[#8a8a9a] transition-colors"
             />
