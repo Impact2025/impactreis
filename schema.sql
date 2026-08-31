@@ -96,6 +96,60 @@ CREATE TABLE IF NOT EXISTS user_context (
 );
 
 -- =====================================================
+-- SPARRINGPARTNER (persoonlijke business- en welzijnscoach)
+-- =====================================================
+
+-- Geleerde patronen over de gebruiker heen, met een confidence die stijgt/daalt met bewijs
+-- (zelfde patroon als iris_lessons in Impact OS: een observatie is pas een les na herhaald bewijs)
+CREATE TABLE IF NOT EXISTS coach_lessons (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  pattern_key TEXT NOT NULL, -- stabiele sleutel voor dedupe, bv. 'vroeg-op-hoge-energie'
+  technique TEXT NOT NULL, -- welke coachtechniek hoort hierbij (grow, mi, oplossingsgericht, cgt, act, systemisch, strengths)
+  insight TEXT NOT NULL, -- de les zelf, in mensentaal
+  confidence REAL DEFAULT 0.5, -- Laplace-gladgestreken trefkans, 0-1
+  times_confirmed INTEGER DEFAULT 0,
+  times_disproven INTEGER DEFAULT 0,
+  active BOOLEAN DEFAULT TRUE, -- na herhaald ongelijk krijgen: uitgezet, niet verwijderd
+  source TEXT, -- welke coachrun deze les legde ('coach_analyse', 'handmatig')
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, pattern_key)
+);
+
+-- Energie-attributie per activiteit: wat een dag gaf of kostte, niet alleen een cijfer
+CREATE TABLE IF NOT EXISTS energy_log (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  date_string TEXT NOT NULL,
+  activity TEXT NOT NULL,
+  category TEXT, -- vrij veld: bv. projectnaam binnen de holding, of 'herstel', 'team', 'operationeel'
+  direction TEXT NOT NULL, -- 'gain' of 'cost'
+  source TEXT DEFAULT 'ritueel', -- 'ritueel' (handmatig ingevuld) of later 'impactos' (aangeleverd)
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Falsifieerbare coach-voorspellingen, getoetst tegen de werkelijkheid (Iris-patroon)
+CREATE TABLE IF NOT EXISTS coach_predictions (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  lesson_id INTEGER REFERENCES coach_lessons(id) ON DELETE SET NULL,
+  statement TEXT NOT NULL, -- de voorspelling zelf, in mensentaal
+  metric TEXT NOT NULL, -- 'energy_level' | 'sleep_quality' | 'streak'
+  baseline REAL NOT NULL, -- gemeten waarde op het moment van voorspellen, nooit verzonnen
+  direction TEXT NOT NULL, -- 'up' | 'down' | 'stable'
+  horizon_days INTEGER NOT NULL DEFAULT 7,
+  due_date DATE NOT NULL,
+  outcome TEXT, -- NULL = nog niet vervallen; 'correct' | 'incorrect' | 'unclear'
+  resolved_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_coach_lessons_user ON coach_lessons(user_id, active);
+CREATE INDEX IF NOT EXISTS idx_energy_log_user_date ON energy_log(user_id, date_string DESC);
+CREATE INDEX IF NOT EXISTS idx_coach_predictions_due ON coach_predictions(user_id, due_date) WHERE outcome IS NULL;
+
+-- =====================================================
 -- COURSES & WORKBOOKS (Tony Robbins Unleashed)
 -- =====================================================
 

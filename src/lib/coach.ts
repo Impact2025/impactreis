@@ -100,7 +100,13 @@ export async function fetchHoldingContext(): Promise<HoldingContext | null> {
 const DAY_NAMES = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
 
 function parseData(raw: any) {
-  return typeof raw === 'string' ? JSON.parse(raw) : raw;
+  const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  // daily_logs.data is saved by api/logs/route.ts as { data: formData, createdAt: ... }
+  // Unwrap the nested .data so callers get the morning/evening form data directly.
+  if (parsed && typeof parsed === 'object' && 'data' in parsed && parsed.data && typeof parsed.data === 'object') {
+    return parsed.data;
+  }
+  return parsed;
 }
 
 /** Bouwt de multi-dag context die de coach nodig heeft. Alle cijfers komen uit de echte tabellen,
@@ -211,21 +217,44 @@ export function chooseTechnique(ctx: CoachContext): { technique: Technique; reas
   return { technique: 'grow', reason: 'Geen uitschieter — een gewone dag verdient een gewone scherpe vraag.' };
 }
 
+const LOCAL_LLM_GATEWAY = process.env.NEXT_PUBLIC_LLM_GATEWAY_URL || 'http://localhost:8899/v1';
+const LOCAL_LLM_MODEL = 'qwen3.6-flash';
+
 export async function openRouterChat(prompt: string, maxTokens = 400): Promise<string> {
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  // Primary: OpenRouter (cloud) if API key is configured
+  if (process.env.OPENROUTER_API_KEY) {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://mijn-ondernemers-os.vercel.app',
+      },
+      body: JSON.stringify({
+        model: 'anthropic/claude-haiku-4-5',
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    if (!res.ok) throw new Error(`OpenRouter error: ${res.status}`);
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content ?? 'Analyse niet beschikbaar.';
+  }
+
+  // Fallback: local LLM gateway (OpenModel/Ollama via :8899)
+  const res = await fetch(`${LOCAL_LLM_GATEWAY}/chat/completions`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      'Authorization': `Bearer ${process.env.OLLAMA_API_KEY || ''}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://mijn-ondernemers-os.vercel.app',
     },
     body: JSON.stringify({
-      model: 'anthropic/claude-haiku-4-5',
+      model: LOCAL_LLM_MODEL,
       max_tokens: maxTokens,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
-  if (!res.ok) throw new Error(`OpenRouter error: ${res.status}`);
+  if (!res.ok) throw new Error(`Local LLM gateway error: ${res.status}`);
   const data = await res.json();
   return data.choices?.[0]?.message?.content ?? 'Analyse niet beschikbaar.';
 }

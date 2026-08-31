@@ -115,7 +115,10 @@ export default function WeeklyStartPage() {
         console.error('Failed to save to backend:', apiError);
       }
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      // Redirect to dashboard after a brief success confirmation
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1500);
     } catch (error) {
       console.error('Error saving weekly start:', error);
     } finally {
