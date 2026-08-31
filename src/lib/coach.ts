@@ -331,6 +331,26 @@ ${holdingBlock(ctx.holding)}
 Schrijf een coach-reflectie van 120-180 woorden in het Nederlands, in de jij-vorm, warm maar scherp. Volg de aangewezen techniek. Eindig met precies één concrete vraag aan Vincent — geen waslijst, geen bullet points, gewone paragrafen.`;
 }
 
+
+/**
+ * Build a prompt for follow-up messages in the coach chat conversation.
+ * Takes the message history and constructs a prompt that continues the coaching dialogue.
+ */
+export function buildFollowUpPrompt(messages: { role: string; content: string }[]): string {
+  const conversation = messages
+    .map((m) => `${m.role === 'coach' ? 'Sparringpartner' : 'Vincent'}: ${m.content}`)
+    .join('\\n\\n');
+
+  return `Je bent De Sparringpartner, Vincents persoonlijke business- en welzijnscoach.
+
+Verloopt deze conversatie natuurlijk en kort. Wees warm maar scherp. Gebruik de jij-vorm. Maximaal 100 woorden.
+
+CONVERSATIEEL GESCHIEDENIS:
+${conversation}
+
+${messages.length > 0 ? 'Beantwoord nu op het laatste bericht van Vincent.' : 'Start de gesprekstroom.'}`;
+}
+
 /** Legt een observatie vast als coach_lesson: dedupe op pattern_key, confidence groeit met bewijs
  *  (Laplace-gladgestreken, zelfde formule als iris_lessons) i.p.v. bij elke run een nieuwe rij.
  *  organizationId alleen nodig voor de INSERT-tak — coach_lessons.organization_id is NOT NULL. */

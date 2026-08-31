@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Sparkles, RefreshCw, Compass } from 'lucide-react';
+import { ArrowLeft, Sparkles, RefreshCw, Compass, Send } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
@@ -23,6 +23,13 @@ interface Lesson {
   times_confirmed: number;
 }
 
+interface CoachMessage {
+  id: string;
+  role: 'coach' | 'user';
+  content: string;
+  ts: number;
+}
+
 export default function CoachPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -30,6 +37,9 @@ export default function CoachPage() {
   const [result, setResult] = useState<AnalyseResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [messages, setMessages] = useState<CoachMessage[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [sending, setSending] = useState(false);
 
   const fetchLessons = async () => {
     try {
@@ -60,10 +70,49 @@ export default function CoachPage() {
       }
       setResult(data);
       fetchLessons();
+      // Add coach's first message to the conversation
+      setMessages([{ id: 'coach-1', role: 'coach', content: data.analysis, ts: Date.now() }]);
     } catch {
       setError('Kon geen reflectie ophalen');
     } finally {
       setAsking(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!inputValue.trim() || !result) return;
+    const userMsg: CoachMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: inputValue.trim(),
+      ts: Date.now(),
+    };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setInputValue('');
+    setSending(true);
+    try {
+      const res = await fetch('/api/coach/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ messages: newMessages }),
+      });
+      const data = await res.json();
+      if (res.ok && data.analysis) {
+        setMessages((prev) => [...prev, {
+          id: `coach-${Date.now()}`,
+          role: 'coach',
+          content: data.analysis,
+          ts: Date.now(),
+        }]);
+      }
+    } catch {
+      // silent
+    } finally {
+      setSending(false);
     }
   };
 
@@ -125,8 +174,40 @@ export default function CoachPage() {
             <span className="inline-block text-[11px] font-medium text-[#00cc66] bg-[#00cc66]/10 rounded-full px-2.5 py-1 mb-3">
               {result.techniqueLabel}
             </span>
-            <p className="text-[14px] text-[#0a0a14] leading-relaxed whitespace-pre-line">{result.analysis}</p>
-            <p className="text-[11px] text-[#8a8a9a] mt-4 pt-3 border-t border-[#f4f4f7]">{result.reason}</p>
+            <div className="space-y-4">
+              {messages.map((msg) => (
+                <div key={msg.id} className={`space-y-2 ${msg.role === 'user' ? 'text-right' : ''}`}>
+                  <div className={`inline-block rounded-[12px] px-4 py-3 ${
+                    msg.role === 'user' ? 'bg-[#0a0a14] text-white' : 'bg-[#f4f4f7] text-[#0a0a14]'
+                  }`}>
+                    <p className="text-[14px] leading-relaxed whitespace-pre-line">{msg.content}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 flex gap-2">
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                placeholder="Typ je antwoord op de vraag..."
+                className="flex-1 px-4 py-3 border border-[#e8e8ec] rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] focus:outline-none focus:ring-2 focus:ring-[#00cc66]/20"
+                disabled={sending}
+              />
+              <button
+                onClick={handleSend}
+                disabled={sending || !inputValue.trim()}
+                className="px-4 py-3 bg-[#0a0a14] text-white rounded-[12px] text-[14px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-transform flex items-center justify-center"
+              >
+                {sending ? (
+                  <RefreshCw size={16} className="animate-spin" />
+                ) : (
+                  <Send size={16} />
+                )}
+              </button>
+            </div>
+            <p className="text-[11px] text-[#8a8a9a] mt-3 pt-3 border-t border-[#f4f4f7]">{result.reason}</p>
           </div>
         )}
 
