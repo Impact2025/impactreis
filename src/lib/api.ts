@@ -379,6 +379,22 @@ class ApiClient {
     today: () => this.request<{ configured: boolean; events: any[] }>('/calendar/today'),
   };
 
+  weeklySummary = {
+    get: (weekStart: string, weekEnd: string) =>
+      this.request<{
+        weekStart: string;
+        weekEnd: string;
+        morningRitualDays: number;
+        eveningRitualDays: number;
+        averageEveningEnergy: number | null;
+        focusSessionsCompleted: number;
+        focusMinutes: number;
+        energyGains: number;
+        energyCosts: number;
+        wins: { id: number; title: string; category: string }[];
+      }>(`/weekly-summary?weekStart=${weekStart}&weekEnd=${weekEnd}`),
+  };
+
   onboarding = {
     profile: () => this.request<{ completed: boolean; profile: any | null }>('/onboarding/profile'),
   };

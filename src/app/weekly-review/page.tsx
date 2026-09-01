@@ -16,7 +16,10 @@ import {
   X,
   HelpCircle,
   Gift,
-  BookOpen
+  BookOpen,
+  Sunrise,
+  Moon,
+  Timer,
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -60,12 +63,20 @@ export default function WeeklyReviewPage() {
     monday.setDate(now.getDate() + diff);
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
+    const toDateString = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
     return {
       weekNumber,
       weekStart: monday.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }),
       weekEnd: sunday.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }),
       weekStartISO: monday.toISOString(),
-      weekEndISO: sunday.toISOString()
+      weekEndISO: sunday.toISOString(),
+      weekStartDate: toDateString(monday),
+      weekEndDate: toDateString(sunday),
     };
   };
 
@@ -96,6 +107,8 @@ export default function WeeklyReviewPage() {
     totalReviews: 0
   });
 
+  const [weekSummary, setWeekSummary] = useState<Awaited<ReturnType<typeof api.weeklySummary.get>> | null>(null);
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -108,6 +121,28 @@ export default function WeeklyReviewPage() {
     };
     checkAuth();
   }, [router]);
+
+  useEffect(() => {
+    // Vult de week met echte data i.p.v. alles blanco te laten: voltooide rituelen,
+    // focus-minuten en de wins die al deze week zijn gelogd (via /api/wins).
+    api.weeklySummary.get(weekInfo.weekStartDate, weekInfo.weekEndDate)
+      .then((summary) => {
+        setWeekSummary(summary);
+        setFormData((prev) => {
+          const next = { ...prev };
+          if (prev.wins.length === 0 && summary.wins.length > 0) {
+            next.wins = summary.wins.map((w) => w.title);
+          }
+          // Alleen de ongewijzigde default (7) vervangen door een op echte data gebaseerde suggestie
+          if (prev.energyScore === 7 && summary.averageEveningEnergy !== null) {
+            next.energyScore = Math.round(summary.averageEveningEnergy);
+          }
+          return next;
+        });
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAddWin = () => {
     if (newWin.trim()) {
@@ -197,6 +232,35 @@ export default function WeeklyReviewPage() {
               <p className="text-[13px] font-semibold text-[#0a0a14]">Je hebt deze week review al voltooid</p>
               <p className="text-[12px] text-[#8a8a9a]">Je kunt het opnieuw doen om te overschrijven</p>
             </div>
+          </div>
+        )}
+
+        {/* Week in cijfers — echte data uit ochtend/avond/focus/energie, geen invoer */}
+        {weekSummary && (
+          <div className="rounded-[16px] border border-[#e8e8ec] bg-[#f4f4f7] p-4 mb-5">
+            <p className="text-[12px] font-semibold text-[#0a0a14] uppercase tracking-wide mb-3">Deze week in cijfers</p>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div>
+                <Sunrise size={14} className="text-[#f59e0b] mx-auto mb-1" />
+                <p className="text-[15px] font-bold text-[#0a0a14]">{weekSummary.morningRitualDays}/7</p>
+                <p className="text-[10px] text-[#8a8a9a]">Ochtend</p>
+              </div>
+              <div>
+                <Moon size={14} className="text-[#6366f1] mx-auto mb-1" />
+                <p className="text-[15px] font-bold text-[#0a0a14]">{weekSummary.eveningRitualDays}/7</p>
+                <p className="text-[10px] text-[#8a8a9a]">Avond</p>
+              </div>
+              <div>
+                <Timer size={14} className="text-[#00cc66] mx-auto mb-1" />
+                <p className="text-[15px] font-bold text-[#0a0a14]">{weekSummary.focusMinutes}</p>
+                <p className="text-[10px] text-[#8a8a9a]">Focus-min</p>
+              </div>
+            </div>
+            {weekSummary.averageEveningEnergy !== null && (
+              <p className="text-[12px] text-[#8a8a9a] text-center mt-3">
+                Gemiddelde avond-energie: <span className="font-semibold text-[#0a0a14]">{weekSummary.averageEveningEnergy}/10</span>
+              </p>
+            )}
           </div>
         )}
 

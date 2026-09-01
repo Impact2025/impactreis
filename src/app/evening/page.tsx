@@ -8,6 +8,7 @@ import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { TimeGateScreen } from '@/components/weekflow/time-gate-screen';
 import { isAfter5PM, isEveningRitualComplete, getToday } from '@/lib/weekflow.service';
+import { buildRecoveryProposalUrl } from '@/lib/calendar-proposal';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
 const SYMPTOMS = [
@@ -56,6 +57,8 @@ function EveningContent() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [adhdScores, setAdhdScores] = useState<Record<string, number>>(defaultAdhdScores());
   const [recoveryHabit, setRecoveryHabit] = useState<string | null>(null);
+  const [morningIntentie, setMorningIntentie] = useState<string | null>(null);
+  const [focusSummary, setFocusSummary] = useState<{ completed: number; total: number; minutes: number } | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -99,6 +102,27 @@ function EveningContent() {
         if (savedAdhd) {
           try { setAdhdScores(JSON.parse(savedAdhd)); } catch { /* ignore */ }
         }
+
+        // Sluit de cirkel met de ochtend: toon wat vanochtend als intentie is gezet en hoeveel
+        // van de focus-sessies die dag echt zijn afgerond. Puur informatief, blokkeert niets.
+        api.logs.getByTypeAndDate('morning', targetDate).then((logs: any[]) => {
+          const rawData = logs?.[0]?.data;
+          const parsedData = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+          const intentie = parsedData?.intentie ?? logs?.[0]?.intentie;
+          if (intentie && typeof intentie === 'string' && intentie.trim()) {
+            setMorningIntentie(intentie.trim());
+          }
+        }).catch(() => {});
+
+        api.focus.getByDate(targetDate).then((sessions) => {
+          const list = (sessions as any[]) || [];
+          const workSessions = list.filter((s) => s.session_type !== 'break');
+          const completed = workSessions.filter((s) => s.completed).length;
+          const minutes = workSessions.reduce((sum: number, s) => sum + (s.duration_minutes || 0), 0);
+          if (workSessions.length > 0) {
+            setFocusSummary({ completed, total: workSessions.length, minutes });
+          }
+        }).catch(() => {});
       } catch (err) {
         router.push('/auth/login');
       } finally {
@@ -249,6 +273,27 @@ function EveningContent() {
           </div>
         )}
 
+        {/* Ochtend terugblik — sluit de cirkel met de intentie en focus-sessies van vandaag */}
+        {(morningIntentie || focusSummary) && (
+          <div className="rounded-[16px] border border-[#e8e8ec] bg-[#f4f4f7] p-4 mb-5">
+            <div className="flex items-center gap-2 mb-2.5">
+              <Zap size={14} className="text-[#f59e0b]" />
+              <span className="text-[12px] font-semibold text-[#0a0a14] uppercase tracking-wide">Vanochtend</span>
+            </div>
+            {morningIntentie && (
+              <p className="text-[13px] text-[#0a0a14] mb-1.5">
+                <span className="text-[#8a8a9a]">Intentie: </span>{morningIntentie}
+              </p>
+            )}
+            {focusSummary && (
+              <p className="text-[13px] text-[#0a0a14]">
+                <span className="text-[#8a8a9a]">Focus-sessies: </span>
+                {focusSummary.completed}/{focusSummary.total} voltooid — {focusSummary.minutes} min deep work
+              </p>
+            )}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* What went well */}
           <div className="rounded-[16px] border border-[#e8e8ec] p-5">
@@ -360,6 +405,30 @@ function EveningContent() {
               <span>Uitgeput</span>
               <span>Energiek</span>
             </div>
+            {/* Zelfde propose-nooit-schrijf patroon als het dashboard: bij lage energie een
+                vooringevulde Google Calendar-link voor hersteltijd morgenochtend, geen automatische actie. */}
+            {formData.energyLevel <= 3 && (() => {
+              const tomorrow = new Date();
+              tomorrow.setDate(tomorrow.getDate() + 1);
+              tomorrow.setHours(8, 0, 0, 0);
+              const recoveryUrl = buildRecoveryProposalUrl(
+                tomorrow,
+                30,
+                'Hersteltijd ochtend (voorgesteld door Aipa)',
+                'Voorgesteld na een dag met lage energie — begin morgen rustig, geen taken.'
+              );
+              return (
+                <a
+                  href={recoveryUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 flex items-center gap-2.5 rounded-[12px] bg-[#00cc66]/10 px-4 py-3 hover:bg-[#00cc66]/15 transition-colors"
+                >
+                  <Calendar size={15} className="text-[#00cc66] shrink-0" />
+                  <span className="text-[12px] font-medium text-[#0a0a14]">Plan hersteltijd voor morgenochtend</span>
+                </a>
+              );
+            })()}
           </div>
 
           {/* Energie-attributie: niet alleen het cijfer, ook de bron */}

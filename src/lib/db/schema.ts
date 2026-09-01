@@ -107,6 +107,13 @@ export const focusSessions = pgTable('focus_sessions', {
   goal: text('goal'),
   completed: boolean('completed').default(false),
   createdAt: timestamp('created_at').defaultNow(),
+  // Additief toegevoegd zodat de focus-pagina (Pomodoro-timer) echte sessies opslaat i.p.v.
+  // alleen localStorage — zie de ochtend/avond/week-integratie-doc.
+  durationMinutes: integer('duration_minutes'),
+  completedAt: timestamp('completed_at'),
+  energyBefore: integer('energy_before'),
+  energyAfter: integer('energy_after'),
+  sessionType: text('session_type').default('work'), // 'work' | 'break'
 });
 
 export const wins = pgTable('wins', {

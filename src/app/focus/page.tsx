@@ -121,6 +121,29 @@ export default function FocusPage() {
         energyAfter,
       };
       saveSessions([...sessions, session]);
+
+      // Schrijf ook echt naar focus_sessions in de DB (was tot nu toe alleen localStorage),
+      // zodat avond/week deze sessie kunnen terugzien. localStorage blijft de instant-UI-cache.
+      const today = new Date().toISOString().split('T')[0];
+      api.focus.create({
+        date: today,
+        startTime: new Date(Date.now() - workMinutes * 60 * 1000).toTimeString().slice(0, 8),
+        goal: sessionGoal || null,
+      }).then((created: any) => {
+        if (created?.id) {
+          return api.focus.update(created.id, {
+            completed: true,
+            durationMinutes: workMinutes,
+            completedAt: new Date().toISOString(),
+            energyBefore,
+            energyAfter,
+            sessionType: 'work',
+          });
+        }
+      }).catch(() => {
+        // Offline of DB-fout: sessie staat al veilig in localStorage, niet blokkerend.
+      });
+
       setTimeout(() => {
         setShowCelebration(false);
         setShowMovementBreak(true);
@@ -419,7 +442,7 @@ export default function FocusPage() {
                 currentSession === 'work' ? 'bg-[#0a0a14] text-white shadow-sm' : 'text-[#8a8a9a]'
               }`}
             >
-              Focus (25min)
+              Focus ({workMinutes}min)
             </button>
             <button
               onClick={switchToBreak}

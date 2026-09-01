@@ -13,6 +13,7 @@ import { Win } from '@/types';
 import { RitualGuard } from '@/components/weekflow/ritual-guard';
 import { getDayType, isEveningRitualComplete } from '@/lib/weekflow.service';
 import { initializeNotifications } from '@/lib/notifications.service';
+import { buildRecoveryProposalUrl } from '@/lib/calendar-proposal';
 import { canStillDoWeeklyStart } from '@/lib/ritual-recovery.service';
 import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { BottomNav } from '@/components/ui/bottom-nav';
@@ -360,14 +361,17 @@ export default function DashboardPage() {
             // Synergie coach ↔ PA, zonder de bestaande ImpactOS-review-gate te omzeilen: geen
             // automatische agenda-schrijfactie, wél een concrete, één-klik-voorstel dat Google
             // Calendar's eigen "nieuw event"-scherm opent — Vincent bevestigt en bewaart zelf.
-            const toGCal = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
             const timedEvents = calendarEvents.filter((ev) => !ev.isAllDay && ev.end);
             const lastEventEnd = timedEvents.length > 0
               ? new Date(Math.max(...timedEvents.map((ev) => new Date(ev.end!).getTime())))
               : new Date();
             const recoveryStart = new Date(lastEventEnd.getTime() + 15 * 60000);
-            const recoveryEnd = new Date(recoveryStart.getTime() + 60 * 60000);
-            const recoveryUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Hersteltijd (voorgesteld door Aipa)')}&dates=${toGCal(recoveryStart)}/${toGCal(recoveryEnd)}&details=${encodeURIComponent('Voorgesteld na een drukke dag met veel vergaderingen — even geen scherm, even geen taak.')}`;
+            const recoveryUrl = buildRecoveryProposalUrl(
+              recoveryStart,
+              60,
+              'Hersteltijd (voorgesteld door Aipa)',
+              'Voorgesteld na een drukke dag met veel vergaderingen — even geen scherm, even geen taak.'
+            );
 
             return (
             <div className="rounded-[16px] border border-[#e8e8ec] p-5 mb-6">

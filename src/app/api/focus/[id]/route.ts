@@ -16,7 +16,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { completed } = body;
+    const { completed, durationMinutes, completedAt, energyBefore, energyAfter, sessionType } = body;
 
     if (completed === undefined) {
       return NextResponse.json(
@@ -27,7 +27,12 @@ export async function PUT(
 
     const result = await sql`
       UPDATE focus_sessions
-      SET completed = ${completed}
+      SET completed = ${completed},
+          duration_minutes = COALESCE(${durationMinutes ?? null}, duration_minutes),
+          completed_at = COALESCE(${completedAt ?? null}, completed_at),
+          energy_before = COALESCE(${energyBefore ?? null}, energy_before),
+          energy_after = COALESCE(${energyAfter ?? null}, energy_after),
+          session_type = COALESCE(${sessionType ?? null}, session_type)
       WHERE id = ${id} AND user_id = ${userId} AND organization_id = ${organizationId}
       RETURNING *
     `;

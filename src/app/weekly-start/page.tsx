@@ -48,6 +48,7 @@ export default function WeeklyStartPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [carryForward, setCarryForward] = useState<string | null>(null);
 
   const today = new Date();
   const currentWeek = getWeekNumber(today);
@@ -90,6 +91,15 @@ export default function WeeklyStartPage() {
         if (!currentUser) { router.push('/auth/login'); return; }
         const savedData = localStorage.getItem(`weeklyStart_${currentYear}_${currentWeek}`);
         if (savedData) setFormData(JSON.parse(savedData));
+
+        // Vorige week se "wat neem je mee" (weekly-review) als suggestie tonen, i.p.v. de week
+        // blanco te starten los van wat er net is afgesloten.
+        api.weeklyReviews.getByWeekNumber(currentWeek - 1)
+          .then((reviews: any[]) => {
+            const review = reviews.find((r) => r?.data?.carryForward);
+            if (review?.data?.carryForward) setCarryForward(review.data.carryForward);
+          })
+          .catch(() => {});
       } catch (err) {
         router.push('/auth/login');
       } finally {
@@ -183,6 +193,14 @@ export default function WeeklyStartPage() {
               <p className="text-[13px] font-semibold text-[#0a0a14]">Week start al voltooid</p>
               <p className="text-[12px] text-[#8a8a9a]">Je kunt het opnieuw doen om te overschrijven</p>
             </div>
+          </div>
+        )}
+
+        {/* Vorige week se carry-forward, als suggestie */}
+        {carryForward && (
+          <div className="rounded-[16px] border border-[#e8e8ec] bg-[#f4f4f7] p-4">
+            <p className="text-[12px] font-semibold text-[#0a0a14] uppercase tracking-wide mb-1.5">Vorige week nam je dit mee</p>
+            <p className="text-[13px] text-[#0a0a14]">{carryForward}</p>
           </div>
         )}
 

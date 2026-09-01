@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Sunrise, ArrowLeft, ArrowRight, CheckCircle, Heart, Target, Zap, Brain } from 'lucide-react';
+import { Sunrise, ArrowLeft, ArrowRight, CheckCircle, Heart, Target, Zap, Brain, CalendarClock } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { BottomNav } from '@/components/ui/bottom-nav';
@@ -43,6 +43,7 @@ export default function MorningPage() {
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState<Step>('intentie');
   const [alVoltooid, setAlVoltooid] = useState(false);
+  const [meetingCount, setMeetingCount] = useState<number | null>(null);
   const router = useRouter();
 
   const today = new Date();
@@ -111,6 +112,12 @@ export default function MorningPage() {
       }
     };
     checkAuth();
+
+    // Zichtbaarheid, geen sturing: laat zien hoe vol de agenda vandaag al is zodat de
+    // focusblokken bewust gekozen worden — geen tijdvak-matching, geen automatische actie.
+    api.calendar.today()
+      .then((res) => { if (res?.configured) setMeetingCount(res.events?.length ?? 0); })
+      .catch(() => {});
   }, [router, todayStr]);
 
   const updateDankbaarheid = (index: number, value: string) => {
@@ -373,6 +380,14 @@ export default function MorningPage() {
               </div>
               <p className="text-[17px] text-white font-semibold">Jouw 2 focusblokken vandaag</p>
               <p className="text-[13px] text-white/50 mt-1">Besluit nu — zodat je straks direct begint.</p>
+              {meetingCount !== null && (
+                <p className="text-[12px] text-[#00cc66] mt-3 flex items-center gap-1.5">
+                  <CalendarClock size={13} />
+                  {meetingCount === 0
+                    ? 'Geen vergaderingen vandaag in je agenda'
+                    : `Je hebt vandaag al ${meetingCount} ${meetingCount === 1 ? 'afspraak' : 'afspraken'} in je agenda`}
+                </p>
+              )}
             </div>
 
             {/* Blok 1 */}
