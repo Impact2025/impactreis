@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  Bell, Sunrise, Moon, CalendarDays, BookOpen,
-  TrendingUp, Play, ChevronRight, Zap, BookHeart, Sparkles,
+  Bell, Sunrise, Moon, CalendarDays, TrendingUp,
+  Play, ChevronRight, Zap, Fingerprint, Sparkles,
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -129,32 +129,31 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[#00cc66] border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
     <RitualGuard>
-      <div className="min-h-screen bg-white pb-28">
+      <div className="min-h-screen bg-surface pb-28">
 
         {/* ══ HEADER ══════════════════════════════════════════ */}
-        <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#e8e8ec]">
+        <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-md border-b border-line">
           <div className="max-w-lg mx-auto px-5 py-3.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Avatar */}
-              <div className="w-9 h-9 rounded-full bg-[#0a0a14] flex items-center justify-center text-white text-[13px] font-bold select-none">
+              <div className="w-9 h-9 rounded-full bg-ink flex items-center justify-center text-white text-[13px] font-bold select-none">
                 {displayName.charAt(0)}
               </div>
               <div className="leading-tight">
-                <p className="text-[13px] font-bold text-[#0a0a14]">Mijn Ondernemers OS</p>
-                <p className="text-[9px] font-bold tracking-[0.18em] text-[#00cc66] uppercase">
-                  Mastermind Edition
+                <p className="text-[13px] font-bold text-ink">MyAIPA</p>
+                <p className="text-[9px] font-bold tracking-[0.18em] text-primary uppercase">
+                  Jouw persoonlijke AI PA
                 </p>
               </div>
             </div>
-            <button className="w-9 h-9 rounded-full bg-[#f4f4f7] flex items-center justify-center text-[#8a8a9a] hover:text-[#0a0a14] transition-colors">
+            <button className="w-9 h-9 rounded-full bg-surface-sunken flex items-center justify-center text-ink-soft hover:text-ink transition-colors">
               <Bell size={16} />
             </button>
           </div>
@@ -164,18 +163,18 @@ export default function DashboardPage() {
 
           {/* ══ GREETING ════════════════════════════════════════ */}
           <div className="pt-7 pb-6">
-            <h1 className="text-[30px] font-bold leading-tight text-[#0a0a14] tracking-tight">
+            <h1 className="text-[30px] font-bold leading-tight text-ink tracking-tight">
               {getGreeting()}, {displayName}
             </h1>
             {leverageGoal ? (
               <div className="mt-2.5">
-                <p className="text-[10px] font-bold tracking-[0.15em] text-[#00cc66] uppercase mb-1">
+                <p className="text-[10px] font-bold tracking-[0.15em] text-primary uppercase mb-1">
                   90-dagen hefboom
                 </p>
-                <p className="text-[13px] text-[#0a0a14] leading-relaxed">{leverageGoal}</p>
+                <p className="text-[13px] text-ink leading-relaxed">{leverageGoal}</p>
               </div>
             ) : (
-              <p className="text-[13px] text-[#8a8a9a] mt-2 italic leading-relaxed">
+              <p className="text-[13px] text-ink-soft mt-2 italic leading-relaxed">
                 &ldquo;The best way to predict the future is to create it.&rdquo;
               </p>
             )}
@@ -185,36 +184,41 @@ export default function DashboardPage() {
           {missedEveningYesterday && (
             <Link
               href={`/evening?date=${yesterday}`}
-              className="flex items-center gap-3 rounded-[16px] border border-[#6366f1]/25 bg-[#6366f1]/5 p-4 mb-5 active:scale-[0.99] transition-transform"
+              className="flex items-center gap-3 rounded-card border border-accent/25 bg-accent-soft p-4 mb-5 active:scale-[0.99] transition-transform"
             >
-              <div className="w-9 h-9 rounded-[10px] bg-[#6366f1]/15 flex items-center justify-center flex-shrink-0">
-                <Moon size={17} className="text-[#6366f1]" />
+              <div className="w-9 h-9 rounded-[10px] bg-accent/15 flex items-center justify-center flex-shrink-0">
+                <Moon size={17} className="text-accent" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-[#0a0a14]">Avondritueel gemist</p>
-                <p className="text-[11px] text-[#6366f1]">Tik om gisteren alsnog in te vullen →</p>
+                <p className="text-[13px] font-semibold text-ink">Avondritueel gemist</p>
+                <p className="text-[11px] text-accent">Tik om gisteren alsnog in te vullen →</p>
               </div>
             </Link>
           )}
 
-          {/* ══ FOCUS CARD ══════════════════════════════════════ */}
+          {/* ══ GOLDEN EGG — FOCUS VAN DE DAG ═══════════════════ */}
           {focusGoal ? (
-            <div className="rounded-[20px] bg-[#0a0a14] p-5 mb-6">
-              <div className="flex items-center gap-1.5 mb-3">
-                <span className="live-dot w-2 h-2 rounded-full bg-[#00cc66] inline-block" />
-                <span className="text-[9px] font-bold tracking-[0.2em] text-[#00cc66] uppercase">
-                  Focus van de dag
-                </span>
+            <div className="rounded-hero bg-ink p-5 mb-6 shadow-organic-lg">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="live-dot w-2 h-2 rounded-full bg-primary inline-block" />
+                  <span className="text-[9px] font-bold tracking-[0.2em] text-primary uppercase">
+                    Golden Egg — Focus van de dag
+                  </span>
+                </div>
+                <Link href="/goals" className="text-[10px] font-semibold text-white/40 hover:text-white/70 transition-colors">
+                  {goalProgressLabel(focusGoal.progress)}
+                </Link>
               </div>
               <h2 className="text-[19px] font-bold text-white leading-snug mb-1.5">
                 {focusGoal.title}
               </h2>
-              <p className="text-[12px] text-[#5a5a6a] mb-5">
+              <p className="text-[12px] text-white/40 mb-5">
                 Prioriteit: Hoog &mdash; blijf gefocust op wat écht telt.
               </p>
               <Link
                 href="/focus"
-                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-[14px] bg-[#00cc66] text-[#0a0a14] font-bold text-[14px] active:scale-[0.98] transition-transform shadow-[0_4px_20px_rgba(0,204,102,0.35)]"
+                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-[14px] bg-primary text-ink font-bold text-[14px] active:scale-[0.98] transition-transform shadow-[0_4px_20px_rgba(0,204,102,0.35)]"
               >
                 <Play size={14} fill="currentColor" />
                 Start Focus Timer
@@ -223,123 +227,118 @@ export default function DashboardPage() {
           ) : (
             <Link
               href="/goals"
-              className="block rounded-[20px] bg-[#0a0a14] p-5 mb-6"
+              className="block rounded-hero bg-ink p-5 mb-6 shadow-organic-lg"
             >
               <div className="flex items-center gap-1.5 mb-3">
-                <span className="w-2 h-2 rounded-full bg-[#8a8a9a] inline-block" />
-                <span className="text-[9px] font-bold tracking-[0.2em] text-[#8a8a9a] uppercase">
+                <span className="w-2 h-2 rounded-full bg-white/30 inline-block" />
+                <span className="text-[9px] font-bold tracking-[0.2em] text-white/40 uppercase">
                   Geen actief doel
                 </span>
               </div>
               <p className="text-[16px] font-bold text-white mb-1">Stel je focus in</p>
-              <p className="text-[12px] text-[#5a5a6a]">Voeg een doel toe om te starten →</p>
+              <p className="text-[12px] text-white/40">Voeg een doel toe om te starten →</p>
             </Link>
           )}
 
           {/* ══ MIJN ROUTINES ═══════════════════════════════════ */}
           <section className="mb-6">
             <div className="flex items-center justify-between mb-3.5">
-              <h2 className="text-[15px] font-bold text-[#0a0a14]">Mijn Routines</h2>
-              <Link href="/morning" className="text-[12px] font-semibold text-[#00cc66]">
+              <h2 className="text-[15px] font-bold text-ink">Mijn Routines</h2>
+              <Link href="/morning" className="text-[12px] font-semibold text-primary">
                 Beheer alles
               </Link>
             </div>
 
-            {/* Horizontal scroll */}
             <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5 snap-x snap-mandatory">
-              {/* Ochtend */}
               <Link
                 href="/morning"
-                className="flex-none w-[168px] snap-start rounded-[16px] border border-[#e8e8ec] bg-white p-4 hover:border-[#00cc66]/30 transition-colors"
+                className="flex-none w-[168px] snap-start rounded-card border border-line bg-surface-card p-4 shadow-organic hover:border-primary/30 transition-colors"
               >
                 <div className="flex items-center justify-between mb-3.5">
-                  <div className="w-9 h-9 rounded-[10px] bg-[#fff8eb] flex items-center justify-center">
-                    <Sunrise size={17} className="text-[#f59e0b]" />
+                  <div className="w-9 h-9 rounded-[10px] bg-gold-soft flex items-center justify-center">
+                    <Sunrise size={17} className="text-gold" />
                   </div>
                   {ritualStatuses.morning.isComplete && (
-                    <span className="text-[9px] font-bold text-[#00cc66] bg-[#f0fdf4] px-1.5 py-0.5 rounded-full">✓ Klaar</span>
+                    <span className="text-[9px] font-bold text-primary bg-primary-muted px-1.5 py-0.5 rounded-full">✓ Klaar</span>
                   )}
                 </div>
-                <p className="text-[10px] text-[#8a8a9a] mb-0.5 tabular-nums">07:00 – 08:30</p>
-                <p className="text-[13px] font-bold text-[#0a0a14] mb-0.5">Ochtend Routine</p>
-                <p className="text-[10px] text-[#8a8a9a] mb-3 leading-snug">Meditatie, Schrijven, Sport</p>
-                <div className="h-1 rounded-full bg-[#f4f4f7] overflow-hidden">
+                <p className="text-[10px] text-ink-soft mb-0.5 tabular-nums">07:00 – 08:30</p>
+                <p className="text-[13px] font-bold text-ink mb-0.5">Ochtend Routine</p>
+                <p className="text-[10px] text-ink-soft mb-3 leading-snug">Meditatie, Schrijven, Sport</p>
+                <div className="h-1 rounded-full bg-surface-sunken overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-[#00cc66] transition-all duration-700"
+                    className="h-full rounded-full bg-primary transition-all duration-700"
                     style={{ width: ritualStatuses.morning.isComplete ? '100%' : '65%' }}
                   />
                 </div>
-                <p className="text-[10px] text-[#8a8a9a] mt-1.5 font-medium">
+                <p className="text-[10px] text-ink-soft mt-1.5 font-medium">
                   {ritualStatuses.morning.isComplete ? '100%' : '65%'}
                 </p>
               </Link>
 
-              {/* Avond */}
               <Link
                 href="/evening"
-                className="flex-none w-[168px] snap-start rounded-[16px] border border-[#e8e8ec] bg-white p-4 hover:border-[#6366f1]/30 transition-colors"
+                className="flex-none w-[168px] snap-start rounded-card border border-line bg-surface-card p-4 shadow-organic hover:border-accent/30 transition-colors"
               >
                 <div className="flex items-center justify-between mb-3.5">
-                  <div className="w-9 h-9 rounded-[10px] bg-[#f0f0ff] flex items-center justify-center">
-                    <Moon size={17} className="text-[#6366f1]" />
+                  <div className="w-9 h-9 rounded-[10px] bg-accent-soft flex items-center justify-center">
+                    <Moon size={17} className="text-accent" />
                   </div>
                   {ritualStatuses.evening.isComplete && (
-                    <span className="text-[9px] font-bold text-[#00cc66] bg-[#f0fdf4] px-1.5 py-0.5 rounded-full">✓ Klaar</span>
+                    <span className="text-[9px] font-bold text-primary bg-primary-muted px-1.5 py-0.5 rounded-full">✓ Klaar</span>
                   )}
                 </div>
-                <p className="text-[10px] text-[#8a8a9a] mb-0.5 tabular-nums">20:00 – 21:00</p>
-                <p className="text-[13px] font-bold text-[#0a0a14] mb-0.5">Avond Routine</p>
-                <p className="text-[10px] text-[#8a8a9a] mb-3 leading-snug">Reflectie, Planning</p>
-                <div className="h-1 rounded-full bg-[#f4f4f7] overflow-hidden">
+                <p className="text-[10px] text-ink-soft mb-0.5 tabular-nums">20:00 – 21:00</p>
+                <p className="text-[13px] font-bold text-ink mb-0.5">Avond Routine</p>
+                <p className="text-[10px] text-ink-soft mb-3 leading-snug">Reflectie, Planning</p>
+                <div className="h-1 rounded-full bg-surface-sunken overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-[#6366f1] transition-all duration-700"
+                    className="h-full rounded-full bg-accent transition-all duration-700"
                     style={{ width: ritualStatuses.evening.isComplete ? '100%' : '0%' }}
                   />
                 </div>
-                <p className="text-[10px] text-[#8a8a9a] mt-1.5 font-medium">
+                <p className="text-[10px] text-ink-soft mt-1.5 font-medium">
                   {ritualStatuses.evening.isComplete ? '100%' : 'Vanaf 17:00'}
                 </p>
               </Link>
 
-              {/* Week Start */}
               {canStillDoWeeklyStart() && !ritualStatuses.weeklyStart.isComplete && (
                 <Link
                   href="/weekly-start"
-                  className="flex-none w-[168px] snap-start rounded-[16px] border border-[#e8e8ec] bg-white p-4"
+                  className="flex-none w-[168px] snap-start rounded-card border border-line bg-surface-card p-4 shadow-organic"
                 >
                   <div className="mb-3.5">
-                    <div className="w-9 h-9 rounded-[10px] bg-[#f0fdf4] flex items-center justify-center">
-                      <CalendarDays size={17} className="text-[#00cc66]" />
+                    <div className="w-9 h-9 rounded-[10px] bg-primary-muted flex items-center justify-center">
+                      <CalendarDays size={17} className="text-primary" />
                     </div>
                   </div>
-                  <p className="text-[10px] text-[#8a8a9a] mb-0.5">Maandag</p>
-                  <p className="text-[13px] font-bold text-[#0a0a14] mb-0.5">Week Start</p>
-                  <p className="text-[10px] text-[#8a8a9a] mb-3">Plan je week</p>
-                  <div className="h-1 rounded-full bg-[#f4f4f7]" />
-                  <p className="text-[10px] text-[#8a8a9a] mt-1.5">Niet gestart</p>
+                  <p className="text-[10px] text-ink-soft mb-0.5">Maandag</p>
+                  <p className="text-[13px] font-bold text-ink mb-0.5">Week Start</p>
+                  <p className="text-[10px] text-ink-soft mb-3">Plan je week</p>
+                  <div className="h-1 rounded-full bg-surface-sunken" />
+                  <p className="text-[10px] text-ink-soft mt-1.5">Niet gestart</p>
                 </Link>
               )}
 
-              {/* Weekend review */}
               {dayType === 'weekend' && (
                 <Link
                   href="/weekly-review"
-                  className="flex-none w-[168px] snap-start rounded-[16px] border border-[#e8e8ec] bg-white p-4"
+                  className="flex-none w-[168px] snap-start rounded-card border border-line bg-surface-card p-4 shadow-organic"
                 >
                   <div className="flex items-center justify-between mb-3.5">
-                    <div className="w-9 h-9 rounded-[10px] bg-[#fdf4ff] flex items-center justify-center">
-                      <BookOpen size={17} className="text-[#a855f7]" />
+                    <div className="w-9 h-9 rounded-[10px] bg-violet-soft flex items-center justify-center">
+                      <TrendingUp size={17} className="text-violet" />
                     </div>
                     {ritualStatuses.weeklyReview.isComplete && (
-                      <span className="text-[9px] font-bold text-[#00cc66] bg-[#f0fdf4] px-1.5 py-0.5 rounded-full">✓</span>
+                      <span className="text-[9px] font-bold text-primary bg-primary-muted px-1.5 py-0.5 rounded-full">✓</span>
                     )}
                   </div>
-                  <p className="text-[10px] text-[#8a8a9a] mb-0.5">Weekend</p>
-                  <p className="text-[13px] font-bold text-[#0a0a14] mb-0.5">Week Review</p>
-                  <p className="text-[10px] text-[#8a8a9a] mb-3">Evalueer je week</p>
-                  <div className="h-1 rounded-full bg-[#f4f4f7] overflow-hidden">
+                  <p className="text-[10px] text-ink-soft mb-0.5">Weekend</p>
+                  <p className="text-[13px] font-bold text-ink mb-0.5">Week Review</p>
+                  <p className="text-[10px] text-ink-soft mb-3">Evalueer je week</p>
+                  <div className="h-1 rounded-full bg-surface-sunken overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-[#a855f7]"
+                      className="h-full rounded-full bg-violet"
                       style={{ width: ritualStatuses.weeklyReview.isComplete ? '100%' : '0%' }}
                     />
                   </div>
@@ -358,9 +357,6 @@ export default function DashboardPage() {
             const isDrukkeDag = meetingMinutes >= 300;
             const druk = isDrukkeDag ? 'Drukke dag' : meetingMinutes >= 150 ? 'Gemiddelde vergaderdruk' : 'Rustige dag';
 
-            // Synergie coach ↔ PA, zonder de bestaande ImpactOS-review-gate te omzeilen: geen
-            // automatische agenda-schrijfactie, wél een concrete, één-klik-voorstel dat Google
-            // Calendar's eigen "nieuw event"-scherm opent — Vincent bevestigt en bewaart zelf.
             const timedEvents = calendarEvents.filter((ev) => !ev.isAllDay && ev.end);
             const lastEventEnd = timedEvents.length > 0
               ? new Date(Math.max(...timedEvents.map((ev) => new Date(ev.end!).getTime())))
@@ -369,21 +365,21 @@ export default function DashboardPage() {
             const recoveryUrl = buildRecoveryProposalUrl(
               recoveryStart,
               60,
-              'Hersteltijd (voorgesteld door Aipa)',
+              'Hersteltijd (voorgesteld door AIPA)',
               'Voorgesteld na een drukke dag met veel vergaderingen — even geen scherm, even geen taak.'
             );
 
             return (
-            <div className="rounded-[16px] border border-[#e8e8ec] p-5 mb-6">
+            <div className="rounded-card border border-line bg-surface-card p-5 mb-6 shadow-organic">
               <div className="flex items-center justify-between mb-3.5">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-[10px] bg-[#00cc66]/10 flex items-center justify-center">
-                    <CalendarDays size={15} className="text-[#00cc66]" />
+                  <div className="w-8 h-8 rounded-[10px] bg-primary-muted flex items-center justify-center">
+                    <CalendarDays size={15} className="text-primary" />
                   </div>
-                  <p className="text-[14px] font-semibold text-[#0a0a14]">Vandaag in je agenda</p>
+                  <p className="text-[14px] font-semibold text-ink">Vandaag in je agenda</p>
                 </div>
                 {meetingMinutes > 0 && (
-                  <span className="text-[10px] font-medium text-[#8a8a9a] bg-[#f4f4f7] rounded-full px-2.5 py-1 whitespace-nowrap">
+                  <span className="text-[10px] font-medium text-ink-soft bg-surface-sunken rounded-full px-2.5 py-1 whitespace-nowrap">
                     {druk} &middot; {hours}u
                   </span>
                 )}
@@ -391,12 +387,12 @@ export default function DashboardPage() {
               <div className="space-y-2.5">
                 {calendarEvents.map((ev) => (
                   <div key={ev.id} className="flex items-center gap-3">
-                    <span className="text-[12px] font-medium text-[#8a8a9a] w-12 flex-shrink-0 tabular-nums">
+                    <span className="text-[12px] font-medium text-ink-soft w-12 flex-shrink-0 tabular-nums">
                       {ev.isAllDay || !ev.start
                         ? 'Hele dag'
                         : new Date(ev.start).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
                     </span>
-                    <span className="text-[13px] text-[#0a0a14] truncate">{ev.summary}</span>
+                    <span className="text-[13px] text-ink truncate">{ev.summary}</span>
                   </div>
                 ))}
               </div>
@@ -405,53 +401,47 @@ export default function DashboardPage() {
                   href={recoveryUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-4 flex items-center gap-2.5 rounded-[12px] bg-[#00cc66]/10 px-4 py-3 hover:bg-[#00cc66]/15 transition-colors"
+                  className="mt-4 flex items-center gap-2.5 rounded-[12px] bg-primary-muted px-4 py-3 hover:bg-primary/15 transition-colors"
                 >
-                  <Sparkles size={14} className="text-[#00cc66] flex-shrink-0" />
-                  <span className="text-[12px] font-medium text-[#0a0a14] flex-1">
-                    Drukke dag — Aipa stelt een uur hersteltijd voor na je laatste afspraak
+                  <Sparkles size={14} className="text-primary flex-shrink-0" />
+                  <span className="text-[12px] font-medium text-ink flex-1">
+                    Drukke dag — AIPA stelt een uur hersteltijd voor na je laatste afspraak
                   </span>
-                  <ChevronRight size={14} className="text-[#00cc66] flex-shrink-0" />
+                  <ChevronRight size={14} className="text-primary flex-shrink-0" />
                 </a>
               )}
             </div>
             );
           })()}
 
-          {/* ══ DE SPARRINGPARTNER ══════════════════════════════ */}
+          {/* ══ AIPA ═════════════════════════════════════════════ */}
           <Link
             href="/coach"
-            className="block rounded-[16px] bg-[#0a0a14] p-4 mb-6 hover:opacity-95 transition-opacity"
+            className="block rounded-card bg-ink p-4 mb-6 hover:opacity-95 transition-opacity shadow-organic"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-[10px] bg-[#00cc66]/15 flex items-center justify-center flex-shrink-0">
-                <Sparkles size={18} className="text-[#00cc66]" />
+              <div className="w-10 h-10 rounded-[10px] bg-primary/15 flex items-center justify-center flex-shrink-0">
+                <Sparkles size={18} className="text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-bold text-white">De Sparringpartner</p>
-                <p className="text-[11px] text-white/50 leading-snug">Business- en welzijnscoach — vraag een reflectie op je dag</p>
+                <p className="text-[13px] font-bold text-white">AIPA</p>
+                <p className="text-[11px] text-white/50 leading-snug">Je business- en welzijnscoach — vraag een reflectie op je dag</p>
               </div>
               <ChevronRight size={16} className="text-white/40 flex-shrink-0" />
             </div>
-          </Link>
-
-          {/* Insights kreeg zijn plek in de bottom-nav af aan Coach — houd hem bereikbaar */}
-          <Link
-            href="/insights"
-            className="flex items-center gap-2 text-[12px] text-[#8a8a9a] hover:text-[#0a0a14] transition-colors mb-6 -mt-3"
-          >
-            <TrendingUp size={14} />
-            Bekijk je insights en trends
-            <ChevronRight size={13} />
           </Link>
 
           {/* ══ ACTUELE DOELEN ══════════════════════════════════ */}
           {goals.length > 0 && (
             <section className="mb-6">
               <div className="flex items-center justify-between mb-3.5">
-                <h2 className="text-[15px] font-bold text-[#0a0a14]">Actuele Doelen</h2>
-                <Link href="/goals">
-                  <TrendingUp size={17} className="text-[#8a8a9a] hover:text-[#00cc66] transition-colors" />
+                <h2 className="text-[15px] font-bold text-ink">Actuele Doelen</h2>
+                <Link
+                  href="/insights"
+                  className="flex items-center gap-1 text-[11px] font-semibold text-ink-soft hover:text-primary transition-colors"
+                >
+                  <TrendingUp size={13} />
+                  Insights
                 </Link>
               </div>
 
@@ -460,22 +450,22 @@ export default function DashboardPage() {
                   <Link
                     key={goal.id}
                     href="/goals"
-                    className="block rounded-[14px] border border-[#e8e8ec] bg-white px-4 py-3.5 hover:border-[#00cc66]/30 transition-colors"
+                    className="block rounded-[14px] border border-line bg-surface-card px-4 py-3.5 hover:border-primary/30 transition-colors"
                   >
                     <div className="flex items-center justify-between mb-1.5">
-                      <p className="text-[13px] font-semibold text-[#0a0a14] leading-snug flex-1 pr-3">
+                      <p className="text-[13px] font-semibold text-ink leading-snug flex-1 pr-3">
                         {goal.title}
                       </p>
-                      <span className="text-[14px] font-bold text-[#00cc66] tabular-nums shrink-0">
+                      <span className="text-[14px] font-bold text-primary tabular-nums shrink-0">
                         {goal.progress ?? 0}%
                       </span>
                     </div>
-                    <p className="text-[9px] font-bold text-[#8a8a9a] tracking-[0.15em] uppercase mb-2">
+                    <p className="text-[9px] font-bold text-ink-soft tracking-[0.15em] uppercase mb-2">
                       {categoryLabel[goal.category] ?? goal.category}
                     </p>
-                    <div className="h-1 rounded-full bg-[#f4f4f7] overflow-hidden">
+                    <div className="h-1 rounded-full bg-surface-sunken overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-[#00cc66] transition-all duration-700"
+                        className="h-full rounded-full bg-primary transition-all duration-700"
                         style={{ width: `${Math.max(2, goal.progress ?? 0)}%` }}
                       />
                     </div>
@@ -488,20 +478,20 @@ export default function DashboardPage() {
           {/* ══ STATS ROW ═══════════════════════════════════════ */}
           <section className="mb-6">
             <div className="grid grid-cols-3 gap-2.5">
-              <div className="rounded-[14px] bg-[#f4f4f7] px-3 py-4">
-                <p className="text-[9px] font-bold text-[#8a8a9a] uppercase tracking-[0.12em] mb-1.5">Doelen</p>
-                <p className="text-[26px] font-bold text-[#0a0a14] leading-none">{stats.activeGoals}</p>
-                <p className="text-[9px] text-[#8a8a9a] mt-1">actief</p>
+              <div className="rounded-[14px] bg-surface-sunken px-3 py-4">
+                <p className="text-[9px] font-bold text-ink-soft uppercase tracking-[0.12em] mb-1.5">Doelen</p>
+                <p className="text-[26px] font-bold text-ink leading-none">{stats.activeGoals}</p>
+                <p className="text-[9px] text-ink-soft mt-1">actief</p>
               </div>
-              <div className="rounded-[14px] bg-[#fef3c7] border border-[#fde68a] px-3 py-4">
-                <p className="text-[9px] font-bold text-[#f59e0b] uppercase tracking-[0.12em] mb-1.5">Streak</p>
-                <p className="text-[26px] font-bold text-[#0a0a14] leading-none">{stats.streak}</p>
-                <p className="text-[9px] text-[#f59e0b] mt-1">dagen</p>
+              <div className="rounded-[14px] bg-gold-soft border border-[#fde68a] px-3 py-4">
+                <p className="text-[9px] font-bold text-gold uppercase tracking-[0.12em] mb-1.5">Streak</p>
+                <p className="text-[26px] font-bold text-ink leading-none">{stats.streak}</p>
+                <p className="text-[9px] text-gold mt-1">dagen</p>
               </div>
-              <div className="rounded-[14px] bg-[#f4f4f7] px-3 py-4">
-                <p className="text-[9px] font-bold text-[#8a8a9a] uppercase tracking-[0.12em] mb-1.5">Week</p>
-                <p className="text-[26px] font-bold text-[#0a0a14] leading-none">{stats.weeklyProgress}</p>
-                <p className="text-[9px] text-[#8a8a9a] mt-1">procent</p>
+              <div className="rounded-[14px] bg-surface-sunken px-3 py-4">
+                <p className="text-[9px] font-bold text-ink-soft uppercase tracking-[0.12em] mb-1.5">Week</p>
+                <p className="text-[26px] font-bold text-ink leading-none">{stats.weeklyProgress}</p>
+                <p className="text-[9px] text-ink-soft mt-1">procent</p>
               </div>
             </div>
           </section>
@@ -510,8 +500,8 @@ export default function DashboardPage() {
           {recentWins.length > 0 && (
             <section className="mb-6">
               <div className="flex items-center justify-between mb-3.5">
-                <h2 className="text-[15px] font-bold text-[#0a0a14]">Recente Wins</h2>
-                <Link href="/wins" className="text-[12px] font-semibold text-[#00cc66]">
+                <h2 className="text-[15px] font-bold text-ink">Recente Wins</h2>
+                <Link href="/wins" className="text-[12px] font-semibold text-primary">
                   Alles bekijken
                 </Link>
               </div>
@@ -519,20 +509,20 @@ export default function DashboardPage() {
                 {recentWins.map((win) => (
                   <div
                     key={win.id}
-                    className="flex items-center gap-3 px-4 py-3 rounded-[14px] border border-[#e8e8ec] bg-white"
+                    className="flex items-center gap-3 px-4 py-3 rounded-[14px] border border-line bg-surface-card"
                   >
-                    <div className="w-8 h-8 rounded-[10px] bg-[#f0fdf4] flex items-center justify-center flex-none">
-                      <Zap size={14} className="text-[#00cc66]" />
+                    <div className="w-8 h-8 rounded-[10px] bg-primary-muted flex items-center justify-center flex-none">
+                      <Zap size={14} className="text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-[#0a0a14] truncate">{win.title}</p>
-                      <p className="text-[11px] text-[#8a8a9a]">
+                      <p className="text-[13px] font-semibold text-ink truncate">{win.title}</p>
+                      <p className="text-[11px] text-ink-soft">
                         {new Date(win.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
                       </p>
                     </div>
                     <div className="flex gap-0.5 shrink-0">
                       {Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < win.impact_level ? 'bg-[#00cc66]' : 'bg-[#e8e8ec]'}`} />
+                        <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < win.impact_level ? 'bg-primary' : 'bg-line'}`} />
                       ))}
                     </div>
                   </div>
@@ -541,81 +531,41 @@ export default function DashboardPage() {
             </section>
           )}
 
-          {/* ══ QUICK ACTIONS ═══════════════════════════════════ */}
+          {/* ══ SNEL VERDER ═════════════════════════════════════ */}
           <section className="mb-6">
+            <div className="flex items-center justify-between mb-3.5">
+              <h2 className="text-[15px] font-bold text-ink">Snel verder</h2>
+            </div>
             <div className="grid grid-cols-2 gap-2.5">
               <Link
                 href="/identity"
-                className="rounded-[16px] bg-[#0a0a14] p-4 flex items-center gap-3 group hover:bg-[#111118] transition-colors"
+                className="rounded-card bg-ink p-4 flex items-center gap-3 hover:bg-[#151520] transition-colors"
               >
-                <div className="w-9 h-9 rounded-[10px] bg-white/10 flex items-center justify-center text-base">🛡️</div>
+                <div className="w-9 h-9 rounded-[10px] bg-white/10 flex items-center justify-center">
+                  <Fingerprint size={17} className="text-white" />
+                </div>
                 <div>
                   <p className="text-[12px] font-bold text-white">Identiteit</p>
-                  <p className="text-[10px] text-[#5a5a6a]">Claim wie je bent</p>
-                </div>
-              </Link>
-              <Link
-                href="/controle-cirkel"
-                className="rounded-[16px] border border-[#e8e8ec] bg-white p-4 flex items-center gap-3 hover:border-[#00cc66]/30 transition-colors"
-              >
-                <div className="w-9 h-9 rounded-[10px] bg-[#f0fdf4] flex items-center justify-center text-base">⭕</div>
-                <div>
-                  <p className="text-[12px] font-bold text-[#0a0a14]">Controle</p>
-                  <p className="text-[10px] text-[#8a8a9a]">Cirkel oefening</p>
+                  <p className="text-[10px] text-white/40">Claim wie je bent</p>
                 </div>
               </Link>
               <Link
                 href="/dagboek"
-                className="rounded-[16px] border border-[#e8e8ec] bg-white p-4 flex items-center gap-3 hover:border-[#00cc66]/30 transition-colors"
+                className="rounded-card border border-line bg-surface-card p-4 flex items-center gap-3 hover:border-primary/30 transition-colors"
               >
-                <div className="w-9 h-9 rounded-[10px] bg-[#fdf4ff] flex items-center justify-center">
-                  <BookHeart size={17} className="text-[#a855f7]" />
+                <div className="w-9 h-9 rounded-[10px] bg-violet-soft flex items-center justify-center text-base">
+                  📔
                 </div>
                 <div>
-                  <p className="text-[12px] font-bold text-[#0a0a14]">Dagboek</p>
-                  <p className="text-[10px] text-[#8a8a9a]">Hoe voel je je?</p>
+                  <p className="text-[12px] font-bold text-ink">Dagboek</p>
+                  <p className="text-[10px] text-ink-soft">Hoe voel je je?</p>
                 </div>
-              </Link>
-              <Link
-                href="/aca"
-                className="col-span-2 rounded-[16px] bg-[#f0fdf4] border border-[#bbf7d0] p-4 flex items-center justify-between group active:scale-[0.99] transition-transform"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[10px] bg-[#00cc66]/20 flex items-center justify-center text-base">💚</div>
-                  <div>
-                    <p className="text-[13px] font-bold text-[#0a0a14]">ACA Herstelpad</p>
-                    <p className="text-[10px] text-[#00cc66] font-medium">7 weken naar de Liefdevolle Ouder</p>
-                  </div>
-                </div>
-                <ChevronRight size={17} className="text-[#00cc66]/60 group-hover:text-[#00cc66] transition-colors" />
-              </Link>
-              <Link
-                href="/adhd"
-                className="col-span-2 rounded-[16px] bg-[#f5f3ff] border border-[#e9d5ff] p-4 flex items-center justify-between group active:scale-[0.99] transition-transform"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[10px] bg-[#a78bfa]/20 flex items-center justify-center text-base">🧠</div>
-                  <div>
-                    <p className="text-[13px] font-bold text-[#0a0a14]">ADHD Klachten</p>
-                    <p className="text-[10px] text-[#a78bfa] font-medium">Meting voor medicatiestart · 3 weken</p>
-                  </div>
-                </div>
-                <ChevronRight size={17} className="text-[#a78bfa]/60 group-hover:text-[#a78bfa] transition-colors" />
-              </Link>
-              <Link
-                href="/courses"
-                className="col-span-2 rounded-[16px] bg-gradient-to-r from-[#ff6b35] to-[#e83e3e] p-4 flex items-center justify-between group active:scale-[0.99] transition-transform"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[10px] bg-white/20 flex items-center justify-center text-base">🔥</div>
-                  <div>
-                    <p className="text-[13px] font-bold text-white">Tony Robbins Cursussen</p>
-                    <p className="text-[10px] text-white/70">Unleash Your Power · 12 weken</p>
-                  </div>
-                </div>
-                <ChevronRight size={17} className="text-white/60 group-hover:text-white transition-colors" />
               </Link>
             </div>
+            <p className="text-[11px] text-ink-soft text-center mt-3">
+              Meer secties zoals Controle Cirkel, ACA, ADHD en Cursussen vind je onder{' '}
+              <span className="font-semibold text-ink">Menu</span> hieronder.
+            </p>
           </section>
 
         </main>
@@ -625,4 +575,10 @@ export default function DashboardPage() {
       </div>
     </RitualGuard>
   );
+}
+
+function goalProgressLabel(progress: number | undefined) {
+  const p = progress ?? 0;
+  if (p >= 100) return 'Afgerond →';
+  return `${p}% klaar →`;
 }

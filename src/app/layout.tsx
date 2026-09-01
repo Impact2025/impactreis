@@ -15,13 +15,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mijn Ondernemers OS",
-  description: "Personal OS voor Hoogbegaafde Ondernemers - Rituelen, Doelen, Wins",
+  title: "MyAIPA",
+  description: "MyAIPA — jouw persoonlijke AI PA voor Rituelen, Doelen, Wins",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Mijn OS",
+    title: "MyAIPA",
     startupImage: [
       {
         url: "/icons/icon-512x512.png",
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#00cc66",
+  themeColor: "#faf8f5",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

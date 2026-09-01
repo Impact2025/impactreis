@@ -1,31 +1,74 @@
 @import "tailwindcss";
 
 :root {
-  /* Core palette */
-  --bg: #ffffff;
+  /* ══ MyAIPA design tokens ══════════════════════════════════ */
+  /* Surfaces — warm off-white instead of pure white, organic feel */
+  --bg: #faf8f5;
+  --surface: #faf8f5;
+  --surface-card: #ffffff;
+  --surface-sunken: #f4f2ee;
+
+  /* Ink / text */
   --fg: #0a0a14;
+  --ink: #0a0a14;
+  --ink-soft: #6f7178;
+  --muted: #6f7178;
+  --muted-light: #f4f2ee;
+
+  /* Brand */
   --green: #00cc66;
   --green-dark: #00a854;
   --green-light: #dcfce7;
-  --green-muted: #f0fdf4;
+  --green-muted: #eefbf3;
   --dark: #0a0a14;
-  --dark-card: #111118;
-  --card: #f8f9fa;
-  --border: #e8e8ec;
-  --muted: #8a8a9a;
-  --muted-light: #f4f4f7;
+  --dark-card: #14141f;
+  --card: #f8f7f4;
+  --border: #e7e4dd;
+  --line: #e7e4dd;
+
+  /* Secondary accents (used across rituals/reflectie) */
+  --accent: #6366f1;
+  --accent-soft: #eef0fe;
+  --violet: #a855f7;
+  --violet-soft: #faf5ff;
   --yellow: #f59e0b;
   --yellow-light: #fef3c7;
 
-  --background: #ffffff;
-  --foreground: #0a0a14;
+  --background: var(--surface);
+  --foreground: var(--ink);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  --color-surface: var(--surface);
+  --color-surface-card: var(--surface-card);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+
+  --color-primary: var(--green);
+  --color-primary-dark: var(--green-dark);
+  --color-primary-light: var(--green-light);
+  --color-primary-muted: var(--green-muted);
+
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+  --color-gold: var(--yellow);
+  --color-gold-soft: var(--yellow-light);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --shadow-organic: 0 4px 20px -2px rgba(20,20,25,0.04), 0 12px 32px -8px rgba(20,20,25,0.06);
+  --shadow-organic-lg: 0 8px 32px -4px rgba(20,20,25,0.06), 0 20px 48px -12px rgba(20,20,25,0.08);
+
+  --radius-card: 20px;
+  --radius-hero: 24px;
 }
 
 * {
@@ -89,4 +132,13 @@ body {
 }
 .live-dot {
   animation: live-pulse 2s ease-in-out infinite;
+}
+
+/* Full-screen sheet (menu overlay) */
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.animate-sheet-up {
+  animation: sheet-up 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
