@@ -16,8 +16,15 @@ vi.mock('@/auth', () => ({ auth }));
 const { sql } = vi.hoisted(() => ({ sql: vi.fn() }));
 vi.mock('../db', () => ({ sql }));
 
-function fakeRequest(): NextRequest {
-  return {} as NextRequest;
+const { checkBridgeToken, loadSingleUserId, loadUserOrganizationId } = vi.hoisted(() => ({
+  checkBridgeToken: vi.fn(),
+  loadSingleUserId: vi.fn(),
+  loadUserOrganizationId: vi.fn(),
+}));
+vi.mock('../coach', () => ({ checkBridgeToken, loadSingleUserId, loadUserOrganizationId }));
+
+function fakeRequest(authorization?: string): NextRequest {
+  return { headers: new Headers(authorization ? { authorization } : {}) } as NextRequest;
 }
 
 describe('getAuthContext', () => {
@@ -25,6 +32,33 @@ describe('getAuthContext', () => {
     authenticateToken.mockReset();
     auth.mockReset();
     sql.mockReset();
+    checkBridgeToken.mockReset();
+    loadSingleUserId.mockReset();
+    loadUserOrganizationId.mockReset();
+    checkBridgeToken.mockReturnValue(false);
+  });
+
+  it('herleidt organizationId via het bridge-token (ImpactOS), zonder Auth.js aan te roepen', async () => {
+    authenticateToken.mockResolvedValue(null);
+    checkBridgeToken.mockReturnValue(true);
+    loadSingleUserId.mockResolvedValue('1');
+    loadUserOrganizationId.mockResolvedValue(4);
+
+    const result = await getAuthContext(fakeRequest('Bearer geheim'));
+
+    expect(result).toEqual({ userId: 1, organizationId: 4 });
+    expect(auth).not.toHaveBeenCalled();
+  });
+
+  it('valt terug op Auth.js als het bridge-token ontbreekt of ongeldig is', async () => {
+    authenticateToken.mockResolvedValue(null);
+    checkBridgeToken.mockReturnValue(false);
+    auth.mockResolvedValue(null);
+
+    const result = await getAuthContext(fakeRequest('Bearer fout-token'));
+
+    expect(result).toBeNull();
+    expect(loadSingleUserId).not.toHaveBeenCalled();
   });
 
   it('herleidt organizationId via het bestaande JWT-token, zonder Auth.js aan te roepen', async () => {
