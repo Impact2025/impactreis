@@ -209,6 +209,26 @@ export const coachPredictions = pgTable('coach_predictions', {
   dueIdx: index('idx_coach_predictions_due').on(t.userId, t.dueDate),
 }));
 
+// Voorstellen voor agenda-tijdblokken (bv. hersteltijd na een drukke dag) die de coach aanmaakt,
+// maar die pas als echte Google Calendar-afspraak worden geschreven ná expliciete goedkeuring
+// door de gebruiker — zie src/lib/google-calendar.ts:createEvent(). Bewust géén auto-write:
+// dit is de human-review-gate die het zusterproject ImpactOS al kent (calendar_proposals).
+export const calendarProposals = pgTable('calendar_proposals', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
+  userId: text('user_id').notNull(),
+  summary: text('summary').notNull(),
+  startTime: timestamp('start_time').notNull(),
+  endTime: timestamp('end_time').notNull(),
+  reason: text('reason'),
+  source: text('source').notNull().default('coach'), // 'coach' | 'manual'
+  status: text('status').notNull().default('pending'), // 'pending' | 'approved' | 'rejected'
+  createdAt: timestamp('created_at').defaultNow(),
+  resolvedAt: timestamp('resolved_at'),
+}, (t) => ({
+  userStatusIdx: index('idx_calendar_proposals_user_status').on(t.userId, t.status),
+}));
+
 // De AIPA-intake: één gesprek i.p.v. een statisch registratieformulier, dat het hele
 // UserOnboardingProfile als JSONB opslaat (zelfde stijl als goals/daily_logs — één blob i.p.v.
 // alle geneste velden normaliseren). RAG-embeddings (pgvector) zijn hier bewust NIET

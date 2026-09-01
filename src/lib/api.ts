@@ -377,6 +377,16 @@ class ApiClient {
 
   calendar = {
     today: () => this.request<{ configured: boolean; events: any[] }>('/calendar/today'),
+    proposals: {
+      list: () => this.request<{ proposals: any[] }>('/calendar/proposals'),
+      approve: (id: string | number) => this.request(`/calendar/proposals/${id}/approve`, { method: 'POST' }),
+      reject: (id: string | number) => this.request(`/calendar/proposals/${id}/reject`, { method: 'POST' }),
+    },
+  };
+
+  coach = {
+    proactiveSignal: () =>
+      this.request<{ signal: boolean; patternKey: string; message: string }>('/coach/proactive-signal'),
   };
 
   weeklySummary = {

@@ -1,3 +1,5 @@
+> ⚠️ **VEROUDERD (sinds 2026-09-01)** — dit rapport beschrijft een eerdere architectuur (Express-server + Vite/React SPA) die niet meer bestaat in deze codebase. De scores hieronder zijn niet gekoppeld aan de huidige Next.js-app. Zie **[STATUS.md](./STATUS.md)** voor de actuele stand van zaken. Dit bestand blijft staan voor historische context, niet als referentie.
+
 # 🔍 Professionele Systeem Audit - Mijn Ondernemers OS
 
 **Datum**: 2024-12-04

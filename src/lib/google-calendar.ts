@@ -2,12 +2,16 @@
 // (D:\apps\agentos, backend/domains/calendar/service_google.py). Die agenda (`chat@weareimpact.nl`)
 // is expliciet gedeeld met het service-account; geen domain-wide delegation nodig.
 //
-// Bewust alleen-lezen hier: dit voedt de ochtendbriefing/dashboard, het schrijft niets terug.
-// Schrijven (afspraken blokkeren) is precies wat ImpactOS al doet met een menselijke review-gate
-// (calendar_proposals) — dat heractiveren hier zou die review-gate omzeilen.
+// Lezen (listEvents/listTodayEvents) voedt de ochtendbriefing/dashboard.
+// Schrijven (createEvent) mag ALLEEN aangeroepen worden ná expliciete gebruikersgoedkeuring van
+// een `calendar_proposals`-rij (zie src/app/api/calendar/proposals/[id]/approve/route.ts) — dat
+// is de menselijke review-gate die ImpactOS al kent. Nooit rechtstreeks vanuit coach-analyse.
 import { JWT } from 'google-auth-library';
 
-const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
+const SCOPES = [
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/calendar.events',
+];
 const CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 
 let client: JWT | null = null;
@@ -60,6 +64,43 @@ export async function listEvents(timeMin: string, timeMax: string): Promise<Cale
     isAllDay: !item.start?.dateTime && Boolean(item.start?.date),
     location: item.location ?? null,
   }));
+}
+
+export interface NewCalendarEvent {
+  summary: string;
+  description?: string;
+  startTime: string; // ISO 8601
+  endTime: string;   // ISO 8601
+}
+
+/** Schrijft een nieuwe afspraak. Roep dit ALLEEN aan na expliciete gebruikersgoedkeuring
+ * van een calendar_proposals-rij — nooit automatisch. */
+export async function createEvent(input: NewCalendarEvent): Promise<CalendarEvent> {
+  const calendarId = process.env.GOOGLE_CALENDAR_ID;
+  if (!calendarId) throw new Error('GOOGLE_CALENDAR_ID niet geconfigureerd.');
+
+  const jwt = getClient();
+  const url = `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events`;
+
+  const res = await jwt.request<any>({
+    url,
+    method: 'POST',
+    data: {
+      summary: input.summary,
+      description: input.description,
+      start: { dateTime: input.startTime, timeZone: 'Europe/Amsterdam' },
+      end: { dateTime: input.endTime, timeZone: 'Europe/Amsterdam' },
+    },
+  });
+
+  return {
+    id: res.data.id,
+    summary: res.data.summary ?? input.summary,
+    start: res.data.start?.dateTime ?? null,
+    end: res.data.end?.dateTime ?? null,
+    isAllDay: false,
+    location: res.data.location ?? null,
+  };
 }
 
 /** Vandaag (lokale Europe/Amsterdam-dag), voor de ochtendbriefing/dashboard. */

@@ -1,3 +1,5 @@
+> ⚠️ **VEROUDERD (sinds 2026-09-01)** — dit document beschrijft een eerdere architectuur die niet meer bestaat in deze codebase. Zie **[STATUS.md](./STATUS.md)** voor de actuele stand van zaken. Blijft staan voor historische context, niet als referentie.
+
 # 🚀 Production Deployment Guide - Wereldklasse Edition
 
 **Mijn Ondernemers OS - Mastermind Editie**

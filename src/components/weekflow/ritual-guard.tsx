@@ -1,9 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getNextRequiredRitual } from '@/lib/weekflow.service';
-
 interface RitualGuardProps {
   children: React.ReactNode;
 }
@@ -11,53 +7,15 @@ interface RitualGuardProps {
 /**
  * RitualGuard Component
  *
- * Automatically redirects users to the next required ritual based on:
- * - Day of week (weekday vs weekend vs Monday)
- * - Time of day (before/after 17:00)
- * - Completion status of rituals
+ * Historically force-redirected to the next required ritual (morning/evening/
+ * weekly-start/weekly-review) before the dashboard could render at all. That
+ * made the app feel like a maze of forced screens instead of one home base.
  *
- * Wrap this around dashboard to enforce weekflow automation
+ * Now a pass-through: the dashboard itself surfaces "nog te doen" rituals as
+ * an inline, dismissable card (see getNextRequiredRitual() in
+ * weekflow.service.ts, used directly in dashboard/page.tsx) so the user can
+ * see their day and choose when to act, instead of being forced there.
  */
 export function RitualGuard({ children }: RitualGuardProps) {
-  const router = useRouter();
-  const [isChecking, setIsChecking] = useState(true);
-
-  useEffect(() => {
-    const checkAndRedirect = () => {
-      // Get next required ritual
-      const nextRitual = getNextRequiredRitual();
-
-      // If there's a required ritual that's available, redirect to it
-      if (nextRitual && nextRitual.isRequired && nextRitual.isAvailable) {
-        console.log('[RitualGuard] Redirecting to:', nextRitual.path, nextRitual.reason);
-        router.push(nextRitual.path);
-        return;
-      }
-
-      // No redirect needed, show dashboard
-      setIsChecking(false);
-    };
-
-    // Small delay to prevent flash
-    const timer = setTimeout(checkAndRedirect, 100);
-
-    return () => clearTimeout(timer);
-  }, [router]);
-
-  // Show loading state while checking
-  if (isChecking) {
-    return (
-      <div className="min-h-screen bg-surface flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mx-auto mb-4" />
-          <p className="text-ink-soft font-medium">
-            Even checken...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Render dashboard
   return <>{children}</>;
 }
