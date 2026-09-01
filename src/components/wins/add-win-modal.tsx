@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { CreateWinData } from '@/types';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Trophy, Briefcase, Star, Heart, BookOpen } from 'lucide-react';
 
 interface AddWinModalProps {
   isOpen: boolean;
@@ -10,10 +10,10 @@ interface AddWinModalProps {
 }
 
 const CATEGORIES = [
-  { value: 'business',  label: 'Business',    icon: '💼' },
-  { value: 'personal',  label: 'Persoonlijk', icon: '⭐' },
-  { value: 'health',    label: 'Gezondheid',  icon: '❤️' },
-  { value: 'learning',  label: 'Leren',       icon: '📚' },
+  { value: 'business',  label: 'Business',    icon: Briefcase },
+  { value: 'personal',  label: 'Persoonlijk', icon: Star },
+  { value: 'health',    label: 'Gezondheid',  icon: Heart },
+  { value: 'learning',  label: 'Leren',       icon: BookOpen },
 ] as const;
 
 export const AddWinModal: React.FC<AddWinModalProps> = ({ isOpen, onClose, onSubmit }) => {
@@ -75,7 +75,7 @@ export const AddWinModal: React.FC<AddWinModalProps> = ({ isOpen, onClose, onSub
 
   if (!isOpen) return null;
 
-  const inputBase = 'w-full px-4 py-3.5 rounded-[12px] bg-[#f4f4f7] border border-[#e8e8ec] text-[15px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66] transition-colors';
+  const inputBase = 'w-full px-4 py-3.5 rounded-[12px] bg-surface-sunken border border-line text-[15px] text-ink placeholder-ink-soft outline-none focus:border-primary transition-colors';
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
@@ -83,19 +83,24 @@ export const AddWinModal: React.FC<AddWinModalProps> = ({ isOpen, onClose, onSub
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleClose} />
 
       {/* Sheet */}
-      <div className="relative bg-white w-full max-w-lg max-h-[92dvh] overflow-y-auto rounded-t-[24px] sm:rounded-[20px] sm:mx-4">
+      <div className="relative bg-surface-card w-full max-w-lg max-h-[92dvh] overflow-y-auto rounded-t-[24px] sm:rounded-[20px] sm:mx-4">
 
         {/* Handle (mobile only) */}
         <div className="sm:hidden flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-[#e8e8ec]" />
+          <div className="w-10 h-1 rounded-full bg-line" />
         </div>
 
         {/* Header */}
-        <div className="sticky top-0 bg-white flex items-center justify-between px-5 py-4 border-b border-[#e8e8ec]">
-          <h2 className="text-[18px] font-bold text-[#0a0a14]">🏆 Win toevoegen</h2>
+        <div className="sticky top-0 bg-surface-card flex items-center justify-between px-5 py-4 border-b border-line">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-[10px] bg-primary-muted flex items-center justify-center">
+              <Trophy size={15} className="text-primary" />
+            </div>
+            <h2 className="text-[18px] font-bold text-ink">Win toevoegen</h2>
+          </div>
           <button
             onClick={handleClose}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-[#f4f4f7] text-[#8a8a9a] hover:text-[#0a0a14] transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-surface-sunken text-ink-soft hover:text-ink transition-colors"
           >
             <X size={18} />
           </button>
@@ -106,7 +111,7 @@ export const AddWinModal: React.FC<AddWinModalProps> = ({ isOpen, onClose, onSub
 
           {/* Title */}
           <div>
-            <label className="block text-[12px] font-semibold text-[#8a8a9a] uppercase tracking-wider mb-2">
+            <label className="block text-[12px] font-semibold text-ink-soft uppercase tracking-wider mb-2">
               Titel *
             </label>
             <input
@@ -121,7 +126,7 @@ export const AddWinModal: React.FC<AddWinModalProps> = ({ isOpen, onClose, onSub
 
           {/* Description */}
           <div>
-            <label className="block text-[12px] font-semibold text-[#8a8a9a] uppercase tracking-wider mb-2">
+            <label className="block text-[12px] font-semibold text-ink-soft uppercase tracking-wider mb-2">
               Beschrijving
             </label>
             <textarea
@@ -135,7 +140,7 @@ export const AddWinModal: React.FC<AddWinModalProps> = ({ isOpen, onClose, onSub
 
           {/* Category */}
           <div>
-            <label className="block text-[12px] font-semibold text-[#8a8a9a] uppercase tracking-wider mb-3">
+            <label className="block text-[12px] font-semibold text-ink-soft uppercase tracking-wider mb-3">
               Categorie *
             </label>
             <div className="grid grid-cols-2 gap-2.5">
@@ -147,12 +152,12 @@ export const AddWinModal: React.FC<AddWinModalProps> = ({ isOpen, onClose, onSub
                   className={cn(
                     'p-4 rounded-[14px] border-2 transition-all duration-200 flex items-center gap-3',
                     formData.category === cat.value
-                      ? 'border-[#00cc66] bg-[#00cc66]/8'
-                      : 'border-[#e8e8ec] bg-[#f4f4f7]'
+                      ? 'border-primary bg-primary/8'
+                      : 'border-line bg-surface-sunken'
                   )}
                 >
-                  <span className="text-[22px]">{cat.icon}</span>
-                  <span className={cn('font-semibold text-[14px]', formData.category === cat.value ? 'text-[#0a0a14]' : 'text-[#8a8a9a]')}>
+                  <cat.icon size={18} className={formData.category === cat.value ? 'text-primary' : 'text-ink-soft'} />
+                  <span className={cn('font-semibold text-[14px]', formData.category === cat.value ? 'text-ink' : 'text-ink-soft')}>
                     {cat.label}
                   </span>
                 </button>
@@ -163,7 +168,7 @@ export const AddWinModal: React.FC<AddWinModalProps> = ({ isOpen, onClose, onSub
 
           {/* Impact Level */}
           <div>
-            <label className="block text-[12px] font-semibold text-[#8a8a9a] uppercase tracking-wider mb-3">
+            <label className="block text-[12px] font-semibold text-ink-soft uppercase tracking-wider mb-3">
               Impact niveau * ({formData.impactLevel}/5)
             </label>
             <div className="flex gap-2">
@@ -175,12 +180,17 @@ export const AddWinModal: React.FC<AddWinModalProps> = ({ isOpen, onClose, onSub
                   className={cn(
                     'flex-1 py-3.5 rounded-[12px] border-2 transition-all duration-200 flex flex-col items-center gap-1',
                     formData.impactLevel >= level
-                      ? 'border-[#f59e0b] bg-[#fef3c7]'
-                      : 'border-[#e8e8ec] bg-[#f4f4f7]'
+                      ? 'border-tertiary bg-tertiary-soft'
+                      : 'border-line bg-surface-sunken'
                   )}
                 >
-                  <span className="text-[20px]">⭐</span>
-                  <span className="text-[11px] font-semibold text-[#8a8a9a]">{level}</span>
+                  <span
+                    className="w-3 h-3 rounded-full"
+                    style={{
+                      backgroundColor: formData.impactLevel >= level ? '#884b3b' : '#e3e2e0',
+                    }}
+                  />
+                  <span className="text-[11px] font-semibold text-ink-soft">{level}</span>
                 </button>
               ))}
             </div>
@@ -188,7 +198,7 @@ export const AddWinModal: React.FC<AddWinModalProps> = ({ isOpen, onClose, onSub
 
           {/* Date */}
           <div>
-            <label className="block text-[12px] font-semibold text-[#8a8a9a] uppercase tracking-wider mb-2">
+            <label className="block text-[12px] font-semibold text-ink-soft uppercase tracking-wider mb-2">
               Datum *
             </label>
             <input
@@ -202,7 +212,7 @@ export const AddWinModal: React.FC<AddWinModalProps> = ({ isOpen, onClose, onSub
 
           {/* Tags */}
           <div>
-            <label className="block text-[12px] font-semibold text-[#8a8a9a] uppercase tracking-wider mb-2">
+            <label className="block text-[12px] font-semibold text-ink-soft uppercase tracking-wider mb-2">
               Tags
             </label>
             <div className="flex gap-2 mb-2">
@@ -217,7 +227,7 @@ export const AddWinModal: React.FC<AddWinModalProps> = ({ isOpen, onClose, onSub
               <button
                 type="button"
                 onClick={handleAddTag}
-                className="w-12 h-[52px] bg-[#f4f4f7] border border-[#e8e8ec] rounded-[12px] flex items-center justify-center text-[#8a8a9a] hover:text-[#0a0a14] hover:border-[#00cc66] transition-colors"
+                className="w-12 h-[52px] bg-surface-sunken border border-line rounded-[12px] flex items-center justify-center text-ink-soft hover:text-ink hover:border-primary transition-colors"
               >
                 <Plus size={18} />
               </button>
@@ -225,9 +235,9 @@ export const AddWinModal: React.FC<AddWinModalProps> = ({ isOpen, onClose, onSub
             {formData.tags && formData.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {formData.tags.map((tag, i) => (
-                  <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium rounded-full bg-[#00cc66]/10 text-[#0a0a14]">
+                  <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium rounded-full bg-primary/10 text-ink">
                     {tag}
-                    <button type="button" onClick={() => handleRemoveTag(tag)} className="text-[#8a8a9a] hover:text-[#0a0a14]">
+                    <button type="button" onClick={() => handleRemoveTag(tag)} className="text-ink-soft hover:text-ink">
                       <X size={12} />
                     </button>
                   </span>
@@ -249,16 +259,16 @@ export const AddWinModal: React.FC<AddWinModalProps> = ({ isOpen, onClose, onSub
               type="button"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="flex-1 py-4 rounded-[14px] border border-[#e8e8ec] text-[15px] font-semibold text-[#8a8a9a] active:scale-[0.98] transition-transform disabled:opacity-40"
+              className="flex-1 py-4 rounded-[14px] border border-line text-[15px] font-semibold text-ink-soft active:scale-[0.98] transition-transform disabled:opacity-40"
             >
               Annuleren
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 py-4 rounded-[14px] bg-[#00cc66] text-white text-[15px] font-semibold shadow-[0_4px_16px_rgba(0,204,102,0.35)] active:scale-[0.98] transition-transform disabled:opacity-40"
+              className="flex-1 py-4 rounded-[14px] bg-primary text-white text-[15px] font-semibold shadow-[0_4px_16px_rgba(81,96,80,0.35)] active:scale-[0.98] transition-transform disabled:opacity-40"
             >
-              {isSubmitting ? 'Opslaan...' : '🏆 Toevoegen'}
+              {isSubmitting ? 'Opslaan...' : 'Toevoegen'}
             </button>
           </div>
         </form>

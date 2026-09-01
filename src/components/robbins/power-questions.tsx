@@ -72,35 +72,35 @@ export function PowerQuestions({ type, values, onChange }: PowerQuestionsProps) 
   const allAnswered = answeredCount === questions.length;
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <div className="bg-white  rounded-2xl border border-line  overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+      <div className="p-4 border-b border-line ">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
               type === 'morning'
-                ? 'bg-gradient-to-br from-amber-500 to-orange-600'
-                : 'bg-gradient-to-br from-indigo-500 to-purple-600'
+                ? 'bg-gradient-to-br from-tertiary to-tertiary'
+                : 'bg-gradient-to-br from-accent to-accent'
             }`}>
               <HelpCircle className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-slate-900 dark:text-white">
+              <h3 className="font-semibold text-ink ">
                 {type === 'morning' ? 'Ochtend' : 'Avond'} Power Questions
               </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-ink-soft ">
                 Quality questions create a quality life
               </p>
             </div>
           </div>
-          <div className="text-sm text-slate-500">
+          <div className="text-sm text-ink-soft">
             {answeredCount}/{questions.length}
           </div>
         </div>
       </div>
 
       {/* Questions */}
-      <div className="divide-y divide-slate-200 dark:divide-slate-800">
+      <div className="divide-y divide-line ">
         {questions.map((q, index) => {
           const isExpanded = expandedIndex === index;
           const hasAnswer = values[q.id]?.trim().length > 0;
@@ -109,34 +109,34 @@ export function PowerQuestions({ type, values, onChange }: PowerQuestionsProps) 
             <div key={q.id} className="transition-colors">
               <button
                 onClick={() => setExpandedIndex(isExpanded ? -1 : index)}
-                className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                className="w-full p-4 flex items-center justify-between text-left hover:bg-surface-card "
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
                     hasAnswer
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                      ? 'bg-primary text-white'
+                      : 'bg-surface-card  text-ink-soft'
                   }`}>
                     {hasAnswer ? '✓' : index + 1}
                   </div>
                   <span className={`font-medium ${
                     hasAnswer
-                      ? 'text-slate-500 dark:text-slate-400'
-                      : 'text-slate-900 dark:text-white'
+                      ? 'text-ink-soft '
+                      : 'text-ink '
                   }`}>
                     {q.question}
                   </span>
                 </div>
                 {isExpanded ? (
-                  <ChevronUp size={18} className="text-slate-400" />
+                  <ChevronUp size={18} className="text-ink-soft" />
                 ) : (
-                  <ChevronDown size={18} className="text-slate-400" />
+                  <ChevronDown size={18} className="text-ink-soft" />
                 )}
               </button>
 
               {isExpanded && (
                 <div className="px-4 pb-4">
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-3 pl-9">
+                  <p className="text-sm text-ink-soft  mb-3 pl-9">
                     {q.hint}
                   </p>
                   <textarea
@@ -144,12 +144,12 @@ export function PowerQuestions({ type, values, onChange }: PowerQuestionsProps) 
                     onChange={(e) => updateValue(q.id, e.target.value)}
                     placeholder="Jouw antwoord..."
                     rows={3}
-                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white resize-none"
+                    className="w-full p-3 bg-surface-card  rounded-xl border border-line  text-ink  placeholder:text-ink-soft focus:outline-none focus:ring-2 focus:ring-line  resize-none"
                   />
                   {index < questions.length - 1 && values[q.id]?.trim() && (
                     <button
                       onClick={() => setExpandedIndex(index + 1)}
-                      className="mt-2 text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                      className="mt-2 text-sm text-ink-soft hover:text-ink-soft "
                     >
                       Volgende vraag →
                     </button>
@@ -165,8 +165,8 @@ export function PowerQuestions({ type, values, onChange }: PowerQuestionsProps) 
       {allAnswered && (
         <div className={`p-4 text-center ${
           type === 'morning'
-            ? 'bg-gradient-to-r from-amber-500 to-orange-600'
-            : 'bg-gradient-to-r from-indigo-500 to-purple-600'
+            ? 'bg-gradient-to-r from-tertiary to-tertiary'
+            : 'bg-gradient-to-r from-accent to-accent'
         }`}>
           <div className="flex items-center justify-center gap-2 text-white">
             <Sparkles className="w-5 h-5" />
@@ -177,10 +177,10 @@ export function PowerQuestions({ type, values, onChange }: PowerQuestionsProps) 
       )}
 
       {/* Quote */}
-      <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700">
-        <p className="text-sm text-slate-600 dark:text-slate-400 italic text-center">
+      <div className="p-4 bg-surface-card  border-t border-line ">
+        <p className="text-sm text-ink-soft  italic text-center">
           "Quality questions create a quality life. Successful people ask better questions."
-          <span className="block text-xs text-slate-400 mt-1">— Tony Robbins</span>
+          <span className="block text-xs text-ink-soft mt-1">— Tony Robbins</span>
         </p>
       </div>
     </div>

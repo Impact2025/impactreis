@@ -12,13 +12,13 @@ describe('Button Component', () => {
   it('applies primary variant styles by default', () => {
     render(<Button>Primary</Button>);
     const button = screen.getByText('Primary');
-    expect(button).toHaveClass('bg-indigo-600');
+    expect(button).toHaveClass('bg-primary');
   });
 
   it('applies secondary variant styles when specified', () => {
     render(<Button variant="secondary">Secondary</Button>);
     const button = screen.getByText('Secondary');
-    expect(button).toHaveClass('bg-slate-200');
+    expect(button).toHaveClass('border-accent');
   });
 
   it('applies ghost variant styles when specified', () => {
@@ -30,7 +30,7 @@ describe('Button Component', () => {
   it('applies danger variant styles when specified', () => {
     render(<Button variant="danger">Danger</Button>);
     const button = screen.getByText('Danger');
-    expect(button).toHaveClass('bg-red-600');
+    expect(button).toHaveClass('bg-error');
   });
 
   it('handles different sizes', () => {

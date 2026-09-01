@@ -94,8 +94,8 @@ export function OfflineIndicator() {
         text: pendingCount > 0
           ? `Offline - ${pendingCount} wijziging${pendingCount !== 1 ? 'en' : ''} wacht${pendingCount === 1 ? '' : 'en'}`
           : 'Je bent offline - wijzigingen worden lokaal opgeslagen',
-        bgClass: 'bg-amber-500/90',
-        textClass: 'text-amber-950',
+        bgClass: 'bg-tertiary/90',
+        textClass: 'text-tertiary',
       };
     }
 
@@ -104,28 +104,28 @@ export function OfflineIndicator() {
         return {
           icon: <RefreshCw className="w-4 h-4 animate-spin" />,
           text: `Synchroniseren... (${pendingCount} item${pendingCount !== 1 ? 's' : ''})`,
-          bgClass: 'bg-indigo-500/90',
+          bgClass: 'bg-accent/90',
           textClass: 'text-white',
         };
       case 'synced':
         return {
           icon: <CheckCircle2 className="w-4 h-4" />,
           text: 'Gesynchroniseerd!',
-          bgClass: 'bg-emerald-500/90',
+          bgClass: 'bg-primary/90',
           textClass: 'text-white',
         };
       case 'error':
         return {
           icon: <WifiOff className="w-4 h-4" />,
           text: 'Synchronisatie mislukt - probeer later opnieuw',
-          bgClass: 'bg-red-500/90',
+          bgClass: 'bg-error/90',
           textClass: 'text-white',
         };
       default:
         return {
           icon: <Wifi className="w-4 h-4" />,
           text: 'Verbonden',
-          bgClass: 'bg-emerald-500/90',
+          bgClass: 'bg-primary/90',
           textClass: 'text-white',
         };
     }

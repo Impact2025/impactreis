@@ -128,8 +128,8 @@ export default function IdentityPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#ffffff] flex items-center justify-center">
-        <div className="w-6 h-6 rounded-full border-2 border-[#00cc66] border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-surface-card flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -137,22 +137,22 @@ export default function IdentityPage() {
   const availableDefaults = defaultIdentities.filter(d => !identities.some(i => i.statement === d));
 
   return (
-    <div className="min-h-screen bg-[#ffffff] pb-28">
+    <div className="min-h-screen bg-surface-card pb-28">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#ffffff] border-b border-[#e8e8ec]">
+      <div className="sticky top-0 z-10 bg-surface-card border-b border-line">
         <div className="max-w-lg mx-auto px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#f4f4f7] transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-sunken transition-colors"
             >
-              <ArrowLeft size={18} className="text-[#0a0a14]" />
+              <ArrowLeft size={18} className="text-ink" />
             </Link>
-            <h1 className="text-[17px] font-semibold text-[#0a0a14]">Identiteit</h1>
+            <h1 className="text-[17px] font-semibold text-ink">Identiteit</h1>
           </div>
           <button
             onClick={() => setShowAddForm(true)}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-[#00cc66] text-white shadow-[0_2px_12px_rgba(0,204,102,0.35)] active:scale-95 transition-transform"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-primary text-white shadow-[0_2px_12px_rgba(81,96,80,0.35)] active:scale-95 transition-transform"
           >
             <Plus size={18} />
           </button>
@@ -162,7 +162,7 @@ export default function IdentityPage() {
       <div className="max-w-lg mx-auto px-5 pt-5 space-y-4">
         {/* Add form */}
         {showAddForm && (
-          <div className="rounded-[16px] bg-[#0a0a14] p-5">
+          <div className="rounded-[16px] bg-surface-inverse p-5">
             <div className="flex items-center justify-between mb-4">
               <span className="text-white text-[15px] font-semibold">Nieuwe identiteit</span>
               <button
@@ -177,12 +177,12 @@ export default function IdentityPage() {
               onChange={(e) => setNewStatement(e.target.value)}
               placeholder="Ik ben iemand die..."
               rows={3}
-              className="w-full bg-white/10 text-white placeholder-white/40 rounded-[12px] px-4 py-3 text-[14px] outline-none resize-none border border-white/10 focus:border-[#00cc66] transition-colors"
+              className="w-full bg-white/10 text-white placeholder-white/40 rounded-[12px] px-4 py-3 text-[14px] outline-none resize-none border border-white/10 focus:border-primary transition-colors"
             />
             <button
               onClick={() => newStatement.trim() && addIdentity(newStatement.trim())}
               disabled={!newStatement.trim()}
-              className="mt-3 w-full py-3 bg-[#00cc66] text-white rounded-[12px] text-[14px] font-semibold disabled:opacity-40 active:scale-[0.98] transition-transform"
+              className="mt-3 w-full py-3 bg-primary text-white rounded-[12px] text-[14px] font-semibold disabled:opacity-40 active:scale-[0.98] transition-transform"
             >
               Toevoegen
             </button>
@@ -192,13 +192,13 @@ export default function IdentityPage() {
         {/* Suggestion chips */}
         {availableDefaults.length > 0 && (
           <div>
-            <p className="text-[11px] font-medium text-[#8a8a9a] uppercase tracking-wider mb-2">Suggesties</p>
+            <p className="text-[11px] font-medium text-ink-soft uppercase tracking-wider mb-2">Suggesties</p>
             <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
               {availableDefaults.map((statement, index) => (
                 <button
                   key={index}
                   onClick={() => addIdentity(statement)}
-                  className="flex-shrink-0 px-3 py-2 rounded-full border border-[#e8e8ec] bg-[#f4f4f7] text-[#0a0a14] text-[12px] font-medium hover:border-[#00cc66] hover:text-[#00cc66] transition-colors whitespace-nowrap"
+                  className="flex-shrink-0 px-3 py-2 rounded-full border border-line bg-surface-sunken text-ink text-[12px] font-medium hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
                 >
                   {statement}
                 </button>
@@ -214,12 +214,12 @@ export default function IdentityPage() {
             onClick={() => { setSelectedIdentity(null); setNewProof(''); }}
           >
             <div
-              className="w-full bg-[#ffffff] rounded-t-[24px] p-5 max-w-lg mx-auto"
+              className="w-full bg-surface-card rounded-t-[24px] p-5 max-w-lg mx-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="w-10 h-1 bg-[#e8e8ec] rounded-full mx-auto mb-5" />
-              <p className="text-[11px] text-[#8a8a9a] mb-1 uppercase tracking-wider">Bewijs voor</p>
-              <p className="text-[15px] font-semibold text-[#0a0a14] mb-4 leading-snug">
+              <div className="w-10 h-1 bg-line rounded-full mx-auto mb-5" />
+              <p className="text-[11px] text-ink-soft mb-1 uppercase tracking-wider">Bewijs voor</p>
+              <p className="text-[15px] font-semibold text-ink mb-4 leading-snug">
                 &ldquo;{identities.find(i => i.id === selectedIdentity)?.statement}&rdquo;
               </p>
               <textarea
@@ -228,19 +228,19 @@ export default function IdentityPage() {
                 placeholder="Wat heb je gedaan dat dit bewijst?"
                 rows={3}
                 autoFocus
-                className="w-full bg-[#f4f4f7] text-[#0a0a14] placeholder-[#8a8a9a] rounded-[12px] px-4 py-3 text-[14px] outline-none resize-none border border-[#e8e8ec] focus:border-[#00cc66] transition-colors mb-4"
+                className="w-full bg-surface-sunken text-ink placeholder-ink-soft rounded-[12px] px-4 py-3 text-[14px] outline-none resize-none border border-line focus:border-primary transition-colors mb-4"
               />
               <div className="flex gap-3">
                 <button
                   onClick={addProof}
                   disabled={!newProof.trim()}
-                  className="flex-1 py-3 bg-[#00cc66] text-white rounded-[12px] text-[14px] font-semibold disabled:opacity-40 active:scale-[0.98] transition-transform"
+                  className="flex-1 py-3 bg-primary text-white rounded-[12px] text-[14px] font-semibold disabled:opacity-40 active:scale-[0.98] transition-transform"
                 >
                   Bewijs opslaan
                 </button>
                 <button
                   onClick={() => { setSelectedIdentity(null); setNewProof(''); }}
-                  className="px-5 py-3 bg-[#f4f4f7] text-[#0a0a14] rounded-[12px] text-[14px] font-medium"
+                  className="px-5 py-3 bg-surface-sunken text-ink rounded-[12px] text-[14px] font-medium"
                 >
                   Annuleer
                 </button>
@@ -252,16 +252,16 @@ export default function IdentityPage() {
         {/* Empty state */}
         {identities.length === 0 && !showAddForm && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 rounded-full bg-[#f4f4f7] flex items-center justify-center mb-4">
-              <Shield size={28} className="text-[#8a8a9a]" />
+            <div className="w-16 h-16 rounded-full bg-surface-sunken flex items-center justify-center mb-4">
+              <Shield size={28} className="text-ink-soft" />
             </div>
-            <p className="text-[16px] font-semibold text-[#0a0a14] mb-2">Claim je eerste identiteit</p>
-            <p className="text-[13px] text-[#8a8a9a] max-w-[240px] leading-relaxed mb-6">
+            <p className="text-[16px] font-semibold text-ink mb-2">Claim je eerste identiteit</p>
+            <p className="text-[13px] text-ink-soft max-w-[240px] leading-relaxed mb-6">
               Je identiteit bepaalt je gedrag. Kies wie je wilt zijn.
             </p>
             <button
               onClick={() => setShowAddForm(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-[#00cc66] text-white rounded-full text-[14px] font-semibold active:scale-95 transition-transform"
+              className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-full text-[14px] font-semibold active:scale-95 transition-transform"
             >
               <Plus size={16} />
               Begin nu
@@ -277,35 +277,35 @@ export default function IdentityPage() {
               return (
                 <div
                   key={identity.id}
-                  className={`rounded-[16px] border border-[#e8e8ec] p-5 bg-[#ffffff] transition-opacity ${identity.isActive ? 'opacity-100' : 'opacity-50'}`}
+                  className={`rounded-[16px] border border-line p-5 bg-surface-card transition-opacity ${identity.isActive ? 'opacity-100' : 'opacity-50'}`}
                 >
                   <div className="flex items-start justify-between gap-3 mb-3">
-                    <p className="text-[15px] font-semibold text-[#0a0a14] leading-snug flex-1">
+                    <p className="text-[15px] font-semibold text-ink leading-snug flex-1">
                       &ldquo;{identity.statement}&rdquo;
                     </p>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => toggleIdentity(identity.id)}
-                        className={`relative w-10 h-5 rounded-full transition-colors ${identity.isActive ? 'bg-[#00cc66]' : 'bg-[#e8e8ec]'}`}
+                        className={`relative w-10 h-5 rounded-full transition-colors ${identity.isActive ? 'bg-primary' : 'bg-line'}`}
                       >
                         <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${identity.isActive ? 'translate-x-5' : 'translate-x-0.5'}`} />
                       </button>
                       <button
                         onClick={() => deleteIdentity(identity.id)}
-                        className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#f4f4f7] transition-colors"
+                        className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-surface-sunken transition-colors"
                       >
-                        <X size={13} className="text-[#8a8a9a]" />
+                        <X size={13} className="text-ink-soft" />
                       </button>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 mb-4 flex-wrap">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#00cc66]/10 text-[#00cc66] text-[11px] font-semibold">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-semibold">
                       <Check size={10} />
                       {identity.proofCount} {identity.proofCount === 1 ? 'bewijs' : 'bewijzen'}
                     </span>
                     {identity.streak > 0 && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#fef3c7] text-[#92400e] text-[11px] font-semibold">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-tertiary-soft text-tertiary text-[11px] font-semibold">
                         <Flame size={10} />
                         {identity.streak} dag streak
                       </span>
@@ -313,23 +313,23 @@ export default function IdentityPage() {
                   </div>
 
                   <div className="mb-4">
-                    <div className="h-1.5 rounded-full bg-[#f4f4f7] overflow-hidden">
+                    <div className="h-1.5 rounded-full bg-surface-sunken overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-[#00cc66] transition-all duration-500"
+                        className="h-full rounded-full bg-primary transition-all duration-500"
                         style={{ width: `${Math.min(100, identity.proofCount * 10)}%` }}
                       />
                     </div>
-                    <p className="text-[10px] text-[#8a8a9a] mt-1 text-right">{Math.min(identity.proofCount, 10)}/10</p>
+                    <p className="text-[10px] text-ink-soft mt-1 text-right">{Math.min(identity.proofCount, 10)}/10</p>
                   </div>
 
                   {recentProofs.length > 0 && (
                     <div className="space-y-2 mb-4">
                       {recentProofs.map((proof) => (
                         <div key={proof.id} className="flex items-start gap-2">
-                          <div className="w-4 h-4 rounded-full bg-[#00cc66]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <Check size={9} className="text-[#00cc66]" />
+                          <div className="w-4 h-4 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <Check size={9} className="text-primary" />
                           </div>
-                          <p className="text-[12px] text-[#8a8a9a] leading-relaxed">{proof.proof}</p>
+                          <p className="text-[12px] text-ink-soft leading-relaxed">{proof.proof}</p>
                         </div>
                       ))}
                     </div>
@@ -338,7 +338,7 @@ export default function IdentityPage() {
                   {identity.isActive && (
                     <button
                       onClick={() => setSelectedIdentity(identity.id)}
-                      className="flex items-center gap-1.5 text-[#00cc66] text-[12px] font-medium hover:opacity-80 transition-opacity"
+                      className="flex items-center gap-1.5 text-primary text-[12px] font-medium hover:opacity-80 transition-opacity"
                     >
                       <Plus size={13} />
                       + Bewijs toevoegen

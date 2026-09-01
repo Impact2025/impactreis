@@ -103,7 +103,7 @@ export function PrimingExercise({ onComplete }: PrimingExerciseProps) {
   // Intro Screen
   if (phase === 'intro') {
     return (
-      <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 rounded-2xl p-8 text-white">
+      <div className="bg-gradient-to-br from-surface-inverse via-accent to-surface-inverse rounded-2xl p-8 text-white">
         <div className="text-center max-w-lg mx-auto">
           <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
             <Wind className="w-10 h-10" />
@@ -126,7 +126,7 @@ export function PrimingExercise({ onComplete }: PrimingExerciseProps) {
           </div>
           <button
             onClick={() => startPhase('breathing')}
-            className="w-full py-4 bg-white text-slate-900 rounded-xl font-semibold hover:bg-white/90 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-4 bg-white text-ink rounded-xl font-semibold hover:bg-white/90 transition-colors flex items-center justify-center gap-2"
           >
             <Play size={20} />
             Start Priming
@@ -139,7 +139,7 @@ export function PrimingExercise({ onComplete }: PrimingExerciseProps) {
   // Complete Screen
   if (phase === 'complete') {
     return (
-      <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl p-8 text-white">
+      <div className="bg-gradient-to-br from-primary to-primary rounded-2xl p-8 text-white">
         <div className="text-center max-w-lg mx-auto">
           <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-10 h-10" />
@@ -154,7 +154,7 @@ export function PrimingExercise({ onComplete }: PrimingExerciseProps) {
           </div>
           <button
             onClick={handleComplete}
-            className="w-full py-4 bg-white text-emerald-700 rounded-xl font-semibold hover:bg-white/90 transition-colors"
+            className="w-full py-4 bg-white text-primary rounded-xl font-semibold hover:bg-white/90 transition-colors"
           >
             Afronden
           </button>
@@ -168,7 +168,7 @@ export function PrimingExercise({ onComplete }: PrimingExerciseProps) {
   const Icon = currentPhaseData.icon;
 
   return (
-    <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 rounded-2xl p-8 text-white">
+    <div className="bg-gradient-to-br from-surface-inverse via-accent to-surface-inverse rounded-2xl p-8 text-white">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
@@ -191,10 +191,10 @@ export function PrimingExercise({ onComplete }: PrimingExerciseProps) {
           <div
             className={`w-40 h-40 mx-auto rounded-full border-4 border-white/30 flex items-center justify-center transition-all duration-1000 ${
               breathPhase === 'in'
-                ? 'scale-110 bg-blue-500/30'
+                ? 'scale-110 bg-accent/30'
                 : breathPhase === 'hold'
-                ? 'scale-110 bg-blue-500/50'
-                : 'scale-100 bg-blue-500/20'
+                ? 'scale-110 bg-accent/50'
+                : 'scale-100 bg-accent/20'
               }`}
           >
             <span className="text-xl font-medium">
@@ -215,7 +215,7 @@ export function PrimingExercise({ onComplete }: PrimingExerciseProps) {
           </p>
           {gratitudeItems.map((item, index) => (
             <div key={index} className="flex items-center gap-3">
-              <span className="w-8 h-8 bg-pink-500/30 rounded-full flex items-center justify-center text-sm font-medium">
+              <span className="w-8 h-8 bg-error/30 rounded-full flex items-center justify-center text-sm font-medium">
                 {index + 1}
               </span>
               <input
@@ -227,7 +227,7 @@ export function PrimingExercise({ onComplete }: PrimingExerciseProps) {
                   setGratitudeItems(newItems);
                 }}
                 placeholder={`Ik ben dankbaar voor...`}
-                className="flex-1 bg-white/10 border border-white/20 rounded-lg px-4 py-3 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                className="flex-1 bg-white/10 border border-white/20 rounded-lg px-4 py-3 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-error"
               />
             </div>
           ))}
@@ -245,7 +245,7 @@ export function PrimingExercise({ onComplete }: PrimingExerciseProps) {
             onChange={(e) => setVisualization(e.target.value)}
             placeholder="Beschrijf wat je visualiseert... Hoe voelt het? Wat zie je?"
             rows={4}
-            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-accent resize-none"
           />
         </div>
       )}
@@ -260,7 +260,7 @@ export function PrimingExercise({ onComplete }: PrimingExerciseProps) {
             onChange={(e) => setFocus(e.target.value)}
             placeholder="Mijn focus voor vandaag is..."
             rows={4}
-            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-tertiary resize-none"
           />
         </div>
       )}
@@ -285,7 +285,7 @@ export function PrimingExercise({ onComplete }: PrimingExerciseProps) {
 
         <button
           onClick={nextPhase}
-          className="px-6 py-3 bg-white text-slate-900 rounded-lg font-medium hover:bg-white/90 transition-colors"
+          className="px-6 py-3 bg-white text-ink rounded-lg font-medium hover:bg-white/90 transition-colors"
         >
           {timeLeft === 0 ? 'Volgende' : 'Skip'}
         </button>
@@ -299,7 +299,7 @@ export function PrimingExercise({ onComplete }: PrimingExerciseProps) {
             className={`flex-1 h-1 rounded-full ${
               ['breathing', 'gratitude', 'visualization', 'focus'].indexOf(p) <
               ['breathing', 'gratitude', 'visualization', 'focus'].indexOf(phase)
-                ? 'bg-emerald-500'
+                ? 'bg-primary'
                 : p === phase
                 ? 'bg-white'
                 : 'bg-white/20'

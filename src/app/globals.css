@@ -86,6 +86,10 @@
 
   --radius-card: 20px;
   --radius-hero: 24px;
+  --radius-bento: 24px;
+
+  --shadow-soft: var(--shadow-organic);
+  --shadow-soft-lg: var(--shadow-organic-lg);
 }
 
 * {

@@ -69,10 +69,10 @@ export const BentoGridItem: React.FC<BentoGridItemProps> = ({
   };
 
   const variantStyles = {
-    default: 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700',
-    wisdom: 'bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border-indigo-200 dark:border-indigo-800',
-    growth: 'bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-emerald-200 dark:border-emerald-800',
-    energy: 'bg-gradient-to-br from-amber-50 to-gold-50 dark:from-amber-950/30 dark:to-gold-950/30 border-amber-200 dark:border-amber-800',
+    default: 'bg-surface-card border-line',
+    wisdom: 'bg-accent-soft border-accent',
+    growth: 'bg-primary-muted border-primary-light',
+    energy: 'bg-tertiary-soft border-tertiary',
   };
 
   return (

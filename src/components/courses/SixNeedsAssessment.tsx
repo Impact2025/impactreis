@@ -127,12 +127,12 @@ export function SixNeedsAssessment({ initialValues, onComplete, readOnly = false
 
   if (showResults) {
     return (
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="p-6 border-b border-slate-200 dark:border-slate-800">
-          <h3 className="text-xl font-semibold text-slate-900 dark:text-white">
+      <div className="bg-white  rounded-2xl border border-line  overflow-hidden">
+        <div className="p-6 border-b border-line ">
+          <h3 className="text-xl font-semibold text-ink ">
             Jouw 6 Menselijke Behoeften
           </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-ink-soft  mt-1">
             Je top 2 behoeften bepalen 95% van je gedrag en beslissingen
           </p>
         </div>
@@ -140,7 +140,7 @@ export function SixNeedsAssessment({ initialValues, onComplete, readOnly = false
         <div className="p-6">
           {/* Top 2 */}
           <div className="mb-8">
-            <h4 className="text-sm font-medium text-slate-500 uppercase tracking-wide mb-4">
+            <h4 className="text-sm font-medium text-ink-soft uppercase tracking-wide mb-4">
               Jouw Primaire Behoeften
             </h4>
             <div className="grid grid-cols-2 gap-4">
@@ -161,8 +161,8 @@ export function SixNeedsAssessment({ initialValues, onComplete, readOnly = false
                         <Icon className="text-white" size={20} />
                       </div>
                       <div>
-                        <span className="text-xs text-slate-500">#{index + 1}</span>
-                        <h5 className="font-semibold text-slate-900 dark:text-white">{need.label}</h5>
+                        <span className="text-xs text-ink-soft">#{index + 1}</span>
+                        <h5 className="font-semibold text-ink ">{need.label}</h5>
                       </div>
                     </div>
                     <div className="text-2xl font-bold" style={{ color: need.color }}>
@@ -176,7 +176,7 @@ export function SixNeedsAssessment({ initialValues, onComplete, readOnly = false
 
           {/* All Results */}
           <div className="space-y-4">
-            <h4 className="text-sm font-medium text-slate-500 uppercase tracking-wide">
+            <h4 className="text-sm font-medium text-ink-soft uppercase tracking-wide">
               Volledig Overzicht
             </h4>
             {needs.map((need) => {
@@ -192,14 +192,14 @@ export function SixNeedsAssessment({ initialValues, onComplete, readOnly = false
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      <span className="text-sm font-medium text-ink-soft ">
                         {need.label}
                       </span>
                       <span className="text-sm font-semibold" style={{ color: need.color }}>
                         {value}/10
                       </span>
                     </div>
-                    <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-2 bg-surface-card  rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{ width: `${value * 10}%`, backgroundColor: need.color }}
@@ -212,11 +212,11 @@ export function SixNeedsAssessment({ initialValues, onComplete, readOnly = false
           </div>
 
           {/* Insight */}
-          <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
-            <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+          <div className="mt-8 p-4 bg-accent-soft  rounded-xl border border-accent-soft ">
+            <h4 className="font-semibold text-accent  mb-2">
               Inzicht van Tony Robbins
             </h4>
-            <p className="text-sm text-blue-700 dark:text-blue-300">
+            <p className="text-sm text-accent ">
               {topTwo[0][0] === 'certainty' || topTwo[0][0] === 'variety' || topTwo[0][0] === 'significance' || topTwo[0][0] === 'connection'
                 ? 'Je primaire behoeften zijn gericht op overleven en comfort. Om echt vervuld te zijn, focus je op het upgraden naar Groei en Bijdrage.'
                 : 'Geweldig! Je primaire behoeften zijn gericht op Groei en Bijdrage - de behoeften van vervulling. Dit is de basis voor een betekenisvol leven.'}
@@ -231,17 +231,17 @@ export function SixNeedsAssessment({ initialValues, onComplete, readOnly = false
   const Icon = currentNeed.icon;
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <div className="bg-white  rounded-2xl border border-line  overflow-hidden">
       {/* Progress */}
-      <div className="h-1 bg-slate-100 dark:bg-slate-800">
+      <div className="h-1 bg-surface-card ">
         <div
-          className="h-full bg-blue-500 transition-all duration-300"
+          className="h-full bg-accent transition-all duration-300"
           style={{ width: `${((step + 1) / needs.length) * 100}%` }}
         />
       </div>
 
       {/* Header */}
-      <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+      <div className="p-6 border-b border-line ">
         <div className="flex items-center gap-4">
           <div
             className="w-12 h-12 rounded-xl flex items-center justify-center"
@@ -250,22 +250,22 @@ export function SixNeedsAssessment({ initialValues, onComplete, readOnly = false
             <Icon className="text-white" size={24} />
           </div>
           <div>
-            <p className="text-sm text-slate-500">Behoefte {step + 1} van {needs.length}</p>
-            <h3 className="text-xl font-semibold text-slate-900 dark:text-white">
+            <p className="text-sm text-ink-soft">Behoefte {step + 1} van {needs.length}</p>
+            <h3 className="text-xl font-semibold text-ink ">
               {currentNeed.label}
             </h3>
           </div>
         </div>
-        <p className="mt-3 text-slate-600 dark:text-slate-400">{currentNeed.description}</p>
+        <p className="mt-3 text-ink-soft ">{currentNeed.description}</p>
       </div>
 
       {/* Questions */}
       <div className="p-6 space-y-6">
         {currentNeed.questions.map((question, index) => (
           <div key={index}>
-            <p className="text-slate-700 dark:text-slate-300 mb-3">{question}</p>
+            <p className="text-ink-soft  mb-3">{question}</p>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-slate-400">Oneens</span>
+              <span className="text-sm text-ink-soft">Oneens</span>
               <div className="flex-1 flex items-center gap-2">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
                   <button
@@ -274,7 +274,7 @@ export function SixNeedsAssessment({ initialValues, onComplete, readOnly = false
                     className={`flex-1 h-10 rounded-lg font-medium transition-all ${
                       answers[currentNeed.key][index] === value
                         ? 'text-white'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        : 'bg-surface-card  text-ink-soft  hover:bg-surface-sunken '
                     }`}
                     style={
                       answers[currentNeed.key][index] === value
@@ -286,18 +286,18 @@ export function SixNeedsAssessment({ initialValues, onComplete, readOnly = false
                   </button>
                 ))}
               </div>
-              <span className="text-sm text-slate-400">Eens</span>
+              <span className="text-sm text-ink-soft">Eens</span>
             </div>
           </div>
         ))}
       </div>
 
       {/* Navigation */}
-      <div className="p-6 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+      <div className="p-6 border-t border-line  flex items-center justify-between">
         <button
           onClick={() => setStep((s) => s - 1)}
           disabled={step === 0}
-          className="flex items-center gap-2 px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center gap-2 px-4 py-2 text-ink-soft  hover:text-ink  disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <ChevronLeft size={20} />
           Vorige
@@ -306,14 +306,14 @@ export function SixNeedsAssessment({ initialValues, onComplete, readOnly = false
         {isLastStep ? (
           <button
             onClick={handleComplete}
-            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
+            className="px-6 py-3 bg-accent text-white rounded-xl font-medium hover:bg-accent transition-colors"
           >
             Bekijk Resultaten
           </button>
         ) : (
           <button
             onClick={() => setStep((s) => s + 1)}
-            className="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-medium hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors"
+            className="flex items-center gap-2 px-6 py-3 bg-surface-inverse  text-white  rounded-xl font-medium hover:bg-surface-inverse  transition-colors"
           >
             Volgende
             <ChevronRight size={20} />

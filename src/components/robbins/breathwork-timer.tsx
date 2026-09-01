@@ -68,41 +68,41 @@ export function BreathworkTimer({ onComplete, totalBreaths = 30 }: BreathworkTim
 
   const getPhaseColor = () => {
     switch (phase) {
-      case 'inhale': return 'from-blue-500 to-cyan-500';
-      case 'exhale': return 'from-purple-500 to-pink-500';
-      case 'complete': return 'from-emerald-500 to-green-500';
-      default: return 'from-slate-600 to-slate-700';
+      case 'inhale': return 'from-accent to-accent';
+      case 'exhale': return 'from-accent to-error';
+      case 'complete': return 'from-primary to-primary';
+      default: return 'from-surface-sunken-strong to-surface-inverse';
     }
   };
 
   if (showComplete) {
     return (
-      <div className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-8 text-center animate-pulse">
+      <div className="bg-gradient-to-br from-primary to-primary rounded-2xl p-8 text-center animate-pulse">
         <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
           <Check className="w-8 h-8 text-white" />
         </div>
         <h3 className="text-xl font-bold text-white mb-2">Priming Voltooid!</h3>
         <p className="text-white/80">Je energie stroomt. Je bent klaar.</p>
         <div className="flex items-center justify-center gap-2 mt-4">
-          <Sparkles className="w-5 h-5 text-yellow-300 animate-bounce" />
+          <Sparkles className="w-5 h-5 text-tertiary animate-bounce" />
           <span className="text-white font-medium">{totalBreaths} power breaths</span>
-          <Sparkles className="w-5 h-5 text-yellow-300 animate-bounce" style={{ animationDelay: '0.5s' }} />
+          <Sparkles className="w-5 h-5 text-tertiary animate-bounce" style={{ animationDelay: '0.5s' }} />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <div className="bg-white  rounded-2xl border border-line  overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+      <div className="p-4 border-b border-line ">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-accent to-accent rounded-xl flex items-center justify-center">
             <Wind className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="font-semibold text-slate-900 dark:text-white">Power Breathing</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <h3 className="font-semibold text-ink ">Power Breathing</h3>
+            <p className="text-sm text-ink-soft ">
               {totalBreaths} snelle ademhalingen om je staat te veranderen
             </p>
           </div>
@@ -122,7 +122,7 @@ export function BreathworkTimer({ onComplete, totalBreaths = 30 }: BreathworkTim
               fill="none"
               stroke="currentColor"
               strokeWidth="8"
-              className="text-slate-200 dark:text-slate-700"
+              className="text-outline "
             />
             <circle
               cx="80"
@@ -158,7 +158,7 @@ export function BreathworkTimer({ onComplete, totalBreaths = 30 }: BreathworkTim
         </div>
 
         {/* Progress text */}
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+        <p className="text-sm text-ink-soft  mb-6">
           {breathCount} van {totalBreaths} ademhalingen
         </p>
 
@@ -167,7 +167,7 @@ export function BreathworkTimer({ onComplete, totalBreaths = 30 }: BreathworkTim
           {!isActive ? (
             <button
               onClick={() => setIsActive(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all active:scale-95"
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-accent to-accent text-white rounded-xl font-medium hover:shadow-lg transition-all active:scale-95"
             >
               <Play size={20} />
               {breathCount > 0 ? 'Doorgaan' : 'Start Priming'}
@@ -175,7 +175,7 @@ export function BreathworkTimer({ onComplete, totalBreaths = 30 }: BreathworkTim
           ) : (
             <button
               onClick={() => setIsActive(false)}
-              className="flex items-center gap-2 px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              className="flex items-center gap-2 px-6 py-3 bg-surface-card  text-ink  rounded-xl font-medium hover:bg-surface-sunken  transition-colors"
             >
               <Pause size={20} />
               Pauzeer
@@ -185,7 +185,7 @@ export function BreathworkTimer({ onComplete, totalBreaths = 30 }: BreathworkTim
           {breathCount > 0 && (
             <button
               onClick={resetTimer}
-              className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              className="p-3 bg-surface-card  text-ink-soft  rounded-xl hover:bg-surface-sunken  transition-colors"
             >
               <RotateCcw size={20} />
             </button>
@@ -194,10 +194,10 @@ export function BreathworkTimer({ onComplete, totalBreaths = 30 }: BreathworkTim
       </div>
 
       {/* Tony Robbins Quote */}
-      <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700">
-        <p className="text-sm text-slate-600 dark:text-slate-400 italic text-center">
+      <div className="p-4 bg-surface-card  border-t border-line ">
+        <p className="text-sm text-ink-soft  italic text-center">
           "If you don't have 10 minutes for your life, you don't have a life."
-          <span className="block text-xs text-slate-400 mt-1">— Tony Robbins</span>
+          <span className="block text-xs text-ink-soft mt-1">— Tony Robbins</span>
         </p>
       </div>
     </div>

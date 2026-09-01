@@ -73,7 +73,7 @@ export function PauseButton() {
       <button
         onClick={handleOpen}
         aria-label="Pauze noodknop"
-        className="fixed z-50 w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+        className="fixed z-50 w-12 h-12 rounded-full bg-accent text-white shadow-organic-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
         style={{
           bottom: 'calc(5.5rem + env(safe-area-inset-bottom))',
           right: '1rem',
@@ -83,8 +83,8 @@ export function PauseButton() {
         <Pause size={22} />
         <style>{`
           @keyframes pausePulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
-            50% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+            0%, 100% { box-shadow: 0 0 0 0 rgba(83, 96, 108, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(83, 96, 108, 0); }
           }
         `}</style>
       </button>
@@ -108,7 +108,7 @@ export function PauseButton() {
             {/* Expanding circle */}
             <div className="relative flex items-center justify-center">
               <div
-                className="rounded-full bg-indigo-500/20 transition-all"
+                className="rounded-full bg-accent/20 transition-all"
                 style={{
                   width: breathPhase === 'in' ? '180px' : '100px',
                   height: breathPhase === 'in' ? '180px' : '100px',
@@ -117,7 +117,7 @@ export function PauseButton() {
                 }}
               />
               <div
-                className="absolute rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center transition-all"
+                className="absolute rounded-full bg-accent flex items-center justify-center transition-all"
                 style={{
                   width: breathPhase === 'in' ? '120px' : '70px',
                   height: breathPhase === 'in' ? '120px' : '70px',
@@ -170,7 +170,7 @@ export function PauseButton() {
             {visibleQuestions >= QUESTIONS.length && (
               <button
                 onClick={handleClose}
-                className="mt-4 w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-medium text-lg hover:opacity-90 transition-opacity"
+                className="mt-4 w-full py-4 rounded-2xl bg-accent text-white font-medium text-lg hover:opacity-90 transition-opacity"
                 style={{ animation: 'fadeIn 0.6s ease forwards' }}
               >
                 Ik ben er klaar voor

@@ -222,8 +222,8 @@ export default function FocusPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#ffffff] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[#00cc66] border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-surface-card flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -241,22 +241,22 @@ export default function FocusPage() {
 
   if (showMovementBreak) {
     return (
-      <div className="min-h-screen bg-[#f4f4f7] flex items-center justify-center p-6 pb-28">
+      <div className="min-h-screen bg-surface-sunken flex items-center justify-center p-6 pb-28">
         <div className="max-w-lg w-full">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#fef3c7] rounded-full text-[#f59e0b] text-[13px] font-semibold mb-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-tertiary-soft rounded-full text-tertiary text-[13px] font-semibold mb-4">
               <Flame className="w-4 h-4" />
               Bewegings Pauze
             </div>
-            <h1 className="text-[22px] font-bold text-[#0a0a14] mb-2 leading-tight">
+            <h1 className="text-[22px] font-bold text-ink mb-2 leading-tight">
               "Emotion is created by motion"
             </h1>
-            <p className="text-[13px] text-[#8a8a9a]">
+            <p className="text-[13px] text-ink-soft">
               Beweeg je lichaam om je energie te resetten
             </p>
           </div>
           <MovementBreakMini onComplete={handleMovementComplete} />
-          <p className="text-center text-[12px] text-[#8a8a9a] mt-6 italic">
+          <p className="text-center text-[12px] text-ink-soft mt-6 italic">
             "Change your physiology, change your state" — Tony Robbins
           </p>
         </div>
@@ -266,22 +266,22 @@ export default function FocusPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#ffffff] pb-28">
+    <div className="min-h-screen bg-surface-card pb-28">
       {/* Header */}
-      <header className="bg-[#ffffff] border-b border-[#e8e8ec] px-5 py-4 sticky top-0 z-30">
+      <header className="bg-surface-card border-b border-line px-5 py-4 sticky top-0 z-30">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-[#f4f4f7] text-[#0a0a14] active:scale-95 transition-transform"
+              className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-surface-sunken text-ink active:scale-95 transition-transform"
             >
               <ArrowLeft size={18} strokeWidth={2} />
             </Link>
-            <h1 className="text-[18px] font-bold text-[#0a0a14] tracking-tight">Focus Sessies</h1>
+            <h1 className="text-[18px] font-bold text-ink tracking-tight">Focus Sessies</h1>
           </div>
           <button
             onClick={showRandomPowerQuestion}
-            className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-[#fef3c7] text-[#f59e0b] active:scale-95 transition-transform"
+            className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-tertiary-soft text-tertiary active:scale-95 transition-transform"
             title="Power vraag"
           >
             <HelpCircle size={18} />
@@ -291,20 +291,20 @@ export default function FocusPage() {
 
       {/* Power Question Modal */}
       {showPowerQuestion && (
-        <div className="fixed inset-0 bg-[#0a0a14]/50 flex items-center justify-center z-50 p-5">
+        <div className="fixed inset-0 bg-surface-inverse/50 flex items-center justify-center z-50 p-5">
           <div className="bg-white rounded-[20px] p-7 max-w-sm w-full text-center shadow-xl">
-            <div className="w-14 h-14 bg-[#fef3c7] rounded-full flex items-center justify-center mx-auto mb-4">
-              <HelpCircle size={26} className="text-[#f59e0b]" />
+            <div className="w-14 h-14 bg-tertiary-soft rounded-full flex items-center justify-center mx-auto mb-4">
+              <HelpCircle size={26} className="text-tertiary" />
             </div>
-            <p className="text-[11px] font-bold text-[#8a8a9a] uppercase tracking-[0.15em] mb-3">
+            <p className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.15em] mb-3">
               Power Question
             </p>
-            <p className="text-[17px] font-semibold text-[#0a0a14] mb-6 leading-snug italic">
+            <p className="text-[17px] font-semibold text-ink mb-6 leading-snug italic">
               "{currentPowerQuestion}"
             </p>
             <button
               onClick={() => setShowPowerQuestion(false)}
-              className="w-full py-3.5 bg-[#0a0a14] text-white text-[14px] font-semibold rounded-[14px] active:scale-95 transition-transform"
+              className="w-full py-3.5 bg-surface-inverse text-white text-[14px] font-semibold rounded-[14px] active:scale-95 transition-transform"
             >
               Doorgaan met focus
             </button>
@@ -315,33 +315,33 @@ export default function FocusPage() {
       <div className="max-w-lg mx-auto px-5">
         {/* Stats Strip */}
         <div className="grid grid-cols-3 gap-3 py-5">
-          <div className="bg-[#f4f4f7] rounded-[14px] p-4 text-center">
-            <p className="text-[22px] font-bold text-[#0a0a14]">{completedSessions}</p>
-            <p className="text-[11px] text-[#8a8a9a] font-medium mt-0.5">Sessies</p>
+          <div className="bg-surface-sunken rounded-[14px] p-4 text-center">
+            <p className="text-[22px] font-bold text-ink">{completedSessions}</p>
+            <p className="text-[11px] text-ink-soft font-medium mt-0.5">Sessies</p>
           </div>
-          <div className="bg-[#f4f4f7] rounded-[14px] p-4 text-center">
-            <p className="text-[22px] font-bold text-[#0a0a14]">{totalFocusTime}</p>
-            <p className="text-[11px] text-[#8a8a9a] font-medium mt-0.5">Minuten</p>
+          <div className="bg-surface-sunken rounded-[14px] p-4 text-center">
+            <p className="text-[22px] font-bold text-ink">{totalFocusTime}</p>
+            <p className="text-[11px] text-ink-soft font-medium mt-0.5">Minuten</p>
           </div>
-          <div className="bg-[#f4f4f7] rounded-[14px] p-4 text-center">
-            <p className="text-[22px] font-bold text-[#00cc66]">{Math.round(totalFocusTime / workMinutes)}</p>
-            <p className="text-[11px] text-[#8a8a9a] font-medium mt-0.5">Pomodoros</p>
+          <div className="bg-surface-sunken rounded-[14px] p-4 text-center">
+            <p className="text-[22px] font-bold text-primary">{Math.round(totalFocusTime / workMinutes)}</p>
+            <p className="text-[11px] text-ink-soft font-medium mt-0.5">Pomodoros</p>
           </div>
         </div>
 
         {/* Session Goal Input */}
         {showGoalInput && currentSession === 'work' && (
-          <div className="bg-white rounded-[16px] border border-[#e8e8ec] p-5 mb-4">
+          <div className="bg-white rounded-[16px] border border-line p-5 mb-4">
             <div className="flex items-center gap-2 mb-3">
-              <Zap size={16} className="text-[#f59e0b]" />
-              <span className="text-[14px] font-semibold text-[#0a0a14]">
+              <Zap size={16} className="text-tertiary" />
+              <span className="text-[14px] font-semibold text-ink">
                 Wat ga je focussen deze sessie?
               </span>
             </div>
             {goalFromCoach && (
               <div className="flex items-center gap-1.5 mb-2.5">
-                <Brain size={12} className="text-[#00cc66]" />
-                <span className="text-[11px] font-medium text-[#00cc66]">Voorgesteld vanuit je ochtendritueel</span>
+                <Brain size={12} className="text-primary" />
+                <span className="text-[11px] font-medium text-primary">Voorgesteld vanuit je ochtendritueel</span>
               </div>
             )}
             <input
@@ -349,18 +349,18 @@ export default function FocusPage() {
               value={sessionGoal}
               onChange={(e) => { setSessionGoal(e.target.value); setGoalFromCoach(false); }}
               placeholder="Bijv: Hoofdstuk 3 schrijven, emails beantwoorden..."
-              className="w-full bg-[#f4f4f7] border border-transparent focus:border-[#00cc66] outline-none rounded-[14px] px-4 py-3.5 text-[14px] text-[#0a0a14] placeholder:text-[#8a8a9a] transition-colors"
+              className="w-full bg-surface-sunken border border-transparent focus:border-primary outline-none rounded-[14px] px-4 py-3.5 text-[14px] text-ink placeholder:text-ink-soft transition-colors"
             />
             <div className="mt-4">
               <div className="flex items-center justify-between text-[12px] mb-2">
-                <span className="text-[#8a8a9a]">Energie nu</span>
-                <span className="font-semibold text-[#0a0a14]">{energyBefore}/10</span>
+                <span className="text-ink-soft">Energie nu</span>
+                <span className="font-semibold text-ink">{energyBefore}/10</span>
               </div>
               <input
                 type="range" min="1" max="10" value={energyBefore}
                 onChange={(e) => setEnergyBefore(parseInt(e.target.value))}
                 className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-                style={{ accentColor: '#00cc66' }}
+                style={{ accentColor: '#516050' }}
               />
             </div>
           </div>
@@ -368,22 +368,22 @@ export default function FocusPage() {
 
         {/* Current goal display */}
         {!showGoalInput && sessionGoal && currentSession === 'work' && (
-          <div className="bg-[#fef3c7] rounded-[14px] px-4 py-3 mb-4 flex items-center gap-2">
-            <Zap size={15} className="text-[#f59e0b] shrink-0" />
-            <span className="text-[13px] font-semibold text-[#92400e]">Focus: {sessionGoal}</span>
+          <div className="bg-tertiary-soft rounded-[14px] px-4 py-3 mb-4 flex items-center gap-2">
+            <Zap size={15} className="text-tertiary shrink-0" />
+            <span className="text-[13px] font-semibold text-tertiary">Focus: {sessionGoal}</span>
           </div>
         )}
 
         {/* Timer Card */}
-        <div className="bg-white rounded-[20px] border border-[#e8e8ec] p-6 mb-4 text-center">
+        <div className="bg-white rounded-[20px] border border-line p-6 mb-4 text-center">
           {/* SVG Timer Ring */}
           <div className="relative w-52 h-52 mx-auto mb-6">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
-              <circle cx="100" cy="100" r={radius} fill="none" stroke="#f4f4f7" strokeWidth="10" />
+              <circle cx="100" cy="100" r={radius} fill="none" stroke="#f4f3f1" strokeWidth="10" />
               <circle
                 cx="100" cy="100" r={radius}
                 fill="none"
-                stroke={isWorkMode ? '#0a0a14' : '#00cc66'}
+                stroke={isWorkMode ? '#2f312f' : '#516050'}
                 strokeWidth="10"
                 strokeLinecap="round"
                 strokeDasharray={circumference}
@@ -393,12 +393,12 @@ export default function FocusPage() {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold mb-2 ${
-                isWorkMode ? 'bg-[#0a0a14] text-white' : 'bg-[#f0fdf4] text-[#00cc66]'
+                isWorkMode ? 'bg-surface-inverse text-white' : 'bg-primary-muted text-primary'
               }`}>
                 {isWorkMode ? <Timer size={11} /> : <Coffee size={11} />}
                 {isWorkMode ? 'Focus' : 'Pauze'}
               </div>
-              <div className="text-[44px] font-bold text-[#0a0a14] font-mono leading-none">
+              <div className="text-[44px] font-bold text-ink font-mono leading-none">
                 {formatTime(timeLeft)}
               </div>
             </div>
@@ -411,7 +411,7 @@ export default function FocusPage() {
                 onClick={startTimer}
                 disabled={showGoalInput && !sessionGoal.trim() && currentSession === 'work'}
                 className={`flex items-center gap-2 px-8 py-4 text-[15px] font-semibold rounded-[14px] active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed ${
-                  isWorkMode ? 'bg-[#0a0a14] text-white' : 'bg-[#00cc66] text-[#0a0a14]'
+                  isWorkMode ? 'bg-surface-inverse text-white' : 'bg-primary text-white'
                 }`}
               >
                 <Play size={20} />
@@ -420,7 +420,7 @@ export default function FocusPage() {
             ) : (
               <button
                 onClick={pauseTimer}
-                className="flex items-center gap-2 px-8 py-4 bg-[#f4f4f7] text-[#0a0a14] text-[15px] font-semibold rounded-[14px] active:scale-95 transition-transform"
+                className="flex items-center gap-2 px-8 py-4 bg-surface-sunken text-ink text-[15px] font-semibold rounded-[14px] active:scale-95 transition-transform"
               >
                 <Pause size={20} />
                 Pauzeer
@@ -428,18 +428,18 @@ export default function FocusPage() {
             )}
             <button
               onClick={resetTimer}
-              className="w-14 h-14 flex items-center justify-center bg-[#f4f4f7] text-[#8a8a9a] rounded-[14px] active:scale-95 transition-transform"
+              className="w-14 h-14 flex items-center justify-center bg-surface-sunken text-ink-soft rounded-[14px] active:scale-95 transition-transform"
             >
               <RotateCcw size={20} />
             </button>
           </div>
 
           {/* Session type switcher */}
-          <div className="inline-flex bg-[#f4f4f7] rounded-[12px] p-1 gap-1">
+          <div className="inline-flex bg-surface-sunken rounded-[12px] p-1 gap-1">
             <button
               onClick={switchToWork}
               className={`px-4 py-2 rounded-[10px] text-[13px] font-semibold transition-all ${
-                currentSession === 'work' ? 'bg-[#0a0a14] text-white shadow-sm' : 'text-[#8a8a9a]'
+                currentSession === 'work' ? 'bg-surface-inverse text-white shadow-sm' : 'text-ink-soft'
               }`}
             >
               Focus ({workMinutes}min)
@@ -447,7 +447,7 @@ export default function FocusPage() {
             <button
               onClick={switchToBreak}
               className={`px-4 py-2 rounded-[10px] text-[13px] font-semibold transition-all ${
-                currentSession === 'break' ? 'bg-[#0a0a14] text-white shadow-sm' : 'text-[#8a8a9a]'
+                currentSession === 'break' ? 'bg-surface-inverse text-white shadow-sm' : 'text-ink-soft'
               }`}
             >
               Pauze (5min)
@@ -456,34 +456,34 @@ export default function FocusPage() {
         </div>
 
         {/* Today's Sessions */}
-        <div className="bg-white rounded-[20px] border border-[#e8e8ec] p-5 mb-4">
-          <h3 className="text-[15px] font-semibold text-[#0a0a14] mb-4">Vandaag Voltooid</h3>
+        <div className="bg-white rounded-[20px] border border-line p-5 mb-4">
+          <h3 className="text-[15px] font-semibold text-ink mb-4">Vandaag Voltooid</h3>
           <div className="space-y-2">
             {todaySessions.length === 0 ? (
               <div className="text-center py-8">
-                <div className="w-12 h-12 bg-[#f4f4f7] rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Clock size={22} className="text-[#8a8a9a]" />
+                <div className="w-12 h-12 bg-surface-sunken rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Clock size={22} className="text-ink-soft" />
                 </div>
-                <p className="text-[13px] text-[#8a8a9a]">Geen sessies vandaag</p>
-                <p className="text-[12px] text-[#8a8a9a] mt-1">Start je eerste focus sessie!</p>
+                <p className="text-[13px] text-ink-soft">Geen sessies vandaag</p>
+                <p className="text-[12px] text-ink-soft mt-1">Start je eerste focus sessie!</p>
               </div>
             ) : (
               todaySessions.map((session) => (
-                <div key={session.id} className="flex items-center gap-3 p-3 rounded-[12px] bg-[#f4f4f7]">
+                <div key={session.id} className="flex items-center gap-3 p-3 rounded-[12px] bg-surface-sunken">
                   <div className="w-9 h-9 rounded-[10px] bg-white flex items-center justify-center shrink-0">
                     {session.type === 'work'
-                      ? <Timer size={16} className="text-[#0a0a14]" />
-                      : <Coffee size={16} className="text-[#00cc66]" />}
+                      ? <Timer size={16} className="text-ink" />
+                      : <Coffee size={16} className="text-primary" />}
                   </div>
                   <div className="flex-1">
-                    <p className="text-[13px] font-semibold text-[#0a0a14]">
+                    <p className="text-[13px] font-semibold text-ink">
                       {session.type === 'work' ? 'Focus Sessie' : 'Pauze'}
                     </p>
-                    <p className="text-[11px] text-[#8a8a9a]">
+                    <p className="text-[11px] text-ink-soft">
                       {session.duration} min — {new Date(session.completedAt).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
-                  <CheckCircle size={18} className="text-[#00cc66] shrink-0" />
+                  <CheckCircle size={18} className="text-primary shrink-0" />
                 </div>
               ))
             )}

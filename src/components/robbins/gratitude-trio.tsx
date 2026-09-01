@@ -9,9 +9,9 @@ interface GratitudeTrioProps {
 }
 
 const prompts = [
-  { icon: Heart, label: 'Relatie', placeholder: 'Een persoon of relatie waar je dankbaar voor bent...', color: 'from-pink-500 to-rose-600' },
-  { icon: Sparkles, label: 'Kans', placeholder: 'Een kans of mogelijkheid waar je dankbaar voor bent...', color: 'from-amber-500 to-orange-600' },
-  { icon: Eye, label: 'Eenvoud', placeholder: 'Iets eenvoudigs dat je vaak over het hoofd ziet...', color: 'from-emerald-500 to-green-600' },
+  { icon: Heart, label: 'Relatie', placeholder: 'Een persoon of relatie waar je dankbaar voor bent...', color: 'from-error to-error' },
+  { icon: Sparkles, label: 'Kans', placeholder: 'Een kans of mogelijkheid waar je dankbaar voor bent...', color: 'from-tertiary to-tertiary' },
+  { icon: Eye, label: 'Eenvoud', placeholder: 'Iets eenvoudigs dat je vaak over het hoofd ziet...', color: 'from-primary to-primary' },
 ];
 
 export function GratitudeTrio({ values, onChange }: GratitudeTrioProps) {
@@ -26,17 +26,17 @@ export function GratitudeTrio({ values, onChange }: GratitudeTrioProps) {
   const completedCount = values.filter(v => v.trim().length > 0).length;
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <div className="bg-white  rounded-2xl border border-line  overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+      <div className="p-4 border-b border-line ">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-error to-error rounded-xl flex items-center justify-center">
               <Heart className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-slate-900 dark:text-white">3 Dankbaarheden</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <h3 className="font-semibold text-ink ">3 Dankbaarheden</h3>
+              <p className="text-sm text-ink-soft ">
                 Voel elke dankbaarheid in je lichaam
               </p>
             </div>
@@ -47,8 +47,8 @@ export function GratitudeTrio({ values, onChange }: GratitudeTrioProps) {
                 key={i}
                 className={`w-2 h-2 rounded-full transition-colors ${
                   values[i]?.trim()
-                    ? 'bg-emerald-500'
-                    : 'bg-slate-200 dark:bg-slate-700'
+                    ? 'bg-primary'
+                    : 'bg-surface-sunken '
                 }`}
               />
             ))}
@@ -57,7 +57,7 @@ export function GratitudeTrio({ values, onChange }: GratitudeTrioProps) {
       </div>
 
       {/* Gratitude Items */}
-      <div className="divide-y divide-slate-200 dark:divide-slate-800">
+      <div className="divide-y divide-line ">
         {prompts.map((prompt, index) => {
           const Icon = prompt.icon;
           const isActive = activeIndex === index;
@@ -67,7 +67,7 @@ export function GratitudeTrio({ values, onChange }: GratitudeTrioProps) {
             <div
               key={index}
               className={`p-4 transition-colors ${
-                isActive ? 'bg-slate-50 dark:bg-slate-800/50' : ''
+                isActive ? 'bg-surface-card ' : ''
               }`}
             >
               <div className="flex items-start gap-3">
@@ -76,11 +76,11 @@ export function GratitudeTrio({ values, onChange }: GratitudeTrioProps) {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <span className="text-sm font-medium text-ink-soft ">
                       {prompt.label}
                     </span>
                     {hasValue && (
-                      <span className="text-xs text-emerald-500 font-medium">VOELT</span>
+                      <span className="text-xs text-primary font-medium">VOELT</span>
                     )}
                   </div>
                   <textarea
@@ -90,10 +90,10 @@ export function GratitudeTrio({ values, onChange }: GratitudeTrioProps) {
                     onBlur={() => setActiveIndex(null)}
                     placeholder={prompt.placeholder}
                     rows={2}
-                    className="w-full bg-transparent border-none text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none resize-none text-sm"
+                    className="w-full bg-transparent border-none text-ink  placeholder:text-ink-soft focus:outline-none resize-none text-sm"
                   />
                   {isActive && (
-                    <p className="text-xs text-slate-400 mt-2 italic">
+                    <p className="text-xs text-ink-soft mt-2 italic">
                       Sluit je ogen en voel deze dankbaarheid in je hart...
                     </p>
                   )}
@@ -106,8 +106,8 @@ export function GratitudeTrio({ values, onChange }: GratitudeTrioProps) {
 
       {/* Footer with instruction */}
       {completedCount === 3 && (
-        <div className="p-4 bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 border-t border-pink-200 dark:border-pink-800">
-          <p className="text-sm text-pink-700 dark:text-pink-300 text-center font-medium">
+        <div className="p-4 bg-gradient-to-r from-error-soft to-error-soft   border-t border-error-soft ">
+          <p className="text-sm text-error  text-center font-medium">
             Neem 30 seconden om al deze dankbaarheden tegelijk te voelen in je hart
           </p>
         </div>

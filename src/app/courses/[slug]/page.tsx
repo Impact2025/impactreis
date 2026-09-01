@@ -70,8 +70,8 @@ export default function CourseDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-slate-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-900 dark:border-white border-t-transparent" />
+      <div className="min-h-screen bg-white  flex items-center justify-center">
+        <div className="animate-spin rounded-full h-6 w-6 border-2 border-line  border-t-transparent" />
       </div>
     );
   }
@@ -85,9 +85,9 @@ export default function CourseDetailPage() {
   const progressPercentage = course.progress?.progress_percentage || 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen bg-surface-card ">
       {/* Hero Header */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+      <div className="bg-gradient-to-br from-surface-inverse via-surface-inverse to-surface-inverse text-white">
         <div className="max-w-5xl mx-auto px-6 py-4">
           <Link
             href="/courses"
@@ -102,7 +102,7 @@ export default function CourseDetailPage() {
           <div className="flex flex-col md:flex-row gap-8 items-start">
             {/* Course Info */}
             <div className="flex-1">
-              <div className="flex items-center gap-2 text-orange-400 mb-3">
+              <div className="flex items-center gap-2 text-tertiary mb-3">
                 <Flame size={18} />
                 <span className="text-sm font-medium">Tony Robbins</span>
               </div>
@@ -133,7 +133,7 @@ export default function CourseDetailPage() {
               {/* CTA */}
               {isCompleted ? (
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 text-emerald-400">
+                  <div className="flex items-center gap-2 text-primary">
                     <CheckCircle size={24} />
                     <span className="text-lg font-medium">Cursus Voltooid</span>
                   </div>
@@ -147,7 +147,7 @@ export default function CourseDetailPage() {
               ) : isEnrolled ? (
                 <button
                   onClick={handleContinue}
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-white text-slate-900 rounded-xl font-semibold hover:bg-white/90 transition-colors"
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-white text-ink rounded-xl font-semibold hover:bg-white/90 transition-colors"
                 >
                   <Play size={20} />
                   Ga Verder
@@ -156,7 +156,7 @@ export default function CourseDetailPage() {
                 <button
                   onClick={handleEnroll}
                   disabled={enrolling}
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-tertiary to-error text-white rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                   {enrolling ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -188,9 +188,9 @@ export default function CourseDetailPage() {
                 </div>
 
                 {isCompleted && (
-                  <div className="mt-4 p-3 bg-emerald-500/20 rounded-lg flex items-center justify-center gap-2">
-                    <Trophy className="text-emerald-400" size={20} />
-                    <span className="text-emerald-300 font-medium">Gefeliciteerd!</span>
+                  <div className="mt-4 p-3 bg-primary/20 rounded-lg flex items-center justify-center gap-2">
+                    <Trophy className="text-primary" size={20} />
+                    <span className="text-primary font-medium">Gefeliciteerd!</span>
                   </div>
                 )}
               </div>
@@ -201,7 +201,7 @@ export default function CourseDetailPage() {
 
       {/* Modules */}
       <main className="max-w-5xl mx-auto px-6 py-8">
-        <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-6">
+        <h2 className="text-xl font-semibold text-ink  mb-6">
           Cursusinhoud
         </h2>
 

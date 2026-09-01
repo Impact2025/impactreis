@@ -27,10 +27,10 @@ interface Goal {
 }
 
 const categoryConfig = {
-  business:      { label: 'Business',    bg: '#eff6ff', text: '#1d4ed8' },
-  health:        { label: 'Gezondheid',  bg: '#f0fdf4', text: '#16a34a' },
-  relationships: { label: 'Relaties',    bg: '#fdf2f8', text: '#be185d' },
-  personal:      { label: 'Persoonlijk', bg: '#f5f3ff', text: '#7c3aed' },
+  business:      { label: 'Business',    bg: '#d4e1ef', text: '#53606c' },
+  health:        { label: 'Gezondheid',  bg: '#f7fff2', text: '#516050' },
+  relationships: { label: 'Relaties',    bg: '#ffdbd1', text: '#884b3b' },
+  personal:      { label: 'Persoonlijk', bg: '#e9e8e5', text: '#444842' },
 };
 
 export default function GoalsPage() {
@@ -122,8 +122,8 @@ export default function GoalsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#ffffff] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[#00cc66] border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -140,22 +140,22 @@ export default function GoalsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#ffffff] pb-28">
+    <div className="min-h-screen bg-surface pb-28">
       {/* Header */}
-      <header className="bg-[#ffffff] border-b border-[#e8e8ec] px-5 py-4 sticky top-0 z-30">
+      <header className="bg-surface border-b border-line px-5 py-4 sticky top-0 z-30">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-[#f4f4f7] text-[#0a0a14] active:scale-95 transition-transform"
+              className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-surface-sunken text-ink active:scale-95 transition-transform"
             >
               <ArrowLeft size={18} strokeWidth={2} />
             </Link>
-            <h1 className="text-[18px] font-bold text-[#0a0a14] tracking-tight">RPM Doelen</h1>
+            <h1 className="text-[18px] font-bold text-ink tracking-tight">RPM Doelen</h1>
           </div>
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#00cc66] text-[#0a0a14] text-[13px] font-semibold rounded-[10px] active:scale-95 transition-transform"
+            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-[13px] font-semibold rounded-[10px] active:scale-95 transition-transform"
           >
             <Plus size={15} strokeWidth={2.5} />
             Nieuw
@@ -166,28 +166,28 @@ export default function GoalsPage() {
       <div className="max-w-lg mx-auto px-5">
         {/* Stats Row */}
         <div className="grid grid-cols-3 gap-3 py-5">
-          <div className="bg-[#f4f4f7] rounded-[14px] p-4 text-center">
-            <p className="text-[22px] font-bold text-[#0a0a14]">{totalGoals}</p>
-            <p className="text-[11px] text-[#8a8a9a] font-medium mt-0.5">Totaal</p>
+          <div className="bg-surface-sunken rounded-[14px] p-4 text-center">
+            <p className="text-[22px] font-bold text-ink">{totalGoals}</p>
+            <p className="text-[11px] text-ink-soft font-medium mt-0.5">Totaal</p>
           </div>
-          <div className="bg-[#f4f4f7] rounded-[14px] p-4 text-center">
-            <p className="text-[22px] font-bold text-[#00cc66]">{completedGoals}</p>
-            <p className="text-[11px] text-[#8a8a9a] font-medium mt-0.5">Voltooid</p>
+          <div className="bg-surface-sunken rounded-[14px] p-4 text-center">
+            <p className="text-[22px] font-bold text-primary">{completedGoals}</p>
+            <p className="text-[11px] text-ink-soft font-medium mt-0.5">Voltooid</p>
           </div>
-          <div className="bg-[#f4f4f7] rounded-[14px] p-4 text-center">
-            <p className="text-[22px] font-bold text-[#0a0a14]">{averageProgress}%</p>
-            <p className="text-[11px] text-[#8a8a9a] font-medium mt-0.5">Gemiddeld</p>
+          <div className="bg-surface-sunken rounded-[14px] p-4 text-center">
+            <p className="text-[22px] font-bold text-ink">{averageProgress}%</p>
+            <p className="text-[11px] text-ink-soft font-medium mt-0.5">Gemiddeld</p>
           </div>
         </div>
 
         {/* Add Form */}
         {showAddForm && (
-          <div className="bg-white rounded-[16px] border border-[#e8e8ec] p-5 mb-5 shadow-sm">
+          <div className="bg-surface-card rounded-card border border-line p-5 mb-5 shadow-organic">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-[16px] font-semibold text-[#0a0a14]">Nieuw RPM Doel</h3>
+              <h3 className="text-[16px] font-semibold text-ink">Nieuw RPM Doel</h3>
               <button
                 onClick={() => setShowAddForm(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-[#f4f4f7] text-[#8a8a9a]"
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-sunken text-ink-soft"
               >
                 <X size={16} />
               </button>
@@ -195,7 +195,7 @@ export default function GoalsPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-[11px] font-bold text-[#8a8a9a] uppercase tracking-[0.15em] mb-2">
+                <label className="block text-[11px] font-bold text-ink-soft uppercase tracking-[0.15em] mb-2">
                   Result — Wat wil je bereiken?
                 </label>
                 <input
@@ -203,12 +203,12 @@ export default function GoalsPage() {
                   placeholder="Specifiek, meetbaar doel"
                   value={newGoal.title}
                   onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
-                  className="w-full bg-[#f4f4f7] border border-transparent focus:border-[#00cc66] outline-none rounded-[14px] px-4 py-3.5 text-[14px] text-[#0a0a14] placeholder:text-[#8a8a9a] transition-colors"
+                  className="w-full bg-surface-sunken border border-transparent focus:border-primary outline-none rounded-[14px] px-4 py-3.5 text-[14px] text-ink placeholder:text-ink-soft transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#8a8a9a] uppercase tracking-[0.15em] mb-2">
+                <label className="block text-[11px] font-bold text-ink-soft uppercase tracking-[0.15em] mb-2">
                   Categorie
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -220,7 +220,7 @@ export default function GoalsPage() {
                       style={
                         newGoal.category === key
                           ? { backgroundColor: cfg.bg, color: cfg.text, outline: `1.5px solid ${cfg.text}` }
-                          : { backgroundColor: '#f4f4f7', color: '#8a8a9a' }
+                          : { backgroundColor: '#f4f3f1', color: '#444842' }
                       }
                     >
                       {cfg.label}
@@ -230,8 +230,8 @@ export default function GoalsPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#8a8a9a] uppercase tracking-[0.15em] mb-2">
-                  <Flame size={11} className="inline mr-1 text-[#f59e0b]" />
+                <label className="block text-[11px] font-bold text-ink-soft uppercase tracking-[0.15em] mb-2">
+                  <Flame size={11} className="inline mr-1 text-tertiary" />
                   Purpose — Waarom moet dit?
                 </label>
                 <textarea
@@ -239,12 +239,12 @@ export default function GoalsPage() {
                   value={newGoal.why}
                   onChange={(e) => setNewGoal({ ...newGoal, why: e.target.value })}
                   rows={3}
-                  className="w-full bg-[#f4f4f7] border border-transparent focus:border-[#00cc66] outline-none rounded-[14px] px-4 py-3.5 text-[14px] text-[#0a0a14] placeholder:text-[#8a8a9a] resize-none transition-colors"
+                  className="w-full bg-surface-sunken border border-transparent focus:border-primary outline-none rounded-[14px] px-4 py-3.5 text-[14px] text-ink placeholder:text-ink-soft resize-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#8a8a9a] uppercase tracking-[0.15em] mb-2">
+                <label className="block text-[11px] font-bold text-ink-soft uppercase tracking-[0.15em] mb-2">
                   Pijn — Als je dit NIET bereikt?
                 </label>
                 <textarea
@@ -252,12 +252,12 @@ export default function GoalsPage() {
                   value={newGoal.painIfNot}
                   onChange={(e) => setNewGoal({ ...newGoal, painIfNot: e.target.value })}
                   rows={2}
-                  className="w-full bg-[#f4f4f7] border border-transparent focus:border-[#00cc66] outline-none rounded-[14px] px-4 py-3.5 text-[14px] text-[#0a0a14] placeholder:text-[#8a8a9a] resize-none transition-colors"
+                  className="w-full bg-surface-sunken border border-transparent focus:border-primary outline-none rounded-[14px] px-4 py-3.5 text-[14px] text-ink placeholder:text-ink-soft resize-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#8a8a9a] uppercase tracking-[0.15em] mb-2">
+                <label className="block text-[11px] font-bold text-ink-soft uppercase tracking-[0.15em] mb-2">
                   Plezier — Hoe voelt het als het LUKT?
                 </label>
                 <textarea
@@ -265,19 +265,19 @@ export default function GoalsPage() {
                   value={newGoal.pleasureIfDone}
                   onChange={(e) => setNewGoal({ ...newGoal, pleasureIfDone: e.target.value })}
                   rows={2}
-                  className="w-full bg-[#f4f4f7] border border-transparent focus:border-[#00cc66] outline-none rounded-[14px] px-4 py-3.5 text-[14px] text-[#0a0a14] placeholder:text-[#8a8a9a] resize-none transition-colors"
+                  className="w-full bg-surface-sunken border border-transparent focus:border-primary outline-none rounded-[14px] px-4 py-3.5 text-[14px] text-ink placeholder:text-ink-soft resize-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#8a8a9a] uppercase tracking-[0.15em] mb-2">
+                <label className="block text-[11px] font-bold text-ink-soft uppercase tracking-[0.15em] mb-2">
                   <Zap size={11} className="inline mr-1" />
                   Massive Action — Volgende stappen
                 </label>
                 <div className="space-y-2">
                   {(newGoal.nextActions || ['']).map((action, index) => (
                     <div key={index} className="flex items-center gap-2">
-                      <span className="w-6 h-6 shrink-0 bg-[#f4f4f7] rounded-[6px] text-[11px] font-semibold flex items-center justify-center text-[#8a8a9a]">
+                      <span className="w-6 h-6 shrink-0 bg-surface-sunken rounded-[6px] text-[11px] font-semibold flex items-center justify-center text-ink-soft">
                         {index + 1}
                       </span>
                       <input
@@ -285,13 +285,13 @@ export default function GoalsPage() {
                         placeholder={`Actie ${index + 1}`}
                         value={action}
                         onChange={(e) => updateNextAction(index, e.target.value)}
-                        className="flex-1 bg-[#f4f4f7] border border-transparent focus:border-[#00cc66] outline-none rounded-[12px] px-4 py-3 text-[14px] text-[#0a0a14] placeholder:text-[#8a8a9a] transition-colors"
+                        className="flex-1 bg-surface-sunken border border-transparent focus:border-primary outline-none rounded-[12px] px-4 py-3 text-[14px] text-ink placeholder:text-ink-soft transition-colors"
                       />
                     </div>
                   ))}
                   <button
                     onClick={addNextAction}
-                    className="flex items-center gap-1.5 text-[13px] text-[#00cc66] font-medium mt-1"
+                    className="flex items-center gap-1.5 text-[13px] text-primary font-medium mt-1"
                   >
                     <Plus size={14} strokeWidth={2.5} />
                     Actie toevoegen
@@ -300,7 +300,7 @@ export default function GoalsPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#8a8a9a] uppercase tracking-[0.15em] mb-2">
+                <label className="block text-[11px] font-bold text-ink-soft uppercase tracking-[0.15em] mb-2">
                   <Calendar size={11} className="inline mr-1" />
                   Deadline
                 </label>
@@ -308,20 +308,20 @@ export default function GoalsPage() {
                   type="date"
                   value={newGoal.deadline}
                   onChange={(e) => setNewGoal({ ...newGoal, deadline: e.target.value })}
-                  className="w-full bg-[#f4f4f7] border border-transparent focus:border-[#00cc66] outline-none rounded-[14px] px-4 py-3.5 text-[14px] text-[#0a0a14] transition-colors"
+                  className="w-full bg-surface-sunken border border-transparent focus:border-primary outline-none rounded-[14px] px-4 py-3.5 text-[14px] text-ink transition-colors"
                 />
               </div>
 
               <div className="flex gap-3 pt-1">
                 <button
                   onClick={handleAddGoal}
-                  className="flex-1 py-3.5 bg-[#00cc66] text-[#0a0a14] text-[14px] font-semibold rounded-[14px] active:scale-95 transition-transform"
+                  className="flex-1 py-3.5 bg-primary text-white text-[14px] font-semibold rounded-[14px] active:scale-95 transition-transform"
                 >
                   Doel Toevoegen
                 </button>
                 <button
                   onClick={() => setShowAddForm(false)}
-                  className="px-5 py-3.5 bg-[#f4f4f7] text-[#0a0a14] text-[14px] font-medium rounded-[14px] active:scale-95 transition-transform"
+                  className="px-5 py-3.5 bg-surface-sunken text-ink text-[14px] font-medium rounded-[14px] active:scale-95 transition-transform"
                 >
                   Annuleren
                 </button>
@@ -334,16 +334,16 @@ export default function GoalsPage() {
         <div className="space-y-3 pb-4">
           {goals.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-16 h-16 bg-[#f0fdf4] rounded-full flex items-center justify-center mb-4">
-                <Target size={28} className="text-[#00cc66]" />
+              <div className="w-16 h-16 bg-primary-muted rounded-full flex items-center justify-center mb-4">
+                <Target size={28} className="text-primary" />
               </div>
-              <h3 className="text-[16px] font-semibold text-[#0a0a14] mb-2">Geen RPM doelen nog</h3>
-              <p className="text-[13px] text-[#8a8a9a] max-w-[220px] leading-relaxed mb-6">
+              <h3 className="text-[16px] font-semibold text-ink mb-2">Geen RPM doelen nog</h3>
+              <p className="text-[13px] text-ink-soft max-w-[220px] leading-relaxed mb-6">
                 Maak je eerste doel met het RPM systeem: Result, Purpose, Massive Action
               </p>
               <button
                 onClick={() => setShowAddForm(true)}
-                className="flex items-center gap-2 px-5 py-3 bg-[#00cc66] text-[#0a0a14] text-[14px] font-semibold rounded-[14px] active:scale-95 transition-transform"
+                className="flex items-center gap-2 px-5 py-3 bg-primary text-white text-[14px] font-semibold rounded-[14px] active:scale-95 transition-transform"
               >
                 <Plus size={16} strokeWidth={2.5} />
                 Eerste Doel Maken
@@ -357,7 +357,7 @@ export default function GoalsPage() {
                 <div
                   key={goal.id}
                   className={`bg-white rounded-[16px] border p-5 transition-all ${
-                    goal.completed ? 'border-[#00cc66]/30' : 'border-[#e8e8ec]'
+                    goal.completed ? 'border-primary/30' : 'border-line'
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -366,8 +366,8 @@ export default function GoalsPage() {
                       className="mt-0.5 shrink-0 active:scale-90 transition-transform"
                     >
                       {goal.completed
-                        ? <CheckCircle size={22} className="text-[#00cc66]" />
-                        : <Circle size={22} className="text-[#e8e8ec]" />}
+                        ? <CheckCircle size={22} className="text-primary" />
+                        : <Circle size={22} className="text-line" />}
                     </button>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
@@ -379,29 +379,29 @@ export default function GoalsPage() {
                         </span>
                         <button
                           onClick={() => deleteGoal(goal.id)}
-                          className="w-7 h-7 flex items-center justify-center rounded-full text-[#8a8a9a] hover:text-red-500 transition-colors"
+                          className="w-7 h-7 flex items-center justify-center rounded-full text-ink-soft hover:text-red-500 transition-colors"
                         >
                           <Trash2 size={14} />
                         </button>
                       </div>
 
                       <h3 className={`text-[15px] font-semibold leading-snug ${
-                        goal.completed ? 'line-through text-[#8a8a9a]' : 'text-[#0a0a14]'
+                        goal.completed ? 'line-through text-ink-soft' : 'text-ink'
                       }`}>
                         {goal.title}
                       </h3>
 
                       {goal.why && (
-                        <div className="mt-2.5 bg-[#fef3c7] rounded-[10px] px-3 py-2">
-                          <p className="text-[12px] text-[#92400e] leading-relaxed">
-                            <Flame size={11} className="inline mr-1 text-[#f59e0b]" />
+                        <div className="mt-2.5 bg-tertiary-soft rounded-[10px] px-3 py-2">
+                          <p className="text-[12px] text-tertiary leading-relaxed">
+                            <Flame size={11} className="inline mr-1 text-tertiary" />
                             <span className="font-semibold">Waarom:</span> {goal.why}
                           </p>
                         </div>
                       )}
 
                       {goal.deadline && (
-                        <div className="flex items-center gap-1.5 mt-2.5 text-[12px] text-[#8a8a9a]">
+                        <div className="flex items-center gap-1.5 mt-2.5 text-[12px] text-ink-soft">
                           <Calendar size={12} />
                           Deadline: {new Date(goal.deadline).toLocaleDateString('nl-NL')}
                         </div>
@@ -410,13 +410,13 @@ export default function GoalsPage() {
                       {!goal.completed && (
                         <div className="mt-3 space-y-1.5">
                           <div className="flex items-center justify-between">
-                            <span className="text-[11px] text-[#8a8a9a]">Voortgang</span>
-                            <span className="text-[11px] font-semibold text-[#0a0a14]">{goal.progress}%</span>
+                            <span className="text-[11px] text-ink-soft">Voortgang</span>
+                            <span className="text-[11px] font-semibold text-ink">{goal.progress}%</span>
                           </div>
                           <div className="relative h-2">
-                            <div className="w-full h-2 bg-[#f4f4f7] rounded-full overflow-hidden">
+                            <div className="w-full h-2 bg-surface-sunken rounded-full overflow-hidden">
                               <div
-                                className="h-2 bg-[#00cc66] rounded-full transition-all duration-300"
+                                className="h-2 bg-primary rounded-full transition-all duration-300"
                                 style={{ width: `${goal.progress}%` }}
                               />
                             </div>
@@ -431,7 +431,7 @@ export default function GoalsPage() {
 
                       <button
                         onClick={() => setExpandedGoal(isExpanded ? null : goal.id)}
-                        className="flex items-center gap-1 mt-3 text-[12px] text-[#00cc66] font-medium"
+                        className="flex items-center gap-1 mt-3 text-[12px] text-primary font-medium"
                       >
                         {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         {isExpanded ? 'Minder details' : 'Meer details'}
@@ -440,7 +440,7 @@ export default function GoalsPage() {
                   </div>
 
                   {isExpanded && (
-                    <div className="mt-4 pt-4 border-t border-[#e8e8ec] space-y-3">
+                    <div className="mt-4 pt-4 border-t border-line space-y-3">
                       {goal.painIfNot && (
                         <div className="bg-red-50 rounded-[10px] px-3 py-2.5">
                           <p className="text-[12px] text-red-700 leading-relaxed">
@@ -449,22 +449,22 @@ export default function GoalsPage() {
                         </div>
                       )}
                       {goal.pleasureIfDone && (
-                        <div className="bg-[#f0fdf4] rounded-[10px] px-3 py-2.5">
-                          <p className="text-[12px] text-[#15803d] leading-relaxed">
+                        <div className="bg-primary-muted rounded-[10px] px-3 py-2.5">
+                          <p className="text-[12px] text-primary-dark leading-relaxed">
                             <span className="font-semibold">Als dit LUKT:</span> {goal.pleasureIfDone}
                           </p>
                         </div>
                       )}
                       {goal.nextActions && goal.nextActions.length > 0 && (
                         <div>
-                          <p className="text-[11px] font-bold text-[#8a8a9a] uppercase tracking-[0.15em] mb-2">
+                          <p className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.15em] mb-2">
                             <Zap size={11} className="inline mr-1" />
                             Volgende Acties
                           </p>
                           <div className="space-y-1.5">
                             {goal.nextActions.map((action, index) => (
-                              <div key={index} className="flex items-center gap-2 text-[13px] text-[#0a0a14]">
-                                <span className="w-5 h-5 shrink-0 bg-[#f4f4f7] rounded-[5px] text-[10px] font-semibold flex items-center justify-center text-[#8a8a9a]">
+                              <div key={index} className="flex items-center gap-2 text-[13px] text-ink">
+                                <span className="w-5 h-5 shrink-0 bg-surface-sunken rounded-[5px] text-[10px] font-semibold flex items-center justify-center text-ink-soft">
                                   {index + 1}
                                 </span>
                                 {action}

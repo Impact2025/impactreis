@@ -15,45 +15,45 @@ interface CelebrationProps {
 const celebrationConfig = {
   habit: {
     icon: Zap,
-    gradient: 'from-emerald-500 to-green-600',
+    background: 'bg-primary',
     title: 'Habit Voltooid!',
     defaultMessage: 'Je bouwt momentum op',
-    particles: ['bg-emerald-400', 'bg-green-400', 'bg-teal-400'],
+    particles: ['bg-white/70', 'bg-primary-light', 'bg-white/40'],
   },
   goal: {
     icon: Trophy,
-    gradient: 'from-amber-500 to-yellow-600',
+    background: 'bg-tertiary',
     title: 'Doel Bereikt!',
     defaultMessage: 'Je hebt het gehaald',
-    particles: ['bg-amber-400', 'bg-yellow-400', 'bg-orange-400'],
+    particles: ['bg-white/70', 'bg-tertiary-soft', 'bg-white/40'],
   },
   ritual: {
     icon: Sparkles,
-    gradient: 'from-purple-500 to-pink-600',
+    background: 'bg-accent',
     title: 'Ritueel Voltooid!',
     defaultMessage: 'Je dag is geprimed voor succes',
-    particles: ['bg-purple-400', 'bg-pink-400', 'bg-fuchsia-400'],
+    particles: ['bg-white/70', 'bg-accent-soft', 'bg-white/40'],
   },
   focus: {
     icon: Star,
-    gradient: 'from-blue-500 to-indigo-600',
+    background: 'bg-accent',
     title: 'Focus Sessie Voltooid!',
     defaultMessage: 'Deep work gedaan',
-    particles: ['bg-blue-400', 'bg-indigo-400', 'bg-cyan-400'],
+    particles: ['bg-white/70', 'bg-accent-soft', 'bg-white/40'],
   },
   win: {
     icon: Crown,
-    gradient: 'from-orange-500 to-red-600',
+    background: 'bg-tertiary',
     title: 'Nieuwe Win!',
     defaultMessage: 'Gevierd en opgeslagen',
-    particles: ['bg-orange-400', 'bg-red-400', 'bg-rose-400'],
+    particles: ['bg-white/70', 'bg-tertiary-soft', 'bg-white/40'],
   },
   streak: {
     icon: Heart,
-    gradient: 'from-rose-500 to-pink-600',
+    background: 'bg-primary',
     title: 'Streak Verlengd!',
     defaultMessage: 'Consistentie is key',
-    particles: ['bg-rose-400', 'bg-pink-400', 'bg-red-400'],
+    particles: ['bg-white/70', 'bg-primary-light', 'bg-white/40'],
   },
 };
 
@@ -94,7 +94,7 @@ export function Celebration({
   if (!isVisible) return null;
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br ${config.gradient} overflow-hidden transition-opacity duration-300`}>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center ${config.background} overflow-hidden transition-opacity duration-300`}>
       {/* Particles */}
       {particles.map((particle) => (
         <div
@@ -117,10 +117,10 @@ export function Celebration({
             <Icon className="w-12 h-12 text-white" />
           </div>
           <Sparkles
-            className="absolute -top-2 -right-2 w-8 h-8 text-yellow-300 animate-pulse"
+            className="absolute -top-2 -right-2 w-8 h-8 text-white animate-pulse"
           />
           <Sparkles
-            className="absolute -bottom-2 -left-2 w-6 h-6 text-yellow-300 animate-pulse"
+            className="absolute -bottom-2 -left-2 w-6 h-6 text-white animate-pulse"
             style={{ animationDelay: '0.5s' }}
           />
         </div>
@@ -182,7 +182,7 @@ export function CelebrationBurst({ show, onComplete }: { show: boolean; onComple
   return (
     <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
       <div className="animate-ping">
-        <Sparkles className="w-16 h-16 text-amber-500" />
+        <Sparkles className="w-16 h-16 text-tertiary" />
       </div>
     </div>
   );
@@ -200,7 +200,7 @@ export function Confetti({ active }: { active: boolean }) {
 
   useEffect(() => {
     if (active) {
-      const colors = ['#fbbf24', '#f472b6', '#34d399', '#60a5fa', '#a78bfa', '#fb7185'];
+      const colors = ['#516050', '#884b3b', '#53606c', '#a56351', '#bbcbb8', '#ffffff'];
       const newParticles = Array.from({ length: 50 }, (_, i) => ({
         id: i,
         x: Math.random() * 100,

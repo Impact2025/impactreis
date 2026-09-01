@@ -62,22 +62,22 @@ export function RitualCard({
       {/* Content */}
       <div className="relative z-10">
         <div className="flex items-start justify-between mb-4">
-          <div className="w-14 h-14 rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm flex items-center justify-center">
-            <Icon size={28} className="text-slate-800 dark:text-white" />
+          <div className="w-14 h-14 rounded-lg bg-white/50 backdrop-blur-sm flex items-center justify-center">
+            <Icon size={28} className="text-ink" />
           </div>
           <RitualStatusBadge status={getBadgeStatus()} />
         </div>
 
-        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+        <h3 className="text-2xl font-bold text-ink mb-2">
           {title}
         </h3>
 
-        <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
+        <p className="text-ink-soft text-sm leading-relaxed">
           {isAvailable ? description : (unavailableReason || 'Nog niet beschikbaar')}
         </p>
 
         {isComplete && isAvailable && (
-          <p className="text-xs text-slate-600 dark:text-slate-400 mt-3 italic">
+          <p className="text-xs text-outline mt-3 italic">
             ✓ Klik om opnieuw te doen
           </p>
         )}

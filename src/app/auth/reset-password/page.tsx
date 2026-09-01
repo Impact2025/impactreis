@@ -47,11 +47,11 @@ function ResetPasswordForm() {
   if (done) {
     return (
       <div className="text-center">
-        <div className="w-16 h-16 rounded-full bg-[#f0fdf4] flex items-center justify-center mx-auto mb-5">
-          <CheckCircle size={32} className="text-[#00cc66]" />
+        <div className="w-16 h-16 rounded-full bg-primary-muted flex items-center justify-center mx-auto mb-5">
+          <CheckCircle size={32} className="text-primary" />
         </div>
-        <h1 className="text-[24px] font-bold text-[#0a0a14] mb-2">Wachtwoord gewijzigd</h1>
-        <p className="text-[14px] text-[#8a8a9a]">Je wordt doorgestuurd naar inloggen…</p>
+        <h1 className="text-[24px] font-bold text-ink mb-2">Wachtwoord gewijzigd</h1>
+        <p className="text-[14px] text-ink-soft">Je wordt doorgestuurd naar inloggen…</p>
       </div>
     );
   }
@@ -59,13 +59,13 @@ function ResetPasswordForm() {
   return (
     <>
       <div className="mb-8">
-        <div className="w-12 h-12 rounded-[14px] bg-[#0a0a14] flex items-center justify-center mb-5 text-white text-[16px] font-bold">
+        <div className="w-12 h-12 rounded-[14px] bg-surface-inverse flex items-center justify-center mb-5 text-white text-[16px] font-bold">
           OS
         </div>
-        <h1 className="text-[28px] font-bold text-[#0a0a14] tracking-tight">
+        <h1 className="text-[28px] font-bold text-ink tracking-tight">
           Nieuw wachtwoord
         </h1>
-        <p className="text-[13px] text-[#8a8a9a] mt-1.5">
+        <p className="text-[13px] text-ink-soft mt-1.5">
           Kies een nieuw wachtwoord van minimaal 6 tekens.
         </p>
       </div>
@@ -80,12 +80,12 @@ function ResetPasswordForm() {
             required
             autoFocus
             disabled={!token}
-            className="w-full px-4 pr-11 py-3.5 rounded-[14px] bg-[#f4f4f7] border border-transparent text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66] focus:bg-white transition-all disabled:opacity-50"
+            className="w-full px-4 pr-11 py-3.5 rounded-[14px] bg-surface-sunken border border-transparent text-[14px] text-ink placeholder-ink-soft outline-none focus:border-primary focus:bg-white transition-all disabled:opacity-50"
           />
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8a8a9a] hover:text-[#0a0a14] transition-colors"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink transition-colors"
           >
             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
@@ -98,7 +98,7 @@ function ResetPasswordForm() {
           onChange={(e) => setConfirm(e.target.value)}
           required
           disabled={!token}
-          className="w-full px-4 py-3.5 rounded-[14px] bg-[#f4f4f7] border border-transparent text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66] focus:bg-white transition-all disabled:opacity-50"
+          className="w-full px-4 py-3.5 rounded-[14px] bg-surface-sunken border border-transparent text-[14px] text-ink placeholder-ink-soft outline-none focus:border-primary focus:bg-white transition-all disabled:opacity-50"
         />
 
         {error && (
@@ -111,10 +111,10 @@ function ResetPasswordForm() {
         <button
           type="submit"
           disabled={loading || !token}
-          className="w-full py-3.5 rounded-[14px] bg-[#00cc66] text-[#0a0a14] font-bold text-[14px] flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(0,204,102,0.35)] active:scale-[0.98] transition-all disabled:opacity-60"
+          className="w-full py-3.5 rounded-[14px] bg-primary text-white font-bold text-[14px] flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(81,96,80,0.35)] active:scale-[0.98] transition-all disabled:opacity-60"
         >
           {loading
-            ? <div className="w-4 h-4 border-2 border-[#0a0a14]/30 border-t-[#0a0a14] rounded-full animate-spin" />
+            ? <div className="w-4 h-4 border-2 border-ink/30 border-t-[#0a0a14] rounded-full animate-spin" />
             : 'Wachtwoord opslaan'
           }
         </button>
@@ -129,12 +129,12 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-[360px]">
         <Link
           href="/auth/login"
-          className="inline-flex items-center gap-2 text-[13px] text-[#8a8a9a] hover:text-[#0a0a14] transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-[13px] text-ink-soft hover:text-ink transition-colors mb-8"
         >
           <ArrowLeft size={14} />
           Terug naar inloggen
         </Link>
-        <Suspense fallback={<div className="w-5 h-5 border-2 border-[#00cc66] border-t-transparent rounded-full animate-spin mx-auto" />}>
+        <Suspense fallback={<div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />}>
           <ResetPasswordForm />
         </Suspense>
       </div>

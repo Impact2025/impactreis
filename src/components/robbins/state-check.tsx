@@ -26,16 +26,16 @@ export function StateCheck({
   const improvement = previousValue !== undefined ? value - previousValue : 0;
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+    <div className="bg-white  rounded-2xl border border-line  p-6">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-tertiary to-tertiary rounded-xl flex items-center justify-center">
             <Zap className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="font-semibold text-slate-900 dark:text-white">{label}</h3>
+            <h3 className="font-semibold text-ink ">{label}</h3>
             {description && (
-              <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p>
+              <p className="text-sm text-ink-soft ">{description}</p>
             )}
           </div>
         </div>
@@ -43,8 +43,8 @@ export function StateCheck({
         {showImprovement && improvement !== 0 && (
           <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
             improvement > 0
-              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-              : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+              ? 'bg-primary-muted  text-primary '
+              : 'bg-error-soft  text-error '
           }`}>
             <TrendingUp size={14} className={improvement < 0 ? 'rotate-180' : ''} />
             {improvement > 0 ? '+' : ''}{improvement}
@@ -55,11 +55,11 @@ export function StateCheck({
       {/* State Display */}
       <div className="text-center mb-6">
         <div className="text-6xl mb-2">{stateEmojis[value - 1]}</div>
-        <div className="text-lg font-semibold text-slate-900 dark:text-white">
+        <div className="text-lg font-semibold text-ink ">
           {stateLabels[value - 1]}
         </div>
-        <div className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
-          {value}<span className="text-lg text-slate-400">/10</span>
+        <div className="text-3xl font-bold text-ink  mt-1">
+          {value}<span className="text-lg text-ink-soft">/10</span>
         </div>
       </div>
 
@@ -71,7 +71,7 @@ export function StateCheck({
           max="10"
           value={value}
           onChange={(e) => onChange(parseInt(e.target.value))}
-          className="w-full h-3 bg-gradient-to-r from-red-400 via-yellow-400 to-emerald-400 rounded-full appearance-none cursor-pointer
+          className="w-full h-3 bg-gradient-to-r from-error via-tertiary to-primary rounded-full appearance-none cursor-pointer
             [&::-webkit-slider-thumb]:appearance-none
             [&::-webkit-slider-thumb]:w-6
             [&::-webkit-slider-thumb]:h-6
@@ -79,10 +79,10 @@ export function StateCheck({
             [&::-webkit-slider-thumb]:bg-white
             [&::-webkit-slider-thumb]:shadow-lg
             [&::-webkit-slider-thumb]:border-2
-            [&::-webkit-slider-thumb]:border-slate-300
+            [&::-webkit-slider-thumb]:border-line
             [&::-webkit-slider-thumb]:cursor-pointer"
         />
-        <div className="flex justify-between text-xs text-slate-400">
+        <div className="flex justify-between text-xs text-ink-soft">
           <span>Laag</span>
           <span>Gemiddeld</span>
           <span>Hoog</span>
@@ -97,8 +97,8 @@ export function StateCheck({
             onClick={() => onChange(num)}
             className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${
               value === num
-                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                ? 'bg-surface-inverse  text-white '
+                : 'bg-surface-card  text-ink-soft  hover:bg-surface-sunken '
             }`}
           >
             {num}
@@ -119,7 +119,7 @@ export function StateComparison({ beforeValue, afterValue }: StateComparisonProp
   const improvementPercent = Math.round((improvement / beforeValue) * 100);
 
   return (
-    <div className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-6 text-white">
+    <div className="bg-gradient-to-br from-primary to-primary rounded-2xl p-6 text-white">
       <h3 className="font-semibold mb-4 flex items-center gap-2">
         <TrendingUp size={20} />
         State Transformatie
@@ -134,7 +134,7 @@ export function StateComparison({ beforeValue, afterValue }: StateComparisonProp
 
         <div className="flex flex-col items-center">
           <ArrowRight size={24} className="text-white/70" />
-          <div className={`text-sm font-bold mt-1 ${improvement > 0 ? 'text-yellow-300' : 'text-red-300'}`}>
+          <div className={`text-sm font-bold mt-1 ${improvement > 0 ? 'text-tertiary' : 'text-error'}`}>
             {improvement > 0 ? '+' : ''}{improvement}
           </div>
         </div>

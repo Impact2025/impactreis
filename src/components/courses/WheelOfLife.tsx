@@ -73,10 +73,10 @@ export function WheelOfLife({ initialValues, onComplete, readOnly = false }: Whe
     .join(' ') + ' Z';
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-      <div className="p-6 border-b border-slate-200 dark:border-slate-800">
-        <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Wheel of Life</h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+    <div className="bg-white  rounded-2xl border border-line  overflow-hidden">
+      <div className="p-6 border-b border-line ">
+        <h3 className="text-xl font-semibold text-ink ">Wheel of Life</h3>
+        <p className="text-sm text-ink-soft  mt-1">
           Score elk levensgebied van 1-10 op basis van je huidige tevredenheid
         </p>
       </div>
@@ -95,7 +95,7 @@ export function WheelOfLife({ initialValues, onComplete, readOnly = false }: Whe
                   r={(level / 10) * maxRadius}
                   fill="none"
                   stroke="currentColor"
-                  className="text-slate-200 dark:text-slate-700"
+                  className="text-outline "
                   strokeWidth="1"
                 />
               ))}
@@ -111,7 +111,7 @@ export function WheelOfLife({ initialValues, onComplete, readOnly = false }: Whe
                     x2={coords.x}
                     y2={coords.y}
                     stroke="currentColor"
-                    className="text-slate-200 dark:text-slate-700"
+                    className="text-outline "
                     strokeWidth="1"
                   />
                 );
@@ -154,7 +154,7 @@ export function WheelOfLife({ initialValues, onComplete, readOnly = false }: Whe
                     y={coords.y}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    className="text-xs font-medium fill-slate-600 dark:fill-slate-400"
+                    className="text-xs font-medium fill-ink-soft "
                   >
                     {cat.label.split('/')[0]}
                   </text>
@@ -183,11 +183,11 @@ export function WheelOfLife({ initialValues, onComplete, readOnly = false }: Whe
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: cat.color }}
                       />
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      <span className="text-sm font-medium text-ink-soft ">
                         {cat.label}
                       </span>
                     </div>
-                    <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    <span className="text-sm font-semibold text-ink ">
                       {values[key]}
                     </span>
                   </div>
@@ -198,12 +198,12 @@ export function WheelOfLife({ initialValues, onComplete, readOnly = false }: Whe
                     value={values[key]}
                     onChange={(e) => handleChange(key, parseInt(e.target.value))}
                     disabled={readOnly}
-                    className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                    className="w-full h-2 bg-surface-sunken  rounded-lg appearance-none cursor-pointer"
                     style={{
                       accentColor: cat.color,
                     }}
                   />
-                  <p className="text-xs text-slate-400 mt-1">{cat.description}</p>
+                  <p className="text-xs text-ink-soft mt-1">{cat.description}</p>
                 </div>
               );
             })}
@@ -212,22 +212,22 @@ export function WheelOfLife({ initialValues, onComplete, readOnly = false }: Whe
 
         {/* Results */}
         {showResults && (
-          <div className="mt-8 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
-            <h4 className="font-semibold text-slate-900 dark:text-white mb-3">Analyse</h4>
+          <div className="mt-8 p-4 bg-surface-card  rounded-xl">
+            <h4 className="font-semibold text-ink  mb-3">Analyse</h4>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-2xl font-bold text-blue-600">{average.toFixed(1)}</p>
-                <p className="text-xs text-slate-500">Gemiddelde</p>
+                <p className="text-2xl font-bold text-accent">{average.toFixed(1)}</p>
+                <p className="text-xs text-ink-soft">Gemiddelde</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-emerald-600">{highest[1]}</p>
-                <p className="text-xs text-slate-500">
+                <p className="text-2xl font-bold text-primary">{highest[1]}</p>
+                <p className="text-xs text-ink-soft">
                   Sterkste: {categories.find((c) => c.key === highest[0])?.label}
                 </p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-red-600">{lowest[1]}</p>
-                <p className="text-xs text-slate-500">
+                <p className="text-2xl font-bold text-error">{lowest[1]}</p>
+                <p className="text-xs text-ink-soft">
                   Focus: {categories.find((c) => c.key === lowest[0])?.label}
                 </p>
               </div>
@@ -238,7 +238,7 @@ export function WheelOfLife({ initialValues, onComplete, readOnly = false }: Whe
         {!readOnly && !showResults && (
           <button
             onClick={handleComplete}
-            className="mt-6 w-full py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
+            className="mt-6 w-full py-3 bg-accent text-white rounded-xl font-medium hover:bg-accent transition-colors"
           >
             Opslaan & Analyseren
           </button>

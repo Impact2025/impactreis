@@ -16,7 +16,7 @@ const movements = [
     icon: Flame,
     description: 'Spring op en spreid armen en benen wijd',
     duration: 20,
-    color: 'from-orange-500 to-red-600',
+    color: 'from-tertiary to-error',
   },
   {
     id: 'power-pose',
@@ -24,7 +24,7 @@ const movements = [
     icon: Zap,
     description: 'Sta breed, armen omhoog als een winnaar (30 sec)',
     duration: 30,
-    color: 'from-amber-500 to-yellow-600',
+    color: 'from-tertiary to-tertiary',
   },
   {
     id: 'deep-breaths',
@@ -32,7 +32,7 @@ const movements = [
     icon: Wind,
     description: 'In door de neus, uit door de mond',
     duration: 25,
-    color: 'from-blue-500 to-cyan-600',
+    color: 'from-accent to-accent',
   },
   {
     id: 'stretching',
@@ -40,7 +40,7 @@ const movements = [
     icon: Dumbbell,
     description: 'Rek je armen, nek en rug uit',
     duration: 20,
-    color: 'from-emerald-500 to-green-600',
+    color: 'from-primary to-primary',
   },
 ];
 
@@ -96,7 +96,7 @@ export function MovementBreak({ onComplete, onSkip, duration = 300 }: MovementBr
   const allComplete = completedMovements.size >= 2; // Need at least 2 movements
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-500 via-red-500 to-pink-600 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-tertiary via-error to-error flex items-center justify-center p-6">
       <div className="max-w-md w-full">
         {/* Header */}
         <div className="text-center mb-8">
@@ -153,7 +153,7 @@ export function MovementBreak({ onComplete, onSkip, duration = 300 }: MovementBr
                 >
                   <div className="flex items-center gap-2 mb-2">
                     {isCompleted ? (
-                      <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                      <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                         <Check className="w-5 h-5 text-white" />
                       </div>
                     ) : (
@@ -183,7 +183,7 @@ export function MovementBreak({ onComplete, onSkip, duration = 300 }: MovementBr
               key={m.id}
               className={`w-3 h-3 rounded-full ${
                 completedMovements.has(m.id)
-                  ? 'bg-emerald-400'
+                  ? 'bg-primary'
                   : 'bg-white/30'
               }`}
             />
@@ -195,7 +195,7 @@ export function MovementBreak({ onComplete, onSkip, duration = 300 }: MovementBr
           {allComplete && (
             <button
               onClick={onComplete}
-              className="flex-1 py-4 bg-white text-red-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-white/90 transition-colors"
+              className="flex-1 py-4 bg-white text-error rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-white/90 transition-colors"
             >
               <Zap size={20} />
               Terug naar Focus
@@ -237,7 +237,7 @@ export function MovementBreakMini({ onComplete }: { onComplete: () => void }) {
   };
 
   return (
-    <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-6 text-white">
+    <div className="bg-gradient-to-br from-tertiary to-error rounded-2xl p-6 text-white">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
           <Flame className="w-5 h-5" />
@@ -259,12 +259,12 @@ export function MovementBreakMini({ onComplete }: { onComplete: () => void }) {
               onClick={() => toggleMovement(movement.id)}
               className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all ${
                 isSelected
-                  ? 'bg-white text-red-600'
+                  ? 'bg-white text-error'
                   : 'bg-white/20 hover:bg-white/30'
               }`}
             >
               <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
-                isSelected ? 'bg-red-100' : 'bg-white/20'
+                isSelected ? 'bg-error-soft' : 'bg-white/20'
               }`}>
                 {isSelected ? <Check size={14} /> : <Icon size={14} />}
               </div>
@@ -277,7 +277,7 @@ export function MovementBreakMini({ onComplete }: { onComplete: () => void }) {
       <button
         onClick={onComplete}
         disabled={selectedMovements.size < 2}
-        className="w-full py-3 bg-white text-red-600 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full py-3 bg-white text-error rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Klaar met bewegen
       </button>

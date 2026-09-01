@@ -116,36 +116,36 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#ffffff] flex items-center justify-center">
-        <div className="w-6 h-6 rounded-full border-2 border-[#00cc66] border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-surface-card flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#ffffff] pb-28">
+    <div className="min-h-screen bg-surface-card pb-28">
       {/* Header */}
-      <header className="bg-[#ffffff] border-b border-[#e8e8ec] px-5 py-4 sticky top-0 z-30">
+      <header className="bg-surface-card border-b border-line px-5 py-4 sticky top-0 z-30">
         <div className="max-w-lg mx-auto flex items-center gap-3">
           <Link
             href="/dashboard"
-            className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-[#f4f4f7] text-[#0a0a14] active:scale-95 transition-transform"
+            className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-surface-sunken text-ink active:scale-95 transition-transform"
           >
             <ArrowLeft size={18} strokeWidth={2} />
           </Link>
-          <h1 className="text-[18px] font-bold text-[#0a0a14] tracking-tight">Instellingen</h1>
+          <h1 className="text-[18px] font-bold text-ink tracking-tight">Instellingen</h1>
         </div>
       </header>
 
       <div className="max-w-lg mx-auto px-5 py-6 space-y-7">
         {/* Notifications */}
         <section>
-          <h2 className="text-[11px] font-bold text-[#8a8a9a] uppercase tracking-[0.18em] mb-3">
+          <h2 className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-3">
             Notificaties
           </h2>
-          <div className="rounded-[16px] border border-[#e8e8ec] bg-white divide-y divide-[#e8e8ec] overflow-hidden">
+          <div className="rounded-[16px] border border-line bg-white divide-y divide-line overflow-hidden">
             {!notifSupported ? (
-              <div className="px-5 py-4 text-[13px] text-[#8a8a9a]">
+              <div className="px-5 py-4 text-[13px] text-ink-soft">
                 Browser ondersteunt geen notificaties
               </div>
             ) : notifPermission === 'denied' ? (
@@ -154,10 +154,10 @@ export default function SettingsPage() {
               </div>
             ) : notifPermission === 'default' ? (
               <div className="px-5 py-4 flex items-center justify-between">
-                <span className="text-[14px] text-[#0a0a14]">Notificaties inschakelen</span>
+                <span className="text-[14px] text-ink">Notificaties inschakelen</span>
                 <button
                   onClick={handleEnableNotifications}
-                  className="px-4 py-2 bg-[#0a0a14] text-white text-[13px] font-semibold rounded-[10px] active:scale-95 transition-transform"
+                  className="px-4 py-2 bg-surface-inverse text-white text-[13px] font-semibold rounded-[10px] active:scale-95 transition-transform"
                 >
                   Inschakelen
                 </button>
@@ -165,11 +165,11 @@ export default function SettingsPage() {
             ) : (
               <>
                 <div className="px-5 py-4 flex items-center justify-between">
-                  <span className="text-[14px] text-[#0a0a14]">Reminders actief</span>
+                  <span className="text-[14px] text-ink">Reminders actief</span>
                   <button
                     onClick={() => handleToggleNotifications(!preferences.enabled)}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      preferences.enabled ? 'bg-[#00cc66]' : 'bg-[#e8e8ec]'
+                      preferences.enabled ? 'bg-primary' : 'bg-line'
                     }`}
                   >
                     <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
@@ -180,21 +180,21 @@ export default function SettingsPage() {
                 {preferences.enabled && (
                   <>
                     <div className="px-5 py-4 flex items-center justify-between">
-                      <span className="text-[14px] text-[#0a0a14]">Ochtend reminder</span>
+                      <span className="text-[14px] text-ink">Ochtend reminder</span>
                       <input
                         type="time"
                         value={preferences.morningTime}
                         onChange={(e) => handleTimeChange('morningTime', e.target.value)}
-                        className="bg-[#f4f4f7] rounded-[10px] px-3 py-1.5 text-[13px] text-[#0a0a14] border-none outline-none"
+                        className="bg-surface-sunken rounded-[10px] px-3 py-1.5 text-[13px] text-ink border-none outline-none"
                       />
                     </div>
                     <div className="px-5 py-4 flex items-center justify-between">
-                      <span className="text-[14px] text-[#0a0a14]">Avond reminder</span>
+                      <span className="text-[14px] text-ink">Avond reminder</span>
                       <input
                         type="time"
                         value={preferences.eveningTime}
                         onChange={(e) => handleTimeChange('eveningTime', e.target.value)}
-                        className="bg-[#f4f4f7] rounded-[10px] px-3 py-1.5 text-[13px] text-[#0a0a14] border-none outline-none"
+                        className="bg-surface-sunken rounded-[10px] px-3 py-1.5 text-[13px] text-ink border-none outline-none"
                       />
                     </div>
                   </>
@@ -206,12 +206,12 @@ export default function SettingsPage() {
 
         {/* Install */}
         <section>
-          <h2 className="text-[11px] font-bold text-[#8a8a9a] uppercase tracking-[0.18em] mb-3">
+          <h2 className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-3">
             Installeren
           </h2>
-          <div className="rounded-[16px] border border-[#e8e8ec] bg-white overflow-hidden">
+          <div className="rounded-[16px] border border-line bg-white overflow-hidden">
             {isPWAInstalled ? (
-              <div className="px-5 py-4 flex items-center gap-2 text-[14px] text-[#00cc66] font-medium">
+              <div className="px-5 py-4 flex items-center gap-2 text-[14px] text-primary font-medium">
                 <Check size={16} />
                 App geinstalleerd
               </div>
@@ -219,15 +219,15 @@ export default function SettingsPage() {
               <div className="p-4">
                 <button
                   onClick={handleInstallPWA}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#0a0a14] text-white text-[14px] font-semibold rounded-[14px] active:scale-95 transition-transform"
+                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-surface-inverse text-white text-[14px] font-semibold rounded-[14px] active:scale-95 transition-transform"
                 >
                   <Download size={16} />
                   Installeer als app
                 </button>
               </div>
             ) : (
-              <div className="px-5 py-4 text-[13px] text-[#8a8a9a] space-y-2">
-                <p className="text-[#0a0a14] font-medium">Voeg toe aan startscherm:</p>
+              <div className="px-5 py-4 text-[13px] text-ink-soft space-y-2">
+                <p className="text-ink font-medium">Voeg toe aan startscherm:</p>
                 <ul className="space-y-1 text-[12px]">
                   <li>Chrome/Edge: installeer-icoon in adresbalk</li>
                   <li>Safari: Delen - Zet op beginscherm</li>
@@ -239,40 +239,40 @@ export default function SettingsPage() {
 
         {/* Stats */}
         <section>
-          <h2 className="text-[11px] font-bold text-[#8a8a9a] uppercase tracking-[0.18em] mb-3">
+          <h2 className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-3">
             Statistieken
           </h2>
           <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-[14px] bg-[#f4f4f7] p-4 text-center">
-              <p className="text-[22px] font-bold text-[#0a0a14]">{streakData.currentStreak}</p>
-              <p className="text-[11px] text-[#8a8a9a] mt-0.5">streak</p>
+            <div className="rounded-[14px] bg-surface-sunken p-4 text-center">
+              <p className="text-[22px] font-bold text-ink">{streakData.currentStreak}</p>
+              <p className="text-[11px] text-ink-soft mt-0.5">streak</p>
             </div>
-            <div className="rounded-[14px] bg-[#fef3c7] border border-[#fde68a] p-4 text-center">
-              <p className="text-[22px] font-bold text-[#92400e]">{streakData.longestStreak}</p>
-              <p className="text-[11px] text-[#b45309] mt-0.5">record</p>
+            <div className="rounded-[14px] bg-tertiary-soft border border-tertiary-soft p-4 text-center">
+              <p className="text-[22px] font-bold text-tertiary">{streakData.longestStreak}</p>
+              <p className="text-[11px] text-tertiary mt-0.5">record</p>
             </div>
-            <div className="rounded-[14px] bg-[#f4f4f7] p-4 text-center">
-              <p className="text-[22px] font-bold text-[#0a0a14]">{streakData.totalDaysCompleted}</p>
-              <p className="text-[11px] text-[#8a8a9a] mt-0.5">dagen</p>
+            <div className="rounded-[14px] bg-surface-sunken p-4 text-center">
+              <p className="text-[22px] font-bold text-ink">{streakData.totalDaysCompleted}</p>
+              <p className="text-[11px] text-ink-soft mt-0.5">dagen</p>
             </div>
           </div>
         </section>
 
         {/* E-mail rapporten */}
         <section>
-          <h2 className="text-[11px] font-bold text-[#8a8a9a] uppercase tracking-[0.18em] mb-3">
+          <h2 className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-3">
             E-mail Rapporten
           </h2>
-          <div className="rounded-[16px] border border-[#e8e8ec] bg-white divide-y divide-[#e8e8ec] overflow-hidden">
+          <div className="rounded-[16px] border border-line bg-white divide-y divide-line overflow-hidden">
             <div className="px-5 py-4 flex items-center justify-between">
               <div>
-                <p className="text-[14px] font-medium text-[#0a0a14]">Weekrapport</p>
-                <p className="text-[12px] text-[#8a8a9a] mt-0.5">Rituelen, energie, focusblokken, wins</p>
+                <p className="text-[14px] font-medium text-ink">Weekrapport</p>
+                <p className="text-[12px] text-ink-soft mt-0.5">Rituelen, energie, focusblokken, wins</p>
               </div>
               <button
                 onClick={() => handleSendEmail('weekrapport')}
                 disabled={emailSending !== null}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-[#0a0a14] text-white text-[13px] font-semibold rounded-[10px] active:scale-95 transition-transform disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-surface-inverse text-white text-[13px] font-semibold rounded-[10px] active:scale-95 transition-transform disabled:opacity-50"
               >
                 {emailSending === 'weekrapport'
                   ? <Loader2 size={14} className="animate-spin" />
@@ -282,13 +282,13 @@ export default function SettingsPage() {
             </div>
             <div className="px-5 py-4 flex items-center justify-between">
               <div>
-                <p className="text-[14px] font-medium text-[#0a0a14]">ADHD Rapport</p>
-                <p className="text-[12px] text-[#8a8a9a] mt-0.5">Klachtenmeting van de huidige week</p>
+                <p className="text-[14px] font-medium text-ink">ADHD Rapport</p>
+                <p className="text-[12px] text-ink-soft mt-0.5">Klachtenmeting van de huidige week</p>
               </div>
               <button
                 onClick={() => handleSendEmail('adhd')}
                 disabled={emailSending !== null}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-[#a78bfa] text-white text-[13px] font-semibold rounded-[10px] active:scale-95 transition-transform disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-tertiary text-white text-[13px] font-semibold rounded-[10px] active:scale-95 transition-transform disabled:opacity-50"
               >
                 {emailSending === 'adhd'
                   ? <Loader2 size={14} className="animate-spin" />
@@ -297,7 +297,7 @@ export default function SettingsPage() {
               </button>
             </div>
             {emailResult && (
-              <div className={`px-5 py-3 text-[13px] font-medium ${emailResult.ok ? 'text-[#00cc66]' : 'text-red-500'}`}>
+              <div className={`px-5 py-3 text-[13px] font-medium ${emailResult.ok ? 'text-primary' : 'text-red-500'}`}>
                 {emailResult.ok
                   ? `✓ ${emailResult.type === 'weekrapport' ? 'Weekrapport' : 'ADHD rapport'} verstuurd naar je inbox`
                   : `✗ Versturen mislukt — check Vercel logs`}
@@ -308,12 +308,12 @@ export default function SettingsPage() {
 
         {/* Account */}
         <section>
-          <h2 className="text-[11px] font-bold text-[#8a8a9a] uppercase tracking-[0.18em] mb-3">
+          <h2 className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-3">
             Account
           </h2>
-          <div className="rounded-[16px] border border-[#e8e8ec] bg-white divide-y divide-[#e8e8ec] overflow-hidden">
+          <div className="rounded-[16px] border border-line bg-white divide-y divide-line overflow-hidden">
             <div className="px-5 py-4">
-              <p className="text-[14px] font-medium text-[#0a0a14]">{user?.email}</p>
+              <p className="text-[14px] font-medium text-ink">{user?.email}</p>
             </div>
             <div className="px-5 py-4">
               <button

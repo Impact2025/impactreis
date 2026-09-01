@@ -24,40 +24,40 @@ export const Widget: React.FC<WidgetProps> = ({
 }) => {
   // Variant styling voor background en borders
   const variantStyles = {
-    default: 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700',
+    default: 'bg-surface-card border-line',
     wisdom: gradient
-      ? 'bg-gradient-to-br from-indigo-500 to-violet-600 border-indigo-400 text-white'
-      : 'bg-white dark:bg-slate-800 border-indigo-200 dark:border-indigo-800',
+      ? 'bg-accent border-accent text-white'
+      : 'bg-surface-card border-accent',
     growth: gradient
-      ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-400 text-white'
-      : 'bg-white dark:bg-slate-800 border-emerald-200 dark:border-emerald-800',
+      ? 'bg-primary border-primary text-white'
+      : 'bg-surface-card border-primary-light',
     energy: gradient
-      ? 'bg-gradient-to-br from-amber-500 to-gold-600 border-amber-400 text-white'
-      : 'bg-white dark:bg-slate-800 border-amber-200 dark:border-amber-800',
+      ? 'bg-tertiary border-tertiary text-white'
+      : 'bg-surface-card border-tertiary',
   };
 
   // Icon styling per variant
   const iconStyles = {
-    default: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
+    default: 'bg-accent-soft text-accent',
     wisdom: gradient
       ? 'bg-white/20 text-white'
-      : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
+      : 'bg-accent-soft text-accent',
     growth: gradient
       ? 'bg-white/20 text-white'
-      : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
+      : 'bg-primary-muted text-primary',
     energy: gradient
       ? 'bg-white/20 text-white'
-      : 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
+      : 'bg-tertiary-soft text-tertiary',
   };
 
   // Text styling voor gradient variants
   const textStyles = gradient
     ? 'text-white'
-    : 'text-slate-900 dark:text-white';
+    : 'text-ink';
 
   const subtitleStyles = gradient
     ? 'text-white/90'
-    : 'text-slate-500 dark:text-slate-400';
+    : 'text-ink-soft';
 
   return (
     <div

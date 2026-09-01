@@ -123,27 +123,27 @@ export default function CoachPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#ffffff] flex items-center justify-center">
-        <div className="w-6 h-6 rounded-full border-2 border-[#00cc66] border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-surface-card flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#ffffff] pb-28">
-      <div className="sticky top-0 z-10 bg-[#ffffff] border-b border-[#e8e8ec]">
+    <div className="min-h-screen bg-surface-card pb-28">
+      <div className="sticky top-0 z-10 bg-surface-card border-b border-line">
         <div className="max-w-lg mx-auto px-5 py-4 flex items-center gap-3">
-          <Link href="/dashboard" className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#f4f4f7] transition-colors">
-            <ArrowLeft size={18} className="text-[#0a0a14]" />
+          <Link href="/dashboard" className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-sunken transition-colors">
+            <ArrowLeft size={18} className="text-ink" />
           </Link>
-          <h1 className="text-[17px] font-semibold text-[#0a0a14]">AIPA</h1>
+          <h1 className="text-[17px] font-semibold text-ink">AIPA</h1>
         </div>
       </div>
 
       <div className="max-w-lg mx-auto px-5 py-5 space-y-5">
-        <div className="rounded-[16px] border border-[#e8e8ec] p-5 bg-[#0a0a14]">
+        <div className="rounded-[16px] border border-line p-5 bg-surface-inverse">
           <div className="flex items-center gap-2 mb-2">
-            <Sparkles size={16} className="text-[#00cc66]" />
+            <Sparkles size={16} className="text-primary" />
             <span className="text-[11px] text-white/40 uppercase tracking-widest">Business &amp; welzijn, gecombineerd</span>
           </div>
           <p className="text-[14px] text-white/80 leading-relaxed mb-4">
@@ -152,7 +152,7 @@ export default function CoachPage() {
           <button
             onClick={askReflection}
             disabled={asking}
-            className="w-full py-3.5 bg-[#00cc66] text-white text-[14px] font-semibold rounded-[12px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50"
+            className="w-full py-3.5 bg-primary text-white text-[14px] font-semibold rounded-[12px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50"
           >
             {asking ? (
               <RefreshCw size={16} className="animate-spin" />
@@ -170,15 +170,15 @@ export default function CoachPage() {
         )}
 
         {result && (
-          <div className="rounded-[16px] border border-[#e8e8ec] p-5">
-            <span className="inline-block text-[11px] font-medium text-[#00cc66] bg-[#00cc66]/10 rounded-full px-2.5 py-1 mb-3">
+          <div className="rounded-[16px] border border-line p-5">
+            <span className="inline-block text-[11px] font-medium text-primary bg-primary/10 rounded-full px-2.5 py-1 mb-3">
               {result.techniqueLabel}
             </span>
             <div className="space-y-4">
               {messages.map((msg) => (
                 <div key={msg.id} className={`space-y-2 ${msg.role === 'user' ? 'text-right' : ''}`}>
                   <div className={`inline-block rounded-[12px] px-4 py-3 ${
-                    msg.role === 'user' ? 'bg-[#0a0a14] text-white' : 'bg-[#f4f4f7] text-[#0a0a14]'
+                    msg.role === 'user' ? 'bg-surface-inverse text-white' : 'bg-surface-sunken text-ink'
                   }`}>
                     <p className="text-[14px] leading-relaxed whitespace-pre-line">{msg.content}</p>
                   </div>
@@ -192,13 +192,13 @@ export default function CoachPage() {
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Typ je antwoord op de vraag..."
-                className="flex-1 px-4 py-3 border border-[#e8e8ec] rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] focus:outline-none focus:ring-2 focus:ring-[#00cc66]/20"
+                className="flex-1 px-4 py-3 border border-line rounded-[12px] text-[14px] text-ink placeholder-ink-soft focus:outline-none focus:ring-2 focus:ring-primary/20"
                 disabled={sending}
               />
               <button
                 onClick={handleSend}
                 disabled={sending || !inputValue.trim()}
-                className="px-4 py-3 bg-[#0a0a14] text-white rounded-[12px] text-[14px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-transform flex items-center justify-center"
+                className="px-4 py-3 bg-surface-inverse text-white rounded-[12px] text-[14px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-transform flex items-center justify-center"
               >
                 {sending ? (
                   <RefreshCw size={16} className="animate-spin" />
@@ -207,21 +207,21 @@ export default function CoachPage() {
                 )}
               </button>
             </div>
-            <p className="text-[11px] text-[#8a8a9a] mt-3 pt-3 border-t border-[#f4f4f7]">{result.reason}</p>
+            <p className="text-[11px] text-ink-soft mt-3 pt-3 border-t border-surface-sunken">{result.reason}</p>
           </div>
         )}
 
         {lessons.length > 0 && (
           <div>
-            <p className="text-[11px] font-medium text-[#8a8a9a] uppercase tracking-wider mb-2.5 px-1">Wat de coach al over je weet</p>
+            <p className="text-[11px] font-medium text-ink-soft uppercase tracking-wider mb-2.5 px-1">Wat de coach al over je weet</p>
             <div className="space-y-2">
               {lessons.map((l) => (
-                <div key={l.id} className="rounded-[14px] border border-[#e8e8ec] p-4">
-                  <p className="text-[13px] text-[#0a0a14] leading-relaxed mb-1.5">{l.insight}</p>
+                <div key={l.id} className="rounded-[14px] border border-line p-4">
+                  <p className="text-[13px] text-ink leading-relaxed mb-1.5">{l.insight}</p>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-[#8a8a9a]">{l.techniqueLabel}</span>
-                    <span className="text-[10px] text-[#8a8a9a]">&middot;</span>
-                    <span className="text-[10px] text-[#8a8a9a]">{Math.round(l.confidence * 100)}% trefkans, {l.times_confirmed}x gezien</span>
+                    <span className="text-[10px] text-ink-soft">{l.techniqueLabel}</span>
+                    <span className="text-[10px] text-ink-soft">&middot;</span>
+                    <span className="text-[10px] text-ink-soft">{Math.round(l.confidence * 100)}% trefkans, {l.times_confirmed}x gezien</span>
                   </div>
                 </div>
               ))}

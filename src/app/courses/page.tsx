@@ -42,8 +42,8 @@ export default function CoursesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-slate-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-900 dark:border-white border-t-transparent" />
+      <div className="min-h-screen bg-white  flex items-center justify-center">
+        <div className="animate-spin rounded-full h-6 w-6 border-2 border-line  border-t-transparent" />
       </div>
     );
   }
@@ -53,22 +53,22 @@ export default function CoursesPage() {
   const primingStreak = practiceStats?.streaks?.priming || 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen bg-surface-card ">
       {/* Header */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+      <header className="bg-white  border-b border-line ">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               href="/dashboard"
-              className="p-2 -ml-2 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+              className="p-2 -ml-2 text-ink-soft hover:text-ink  transition-colors"
             >
               <ChevronLeft size={20} />
             </Link>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-tertiary to-error rounded-lg flex items-center justify-center">
                 <BookOpen className="text-white" size={16} />
               </div>
-              <span className="font-semibold text-slate-900 dark:text-white">Cursussen</span>
+              <span className="font-semibold text-ink ">Cursussen</span>
             </div>
           </div>
         </div>
@@ -76,11 +76,11 @@ export default function CoursesPage() {
 
       <main className="max-w-5xl mx-auto px-6 py-8">
         {/* Hero Section */}
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-8 mb-8 text-white overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl" />
+        <div className="bg-gradient-to-br from-surface-inverse via-surface-inverse to-surface-inverse rounded-2xl p-8 mb-8 text-white overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-tertiary/20 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-accent/20 rounded-full blur-3xl" />
           <div className="relative z-10">
-            <div className="flex items-center gap-2 text-orange-400 mb-3">
+            <div className="flex items-center gap-2 text-tertiary mb-3">
               <Flame size={20} />
               <span className="text-sm font-medium">Tony Robbins Methodologie</span>
             </div>
@@ -95,38 +95,38 @@ export default function CoursesPage() {
         {/* Quick Stats */}
         {practiceStats && (
           <div className="grid grid-cols-3 gap-4 mb-8">
-            <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+            <div className="bg-white  rounded-xl p-4 border border-line ">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-                  <Flame className="text-orange-500" size={20} />
+                <div className="w-10 h-10 bg-tertiary-soft  rounded-lg flex items-center justify-center">
+                  <Flame className="text-tertiary" size={20} />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{primingStreak}</p>
-                  <p className="text-xs text-slate-500">Priming Streak</p>
+                  <p className="text-2xl font-bold text-ink ">{primingStreak}</p>
+                  <p className="text-xs text-ink-soft">Priming Streak</p>
                 </div>
               </div>
             </div>
-            <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+            <div className="bg-white  rounded-xl p-4 border border-line ">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                  <BookOpen className="text-blue-500" size={20} />
+                <div className="w-10 h-10 bg-accent-soft  rounded-lg flex items-center justify-center">
+                  <BookOpen className="text-accent" size={20} />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{enrolledCourses.length}</p>
-                  <p className="text-xs text-slate-500">Actieve Cursussen</p>
+                  <p className="text-2xl font-bold text-ink ">{enrolledCourses.length}</p>
+                  <p className="text-xs text-ink-soft">Actieve Cursussen</p>
                 </div>
               </div>
             </div>
-            <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+            <div className="bg-white  rounded-xl p-4 border border-line ">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                  <Trophy className="text-emerald-500" size={20} />
+                <div className="w-10 h-10 bg-primary-muted  rounded-lg flex items-center justify-center">
+                  <Trophy className="text-primary" size={20} />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                  <p className="text-2xl font-bold text-ink ">
                     {enrolledCourses.filter((c) => c.progress?.status === 'completed').length}
                   </p>
-                  <p className="text-xs text-slate-500">Voltooid</p>
+                  <p className="text-xs text-ink-soft">Voltooid</p>
                 </div>
               </div>
             </div>
@@ -137,8 +137,8 @@ export default function CoursesPage() {
         {enrolledCourses.length > 0 && (
           <section className="mb-10">
             <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="text-blue-500" size={20} />
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+              <Sparkles className="text-accent" size={20} />
+              <h2 className="text-lg font-semibold text-ink ">
                 Ga Verder
               </h2>
             </div>
@@ -154,8 +154,8 @@ export default function CoursesPage() {
         {availableCourses.length > 0 && (
           <section>
             <div className="flex items-center gap-2 mb-4">
-              <BookOpen className="text-slate-500" size={20} />
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+              <BookOpen className="text-ink-soft" size={20} />
+              <h2 className="text-lg font-semibold text-ink ">
                 Beschikbare Cursussen
               </h2>
             </div>
@@ -170,13 +170,13 @@ export default function CoursesPage() {
         {/* Empty State */}
         {courses.length === 0 && (
           <div className="text-center py-16">
-            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <BookOpen className="text-slate-400" size={32} />
+            <div className="w-16 h-16 bg-surface-card  rounded-full flex items-center justify-center mx-auto mb-4">
+              <BookOpen className="text-ink-soft" size={32} />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-ink  mb-2">
               Nog geen cursussen beschikbaar
             </h3>
-            <p className="text-slate-500 dark:text-slate-400">
+            <p className="text-ink-soft ">
               Cursussen worden binnenkort toegevoegd.
             </p>
           </div>

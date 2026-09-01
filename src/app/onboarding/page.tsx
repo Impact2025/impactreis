@@ -112,14 +112,14 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <div className="sticky top-0 z-10 bg-white border-b border-[#e8e8ec] px-5 py-4">
+      <div className="sticky top-0 z-10 bg-white border-b border-line px-5 py-4">
         <div className="max-w-lg mx-auto flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-[#0a0a14] flex items-center justify-center">
-            <Sparkles size={16} className="text-[#00cc66]" />
+          <div className="w-9 h-9 rounded-full bg-surface-inverse flex items-center justify-center">
+            <Sparkles size={16} className="text-primary" />
           </div>
           <div>
-            <p className="text-[14px] font-semibold text-[#0a0a14]">Aipa</p>
-            <p className="text-[11px] text-[#8a8a9a]">Je Executive PA &amp; Impact Coach richt je werkruimte in</p>
+            <p className="text-[14px] font-semibold text-ink">Aipa</p>
+            <p className="text-[11px] text-ink-soft">Je Executive PA &amp; Impact Coach richt je werkruimte in</p>
           </div>
         </div>
       </div>
@@ -129,7 +129,7 @@ export default function OnboardingPage() {
           if (m.role === 'user') {
             return (
               <div key={i} className="flex justify-end">
-                <div className="bg-[#0a0a14] text-white rounded-[16px] rounded-br-[4px] px-4 py-2.5 max-w-[80%] text-[14px]">
+                <div className="bg-surface-inverse text-white rounded-[16px] rounded-br-[4px] px-4 py-2.5 max-w-[80%] text-[14px]">
                   {m.content}
                 </div>
               </div>
@@ -139,7 +139,7 @@ export default function OnboardingPage() {
           const { text, chips } = splitSuggestions(visible);
           return (
             <div key={i} className="space-y-2.5">
-              <div className="bg-[#f4f4f7] rounded-[16px] rounded-bl-[4px] px-4 py-2.5 max-w-[85%] text-[14px] text-[#0a0a14] whitespace-pre-line">
+              <div className="bg-surface-sunken rounded-[16px] rounded-bl-[4px] px-4 py-2.5 max-w-[85%] text-[14px] text-ink whitespace-pre-line">
                 {text || (streaming && i === messages.length - 1 ? '…' : '')}
               </div>
               {chips.length > 0 && !streaming && (
@@ -148,7 +148,7 @@ export default function OnboardingPage() {
                     <button
                       key={chip}
                       onClick={() => useChip(chip)}
-                      className="text-[12px] px-3 py-1.5 rounded-full border border-[#e8e8ec] text-[#0a0a14] hover:border-[#00cc66] hover:text-[#00cc66] transition-colors"
+                      className="text-[12px] px-3 py-1.5 rounded-full border border-line text-ink hover:border-primary hover:text-primary transition-colors"
                     >
                       {chip}
                     </button>
@@ -166,11 +166,11 @@ export default function OnboardingPage() {
         )}
 
         {done && (
-          <div className="rounded-[16px] border border-[#e8e8ec] p-5 text-center space-y-3">
-            <p className="text-[14px] font-semibold text-[#0a0a14]">Je werkruimte staat klaar.</p>
+          <div className="rounded-[16px] border border-line p-5 text-center space-y-3">
+            <p className="text-[14px] font-semibold text-ink">Je werkruimte staat klaar.</p>
             <button
               onClick={() => router.push('/dashboard')}
-              className="w-full py-3 rounded-[14px] bg-[#00cc66] text-[#0a0a14] font-bold text-[14px]"
+              className="w-full py-3 rounded-[14px] bg-primary text-white font-bold text-[14px]"
             >
               Activeer mijn werkruimte
             </button>
@@ -180,7 +180,7 @@ export default function OnboardingPage() {
       </div>
 
       {!done && (
-        <form onSubmit={handleSubmit} className="border-t border-[#e8e8ec] p-4">
+        <form onSubmit={handleSubmit} className="border-t border-line p-4">
           <div className="max-w-lg mx-auto flex items-center gap-2">
             <input
               type="text"
@@ -188,14 +188,14 @@ export default function OnboardingPage() {
               onChange={(e) => setInput(e.target.value)}
               disabled={streaming}
               placeholder="Typ je antwoord..."
-              className="flex-1 px-4 py-3 rounded-[14px] bg-[#f4f4f7] border border-transparent text-[14px] outline-none focus:border-[#00cc66] focus:bg-white transition-all disabled:opacity-60"
+              className="flex-1 px-4 py-3 rounded-[14px] bg-surface-sunken border border-transparent text-[14px] outline-none focus:border-primary focus:bg-white transition-all disabled:opacity-60"
             />
             <button
               type="submit"
               disabled={streaming || !input.trim()}
-              className="w-11 h-11 rounded-[14px] bg-[#00cc66] flex items-center justify-center disabled:opacity-40 transition-opacity"
+              className="w-11 h-11 rounded-[14px] bg-primary flex items-center justify-center disabled:opacity-40 transition-opacity"
             >
-              <Send size={17} className="text-[#0a0a14]" />
+              <Send size={17} className="text-ink" />
             </button>
           </div>
         </form>

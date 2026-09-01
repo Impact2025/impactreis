@@ -52,7 +52,7 @@ function ScoreBar({ avg }: { avg: number }) {
   const color = avgColor(avg);
   return (
     <div className="flex items-center gap-2 flex-1">
-      <div className="flex-1 h-2 bg-[#f4f4f7] rounded-full overflow-hidden">
+      <div className="flex-1 h-2 bg-surface-sunken rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{ width: `${pct}%`, backgroundColor: color }}
@@ -126,45 +126,45 @@ export default function AdhdPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#ffffff] flex items-center justify-center">
+      <div className="min-h-screen bg-surface-card flex items-center justify-center">
         <div className="w-6 h-6 rounded-full border-2 border-[#a78bfa] border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#ffffff] pb-28">
+    <div className="min-h-screen bg-surface-card pb-28">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#ffffff] border-b border-[#e8e8ec]">
+      <div className="sticky top-0 z-10 bg-surface-card border-b border-line">
         <div className="max-w-lg mx-auto px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#f4f4f7] transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-sunken transition-colors"
             >
-              <ArrowLeft size={18} className="text-[#0a0a14]" />
+              <ArrowLeft size={18} className="text-ink" />
             </Link>
             <div>
-              <h1 className="text-[17px] font-semibold text-[#0a0a14]">ADHD Klachten</h1>
-              <p className="text-[11px] text-[#8a8a9a]">Meting voor medicatiestart</p>
+              <h1 className="text-[17px] font-semibold text-ink">ADHD Klachten</h1>
+              <p className="text-[11px] text-ink-soft">Meting voor medicatiestart</p>
             </div>
           </div>
-          <Brain size={20} className="text-[#a78bfa]" />
+          <Brain size={20} className="text-tertiary" />
         </div>
       </div>
 
       <div className="max-w-lg mx-auto px-5 pt-5 space-y-4">
 
         {/* Week tabs */}
-        <div className="flex gap-2 p-1 bg-[#f4f4f7] rounded-[14px]">
+        <div className="flex gap-2 p-1 bg-surface-sunken rounded-[14px]">
           {ADHD_WEEKS.map((w) => (
             <button
               key={w.nr}
               onClick={() => setActiveWeek(w.nr)}
               className={`flex-1 py-2 rounded-[11px] flex flex-col items-center leading-tight transition-all ${
                 activeWeek === w.nr
-                  ? 'bg-white text-[#0a0a14] shadow-sm'
-                  : 'text-[#8a8a9a]'
+                  ? 'bg-white text-ink shadow-sm'
+                  : 'text-ink-soft'
               }`}
             >
               <span className="text-[13px] font-semibold">Week {w.nr}</span>
@@ -174,7 +174,7 @@ export default function AdhdPage() {
         </div>
 
         {/* Summary card */}
-        <div className="rounded-[16px] bg-[#0a0a14] p-5">
+        <div className="rounded-[16px] bg-surface-inverse p-5">
           <div className="flex items-center justify-between mb-1">
             <p className="text-[13px] text-white/50">Gelogd</p>
             <p className="text-[13px] text-white/50">
@@ -192,9 +192,9 @@ export default function AdhdPage() {
               <p className="text-[14px] text-white/30 pb-0.5">/ {MAX_TOTAL}</p>
               {trend !== null && (
                 <div className={`ml-auto flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-semibold ${
-                  trend < -1 ? 'bg-[#f0fdf4] text-[#00cc66]' :
-                  trend > 1 ? 'bg-[#fee2e2] text-[#ef4444]' :
-                  'bg-[#f4f4f7] text-[#8a8a9a]'
+                  trend < -1 ? 'bg-primary-muted text-primary' :
+                  trend > 1 ? 'bg-error-soft text-error' :
+                  'bg-surface-sunken text-ink-soft'
                 }`}>
                   {trend < -1 ? <TrendingDown size={13} /> : trend > 1 ? <TrendingUp size={13} /> : <Minus size={13} />}
                   {trend > 0 ? '+' : ''}{trend.toFixed(1)} t.o.v. week 1
@@ -213,8 +213,8 @@ export default function AdhdPage() {
 
         {/* Symptom averages */}
         {loggedCount > 0 && (
-          <div className="rounded-[16px] border border-[#e8e8ec] p-5">
-            <h2 className="text-[14px] font-semibold text-[#0a0a14] mb-4">
+          <div className="rounded-[16px] border border-line p-5">
+            <h2 className="text-[14px] font-semibold text-ink mb-4">
               Gemiddelde per klacht
             </h2>
             <div className="space-y-3">
@@ -222,9 +222,9 @@ export default function AdhdPage() {
                 const avg = symptomAvgs[s];
                 return (
                   <div key={s} className="flex items-center gap-3">
-                    <span className="text-[12px] text-[#0a0a14] w-36 flex-shrink-0 leading-tight">{s}</span>
+                    <span className="text-[12px] text-ink w-36 flex-shrink-0 leading-tight">{s}</span>
                     <ScoreBar avg={avg} />
-                    <span className="text-[10px] text-[#8a8a9a] w-20 text-right hidden sm:block">
+                    <span className="text-[10px] text-ink-soft w-20 text-right hidden sm:block">
                       {avgLabel(avg)}
                     </span>
                   </div>
@@ -236,8 +236,8 @@ export default function AdhdPage() {
 
         {/* Daily scores */}
         {loggedCount > 0 && (
-          <div className="rounded-[16px] border border-[#e8e8ec] p-5">
-            <h2 className="text-[14px] font-semibold text-[#0a0a14] mb-4">Dagelijkse scores</h2>
+          <div className="rounded-[16px] border border-line p-5">
+            <h2 className="text-[14px] font-semibold text-ink mb-4">Dagelijkse scores</h2>
             <div className="space-y-2">
               {activeDates.map((date) => {
                 const log = weekLogs.find((l) => l.date === date);
@@ -248,10 +248,10 @@ export default function AdhdPage() {
 
                 return (
                   <div key={date} className="flex items-center gap-3">
-                    <span className="text-[12px] text-[#8a8a9a] w-20 flex-shrink-0">{label}</span>
+                    <span className="text-[12px] text-ink-soft w-20 flex-shrink-0">{label}</span>
                     {log ? (
                       <>
-                        <div className="flex-1 h-2 bg-[#f4f4f7] rounded-full overflow-hidden">
+                        <div className="flex-1 h-2 bg-surface-sunken rounded-full overflow-hidden">
                           <div
                             className="h-full rounded-full"
                             style={{
@@ -260,12 +260,12 @@ export default function AdhdPage() {
                             }}
                           />
                         </div>
-                        <span className="text-[12px] font-medium text-[#0a0a14] w-12 text-right">
+                        <span className="text-[12px] font-medium text-ink w-12 text-right">
                           {Object.values(log.scores).reduce((a, b) => a + b, 0)}/{MAX_TOTAL}
                         </span>
                       </>
                     ) : (
-                      <span className="text-[12px] text-[#c0c0cc] italic">niet gelogd</span>
+                      <span className="text-[12px] text-on-surface-inverse/50 italic">niet gelogd</span>
                     )}
                   </div>
                 );
@@ -276,15 +276,15 @@ export default function AdhdPage() {
 
         {/* Top 5 */}
         {loggedCount > 0 && (
-          <div className="rounded-[16px] border border-[#e8e8ec] p-5">
-            <h2 className="text-[14px] font-semibold text-[#0a0a14] mb-3">Zwaarste klachten</h2>
+          <div className="rounded-[16px] border border-line p-5">
+            <h2 className="text-[14px] font-semibold text-ink mb-3">Zwaarste klachten</h2>
             <div className="space-y-2">
               {top5.map((s, i) => (
                 <div key={s} className="flex items-center gap-3">
-                  <span className="w-5 h-5 rounded-full bg-[#f4f4f7] text-[10px] font-bold text-[#8a8a9a] flex items-center justify-center flex-shrink-0">
+                  <span className="w-5 h-5 rounded-full bg-surface-sunken text-[10px] font-bold text-ink-soft flex items-center justify-center flex-shrink-0">
                     {i + 1}
                   </span>
-                  <span className="text-[13px] text-[#0a0a14] flex-1">{s}</span>
+                  <span className="text-[13px] text-ink flex-1">{s}</span>
                   <span
                     className="text-[12px] font-semibold"
                     style={{ color: avgColor(symptomAvgs[s]) }}
@@ -301,15 +301,15 @@ export default function AdhdPage() {
         {loggedCount === 0 && weekStarted && (
           <Link
             href="/evening"
-            className="block rounded-[16px] bg-[#f5f3ff] border border-[#e9d5ff] p-5 text-center active:scale-[0.98] transition-transform"
+            className="block rounded-[16px] bg-tertiary-soft border border-tertiary-soft p-5 text-center active:scale-[0.98] transition-transform"
           >
-            <Brain size={24} className="text-[#a78bfa] mx-auto mb-2" />
-            <p className="text-[14px] font-semibold text-[#0a0a14]">Log je meting van vandaag</p>
-            <p className="text-[12px] text-[#8a8a9a] mt-1">Via het Avondritueel → ADHD Klachten</p>
+            <Brain size={24} className="text-tertiary mx-auto mb-2" />
+            <p className="text-[14px] font-semibold text-ink">Log je meting van vandaag</p>
+            <p className="text-[12px] text-ink-soft mt-1">Via het Avondritueel → ADHD Klachten</p>
           </Link>
         )}
 
-        <p className="text-[11px] text-[#c0c0cc] text-center pb-2">
+        <p className="text-[11px] text-on-surface-inverse/50 text-center pb-2">
           Meetperiode: 3 juni – 17 juni 2026 · Voor start Ritalin
         </p>
       </div>

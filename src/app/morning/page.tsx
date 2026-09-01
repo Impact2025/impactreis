@@ -191,90 +191,90 @@ export default function MorningPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#ffffff] flex items-center justify-center">
-        <div className="w-6 h-6 rounded-full border-2 border-[#00cc66] border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-surface-card flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
 
   if (alVoltooid && step === 'intentie') {
     return (
-      <div className="min-h-screen bg-[#ffffff] pb-28">
-        <div className="sticky top-0 z-10 bg-[#ffffff] border-b border-[#e8e8ec]">
+      <div className="min-h-screen bg-surface-card pb-28">
+        <div className="sticky top-0 z-10 bg-surface-card border-b border-line">
           <div className="max-w-lg mx-auto px-5 py-4 flex items-center gap-3">
-            <Link href="/dashboard" className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#f4f4f7] transition-colors">
-              <ArrowLeft size={18} className="text-[#0a0a14]" />
+            <Link href="/dashboard" className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-sunken transition-colors">
+              <ArrowLeft size={18} className="text-ink" />
             </Link>
             <div>
-              <h1 className="text-[17px] font-semibold text-[#0a0a14]">Ochtend Ritueel</h1>
-              <p className="text-[11px] text-[#8a8a9a]">Vandaag al voltooid</p>
+              <h1 className="text-[17px] font-semibold text-ink">Ochtend Ritueel</h1>
+              <p className="text-[11px] text-ink-soft">Vandaag al voltooid</p>
             </div>
           </div>
         </div>
         <div className="max-w-lg mx-auto px-5 pt-6 space-y-4">
-          <div className="rounded-[16px] bg-[#f0fdf4] border border-[#bbf7d0] p-5 flex items-center gap-4">
-            <CheckCircle size={28} className="text-[#00cc66] flex-shrink-0" />
+          <div className="rounded-[16px] bg-primary-muted border border-primary-light p-5 flex items-center gap-4">
+            <CheckCircle size={28} className="text-primary flex-shrink-0" />
             <div>
-              <p className="text-[15px] font-semibold text-[#0a0a14]">Goed gedaan vandaag!</p>
-              <p className="text-[12px] text-[#5a5a6a] mt-0.5">Je ochtend ritueel is al voltooid voor {dateStr}.</p>
+              <p className="text-[15px] font-semibold text-ink">Goed gedaan vandaag!</p>
+              <p className="text-[12px] text-on-surface-inverse/50 mt-0.5">Je ochtend ritueel is al voltooid voor {dateStr}.</p>
             </div>
           </div>
 
           {formData.intentie ? (
-            <div className="rounded-[16px] border border-[#e8e8ec] p-5 space-y-4">
+            <div className="rounded-[16px] border border-line p-5 space-y-4">
               <div>
-                <p className="text-[11px] text-[#8a8a9a] uppercase tracking-widest mb-1">Intentie</p>
-                <p className="text-[14px] text-[#0a0a14] leading-relaxed">{formData.intentie}</p>
+                <p className="text-[11px] text-ink-soft uppercase tracking-widest mb-1">Intentie</p>
+                <p className="text-[14px] text-ink leading-relaxed">{formData.intentie}</p>
               </div>
               {(formData.focusBlok1?.onderwerp || formData.focusBlok2?.onderwerp) ? (
-                <div className="border-t border-[#f4f4f7] pt-4 space-y-2">
-                  <p className="text-[11px] text-[#8a8a9a] uppercase tracking-widest mb-2">Focus Blokken</p>
+                <div className="border-t border-surface-sunken pt-4 space-y-2">
+                  <p className="text-[11px] text-ink-soft uppercase tracking-widest mb-2">Focus Blokken</p>
                   {formData.focusBlok1?.onderwerp ? (
-                    <div className="flex items-start gap-3 bg-[#f4f4f7] rounded-[12px] p-3">
-                      <span className="text-[11px] font-bold text-[#00cc66] bg-[#f0fdf4] px-2 py-0.5 rounded-md shrink-0">08:30</span>
+                    <div className="flex items-start gap-3 bg-surface-sunken rounded-[12px] p-3">
+                      <span className="text-[11px] font-bold text-primary bg-primary-muted px-2 py-0.5 rounded-md shrink-0">08:30</span>
                       <div>
-                        <p className="text-[13px] font-semibold text-[#0a0a14]">{formData.focusBlok1.onderwerp}</p>
-                        {formData.focusBlok1.doel ? <p className="text-[12px] text-[#8a8a9a] mt-0.5">Doel: {formData.focusBlok1.doel}</p> : null}
+                        <p className="text-[13px] font-semibold text-ink">{formData.focusBlok1.onderwerp}</p>
+                        {formData.focusBlok1.doel ? <p className="text-[12px] text-ink-soft mt-0.5">Doel: {formData.focusBlok1.doel}</p> : null}
                       </div>
                     </div>
                   ) : null}
                   {formData.focusBlok2?.onderwerp ? (
-                    <div className="flex items-start gap-3 bg-[#f4f4f7] rounded-[12px] p-3">
-                      <span className="text-[11px] font-bold text-[#00cc66] bg-[#f0fdf4] px-2 py-0.5 rounded-md shrink-0">12:30</span>
+                    <div className="flex items-start gap-3 bg-surface-sunken rounded-[12px] p-3">
+                      <span className="text-[11px] font-bold text-primary bg-primary-muted px-2 py-0.5 rounded-md shrink-0">12:30</span>
                       <div>
-                        <p className="text-[13px] font-semibold text-[#0a0a14]">{formData.focusBlok2.onderwerp}</p>
-                        {formData.focusBlok2.doel ? <p className="text-[12px] text-[#8a8a9a] mt-0.5">Doel: {formData.focusBlok2.doel}</p> : null}
+                        <p className="text-[13px] font-semibold text-ink">{formData.focusBlok2.onderwerp}</p>
+                        {formData.focusBlok2.doel ? <p className="text-[12px] text-ink-soft mt-0.5">Doel: {formData.focusBlok2.doel}</p> : null}
                       </div>
                     </div>
                   ) : null}
                 </div>
               ) : null}
               {formData.affirmatie ? (
-                <div className="border-t border-[#f4f4f7] pt-4">
-                  <p className="text-[11px] text-[#8a8a9a] uppercase tracking-widest mb-1">Affirmatie</p>
-                  <p className="text-[14px] text-[#00cc66] italic leading-relaxed">&quot;{formData.affirmatie}&quot;</p>
+                <div className="border-t border-surface-sunken pt-4">
+                  <p className="text-[11px] text-ink-soft uppercase tracking-widest mb-1">Affirmatie</p>
+                  <p className="text-[14px] text-primary italic leading-relaxed">&quot;{formData.affirmatie}&quot;</p>
                 </div>
               ) : null}
               {formData.dankbaarheid?.some(d => d) ? (
-                <div className="border-t border-[#f4f4f7] pt-4">
-                  <p className="text-[11px] text-[#8a8a9a] uppercase tracking-widest mb-2">Dankbaarheid</p>
+                <div className="border-t border-surface-sunken pt-4">
+                  <p className="text-[11px] text-ink-soft uppercase tracking-widest mb-2">Dankbaarheid</p>
                   <ul className="space-y-1">
                     {formData.dankbaarheid.filter(d => d).map((d, i) => (
-                      <li key={i} className="text-[13px] text-[#0a0a14] flex items-start gap-2">
-                        <span className="text-[#00cc66] mt-0.5">✓</span>{d}
+                      <li key={i} className="text-[13px] text-ink flex items-start gap-2">
+                        <span className="text-primary mt-0.5">✓</span>{d}
                       </li>
                     ))}
                   </ul>
                 </div>
               ) : null}
-              <div className="border-t border-[#f4f4f7] pt-4 flex gap-4">
+              <div className="border-t border-surface-sunken pt-4 flex gap-4">
                 <div className="flex-1 text-center">
-                  <p className="text-[11px] text-[#8a8a9a]">Energie</p>
-                  <p className="text-[18px] font-bold text-[#00cc66]">{formData.energyLevel}<span className="text-[12px] text-[#8a8a9a]">/10</span></p>
+                  <p className="text-[11px] text-ink-soft">Energie</p>
+                  <p className="text-[18px] font-bold text-primary">{formData.energyLevel}<span className="text-[12px] text-ink-soft">/10</span></p>
                 </div>
                 <div className="flex-1 text-center">
-                  <p className="text-[11px] text-[#8a8a9a]">Slaap</p>
-                  <p className="text-[18px] font-bold text-[#00cc66]">{formData.sleepQuality}<span className="text-[12px] text-[#8a8a9a]">/10</span></p>
+                  <p className="text-[11px] text-ink-soft">Slaap</p>
+                  <p className="text-[18px] font-bold text-primary">{formData.sleepQuality}<span className="text-[12px] text-ink-soft">/10</span></p>
                 </div>
               </div>
             </div>
@@ -282,7 +282,7 @@ export default function MorningPage() {
 
           <button
             onClick={() => setAlVoltooid(false)}
-            className="w-full py-3.5 rounded-[14px] border border-[#e8e8ec] text-[14px] text-[#8a8a9a] font-medium active:scale-[0.98] transition-transform"
+            className="w-full py-3.5 rounded-[14px] border border-line text-[14px] text-ink-soft font-medium active:scale-[0.98] transition-transform"
           >
             Opnieuw invullen
           </button>
@@ -294,43 +294,43 @@ export default function MorningPage() {
 
   if (step === 'done') {
     return (
-      <div className="min-h-screen bg-[#ffffff] flex items-center justify-center">
+      <div className="min-h-screen bg-surface-card flex items-center justify-center">
         <div className="text-center px-5">
-          <div className="w-20 h-20 bg-[#f0fdf4] rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="text-[#00cc66]" size={40} />
+          <div className="w-20 h-20 bg-primary-muted rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="text-primary" size={40} />
           </div>
-          <h2 className="text-[24px] font-bold text-[#0a0a14] mb-2">Ochtend Ritueel Voltooid!</h2>
-          <p className="text-[14px] text-[#8a8a9a]">Je dag is goed gestart.</p>
+          <h2 className="text-[24px] font-bold text-ink mb-2">Ochtend Ritueel Voltooid!</h2>
+          <p className="text-[14px] text-ink-soft">Je dag is goed gestart.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#ffffff] pb-28">
+    <div className="min-h-screen bg-surface-card pb-28">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#ffffff] border-b border-[#e8e8ec]">
+      <div className="sticky top-0 z-10 bg-surface-card border-b border-line">
         <div className="max-w-lg mx-auto px-5 py-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <Link
                 href="/dashboard"
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#f4f4f7] transition-colors"
+                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-sunken transition-colors"
               >
-                <ArrowLeft size={18} className="text-[#0a0a14]" />
+                <ArrowLeft size={18} className="text-ink" />
               </Link>
               <div>
-                <h1 className="text-[17px] font-semibold text-[#0a0a14]">Ochtend Ritueel</h1>
-                <p className="text-[11px] text-[#8a8a9a]">{STEP_LABELS[step]}</p>
+                <h1 className="text-[17px] font-semibold text-ink">Ochtend Ritueel</h1>
+                <p className="text-[11px] text-ink-soft">{STEP_LABELS[step]}</p>
               </div>
             </div>
-            <span className="text-[12px] font-medium text-[#8a8a9a] bg-[#f4f4f7] px-3 py-1 rounded-full">
+            <span className="text-[12px] font-medium text-ink-soft bg-surface-sunken px-3 py-1 rounded-full">
               {currentIndex + 1}/{STEPS.length}
             </span>
           </div>
-          <div className="h-1 w-full bg-[#f4f4f7] rounded-full overflow-hidden">
+          <div className="h-1 w-full bg-surface-sunken rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#00cc66] rounded-full transition-all duration-500"
+              className="h-full bg-primary rounded-full transition-all duration-500"
               style={{ width: `${progressPct}%` }}
             />
           </div>
@@ -342,9 +342,9 @@ export default function MorningPage() {
         {/* Step: Intentie */}
         {step === 'intentie' && (
           <div className="space-y-4">
-            <div className="rounded-[16px] bg-[#0a0a14] p-5">
+            <div className="rounded-[16px] bg-surface-inverse p-5">
               <div className="flex items-center gap-2 mb-2">
-                <Sunrise size={18} className="text-[#00cc66]" />
+                <Sunrise size={18} className="text-primary" />
                 <span className="text-[11px] text-white/40 uppercase tracking-widest">
                   {dayName}, {dateStr}
                 </span>
@@ -352,10 +352,10 @@ export default function MorningPage() {
               <p className="text-[17px] text-white font-semibold">Goedemorgen.</p>
               <p className="text-[13px] text-white/50 mt-1">Zet de toon voor een geweldige dag.</p>
             </div>
-            <div className="rounded-[16px] border border-[#e8e8ec] p-5">
+            <div className="rounded-[16px] border border-line p-5">
               <div className="flex items-center gap-2 mb-3">
-                <Target size={16} className="text-[#00cc66]" />
-                <span className="text-[14px] font-semibold text-[#0a0a14]">Wat is je intentie voor vandaag?</span>
+                <Target size={16} className="text-primary" />
+                <span className="text-[14px] font-semibold text-ink">Wat is je intentie voor vandaag?</span>
               </div>
               <textarea
                 value={formData.intentie}
@@ -363,7 +363,7 @@ export default function MorningPage() {
                 placeholder="Vandaag focus ik op... Ik wil bereiken dat..."
                 rows={4}
                 autoFocus
-                className="w-full resize-none bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] px-4 py-3 text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] transition-colors"
+                className="w-full resize-none bg-surface-sunken border border-line focus:border-primary outline-none rounded-[12px] px-4 py-3 text-[14px] text-ink placeholder-ink-soft transition-colors"
               />
             </div>
           </div>
@@ -372,15 +372,15 @@ export default function MorningPage() {
         {/* Step: Focus Blokken */}
         {step === 'focusblokken' && (
           <div className="space-y-4">
-            <div className="rounded-[16px] bg-[#0a0a14] p-5">
+            <div className="rounded-[16px] bg-surface-inverse p-5">
               <div className="flex items-center gap-2 mb-2">
-                <Brain size={18} className="text-[#00cc66]" />
+                <Brain size={18} className="text-primary" />
                 <span className="text-[11px] text-white/40 uppercase tracking-widest">Deep Work Planning</span>
               </div>
               <p className="text-[17px] text-white font-semibold">Jouw 2 focusblokken vandaag</p>
               <p className="text-[13px] text-white/50 mt-1">Besluit nu — zodat je straks direct begint.</p>
               {meetingCount !== null && (
-                <p className="text-[12px] text-[#00cc66] mt-3 flex items-center gap-1.5">
+                <p className="text-[12px] text-primary mt-3 flex items-center gap-1.5">
                   <CalendarClock size={13} />
                   {meetingCount === 0
                     ? 'Geen vergaderingen vandaag in je agenda'
@@ -390,76 +390,76 @@ export default function MorningPage() {
             </div>
 
             {/* Blok 1 */}
-            <div className="rounded-[16px] border border-[#e8e8ec] p-5 space-y-3">
+            <div className="rounded-[16px] border border-line p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-[8px] bg-[#0a0a14] flex items-center justify-center">
+                  <div className="w-7 h-7 rounded-[8px] bg-surface-inverse flex items-center justify-center">
                     <span className="text-[11px] font-bold text-white">1</span>
                   </div>
-                  <span className="text-[14px] font-semibold text-[#0a0a14]">Focusblok 1</span>
+                  <span className="text-[14px] font-semibold text-ink">Focusblok 1</span>
                 </div>
-                <span className="text-[12px] font-semibold text-[#00cc66] bg-[#f0fdf4] px-3 py-1 rounded-full">
+                <span className="text-[12px] font-semibold text-primary bg-primary-muted px-3 py-1 rounded-full">
                   08:30 – 10:00
                 </span>
               </div>
               <div>
-                <label className="block text-[12px] text-[#8a8a9a] mb-1.5 font-medium uppercase tracking-wide">Wat ga ik doen?</label>
+                <label className="block text-[12px] text-ink-soft mb-1.5 font-medium uppercase tracking-wide">Wat ga ik doen?</label>
                 <input
                   type="text"
                   value={formData.focusBlok1.onderwerp}
                   onChange={(e) => setFormData({ ...formData, focusBlok1: { ...formData.focusBlok1, onderwerp: e.target.value } })}
                   placeholder="Bijv: Voorstel schrijven voor klant X"
-                  className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] transition-colors"
+                  className="w-full px-4 py-3 bg-surface-sunken border border-line focus:border-primary outline-none rounded-[12px] text-[14px] text-ink placeholder-ink-soft transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-[12px] text-[#8a8a9a] mb-1.5 font-medium uppercase tracking-wide">Welk doel wil ik bereiken?</label>
+                <label className="block text-[12px] text-ink-soft mb-1.5 font-medium uppercase tracking-wide">Welk doel wil ik bereiken?</label>
                 <input
                   type="text"
                   value={formData.focusBlok1.doel}
                   onChange={(e) => setFormData({ ...formData, focusBlok1: { ...formData.focusBlok1, doel: e.target.value } })}
                   placeholder="Bijv: Eerste versie klaar hebben"
-                  className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] transition-colors"
+                  className="w-full px-4 py-3 bg-surface-sunken border border-line focus:border-primary outline-none rounded-[12px] text-[14px] text-ink placeholder-ink-soft transition-colors"
                 />
               </div>
             </div>
 
             {/* Blok 2 */}
-            <div className="rounded-[16px] border border-[#e8e8ec] p-5 space-y-3">
+            <div className="rounded-[16px] border border-line p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-[8px] bg-[#0a0a14] flex items-center justify-center">
+                  <div className="w-7 h-7 rounded-[8px] bg-surface-inverse flex items-center justify-center">
                     <span className="text-[11px] font-bold text-white">2</span>
                   </div>
-                  <span className="text-[14px] font-semibold text-[#0a0a14]">Focusblok 2</span>
+                  <span className="text-[14px] font-semibold text-ink">Focusblok 2</span>
                 </div>
-                <span className="text-[12px] font-semibold text-[#00cc66] bg-[#f0fdf4] px-3 py-1 rounded-full">
+                <span className="text-[12px] font-semibold text-primary bg-primary-muted px-3 py-1 rounded-full">
                   12:30 – 14:00
                 </span>
               </div>
               <div>
-                <label className="block text-[12px] text-[#8a8a9a] mb-1.5 font-medium uppercase tracking-wide">Wat ga ik doen?</label>
+                <label className="block text-[12px] text-ink-soft mb-1.5 font-medium uppercase tracking-wide">Wat ga ik doen?</label>
                 <input
                   type="text"
                   value={formData.focusBlok2.onderwerp}
                   onChange={(e) => setFormData({ ...formData, focusBlok2: { ...formData.focusBlok2, onderwerp: e.target.value } })}
                   placeholder="Bijv: Acquisitiegesprekken voorbereiden"
-                  className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] transition-colors"
+                  className="w-full px-4 py-3 bg-surface-sunken border border-line focus:border-primary outline-none rounded-[12px] text-[14px] text-ink placeholder-ink-soft transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-[12px] text-[#8a8a9a] mb-1.5 font-medium uppercase tracking-wide">Welk doel wil ik bereiken?</label>
+                <label className="block text-[12px] text-ink-soft mb-1.5 font-medium uppercase tracking-wide">Welk doel wil ik bereiken?</label>
                 <input
                   type="text"
                   value={formData.focusBlok2.doel}
                   onChange={(e) => setFormData({ ...formData, focusBlok2: { ...formData.focusBlok2, doel: e.target.value } })}
                   placeholder="Bijv: 3 concrete afspraken ingepland"
-                  className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] transition-colors"
+                  className="w-full px-4 py-3 bg-surface-sunken border border-line focus:border-primary outline-none rounded-[12px] text-[14px] text-ink placeholder-ink-soft transition-colors"
                 />
               </div>
             </div>
 
-            <p className="text-center text-[12px] text-[#8a8a9a] italic px-2">
+            <p className="text-center text-[12px] text-ink-soft italic px-2">
               "Success is doing a few things well, consistently." — Tony Robbins
             </p>
           </div>
@@ -467,19 +467,19 @@ export default function MorningPage() {
 
         {/* Step: Status */}
         {step === 'status' && (
-          <div className="rounded-[16px] border border-[#e8e8ec] p-5 space-y-6">
+          <div className="rounded-[16px] border border-line p-5 space-y-6">
             <div className="flex items-center gap-2 mb-1">
-              <Zap size={16} className="text-[#f59e0b]" />
-              <span className="text-[14px] font-semibold text-[#0a0a14]">Hoe voel je je vandaag?</span>
+              <Zap size={16} className="text-tertiary" />
+              <span className="text-[14px] font-semibold text-ink">Hoe voel je je vandaag?</span>
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[13px] text-[#0a0a14]">Slaap kwaliteit</span>
-                <span className="text-[13px] font-semibold text-[#00cc66]">{formData.sleepQuality}/10</span>
+                <span className="text-[13px] text-ink">Slaap kwaliteit</span>
+                <span className="text-[13px] font-semibold text-primary">{formData.sleepQuality}/10</span>
               </div>
-              <div className="relative h-2 bg-[#f4f4f7] rounded-full">
+              <div className="relative h-2 bg-surface-sunken rounded-full">
                 <div
-                  className="absolute inset-y-0 left-0 bg-[#00cc66] rounded-full transition-all"
+                  className="absolute inset-y-0 left-0 bg-primary rounded-full transition-all"
                   style={{ width: `${(formData.sleepQuality / 10) * 100}%` }}
                 />
                 <input
@@ -491,12 +491,12 @@ export default function MorningPage() {
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[13px] text-[#0a0a14]">Energie niveau</span>
-                <span className="text-[13px] font-semibold text-[#00cc66]">{formData.energyLevel}/10</span>
+                <span className="text-[13px] text-ink">Energie niveau</span>
+                <span className="text-[13px] font-semibold text-primary">{formData.energyLevel}/10</span>
               </div>
-              <div className="relative h-2 bg-[#f4f4f7] rounded-full">
+              <div className="relative h-2 bg-surface-sunken rounded-full">
                 <div
-                  className="absolute inset-y-0 left-0 bg-[#00cc66] rounded-full transition-all"
+                  className="absolute inset-y-0 left-0 bg-primary rounded-full transition-all"
                   style={{ width: `${(formData.energyLevel / 10) * 100}%` }}
                 />
                 <input
@@ -508,21 +508,21 @@ export default function MorningPage() {
             </div>
             <div className="flex gap-4">
               <div className="flex-1">
-                <label className="block text-[13px] text-[#0a0a14] mb-2">Hoe laat ben je gaan slapen?</label>
+                <label className="block text-[13px] text-ink mb-2">Hoe laat ben je gaan slapen?</label>
                 <input
                   type="time"
                   value={formData.sleepTime}
                   onChange={(e) => setFormData({ ...formData, sleepTime: e.target.value })}
-                  className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] transition-colors"
+                  className="w-full px-4 py-3 bg-surface-sunken border border-line focus:border-primary outline-none rounded-[12px] text-[14px] text-ink transition-colors"
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-[13px] text-[#0a0a14] mb-2">Hoe laat ben je wakker geworden?</label>
+                <label className="block text-[13px] text-ink mb-2">Hoe laat ben je wakker geworden?</label>
                 <input
                   type="time"
                   value={formData.wakeTime}
                   onChange={(e) => setFormData({ ...formData, wakeTime: e.target.value })}
-                  className="w-full px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] transition-colors"
+                  className="w-full px-4 py-3 bg-surface-sunken border border-line focus:border-primary outline-none rounded-[12px] text-[14px] text-ink transition-colors"
                 />
               </div>
             </div>
@@ -531,15 +531,15 @@ export default function MorningPage() {
 
         {/* Step: Dankbaarheid */}
         {step === 'dankbaarheid' && (
-          <div className="rounded-[16px] border border-[#e8e8ec] p-5">
+          <div className="rounded-[16px] border border-line p-5">
             <div className="flex items-center gap-2 mb-4">
-              <Heart size={16} className="text-[#be185d]" />
-              <span className="text-[14px] font-semibold text-[#0a0a14]">3 dingen waar ik dankbaar voor ben</span>
+              <Heart size={16} className="text-tertiary" />
+              <span className="text-[14px] font-semibold text-ink">3 dingen waar ik dankbaar voor ben</span>
             </div>
             <div className="space-y-3">
               {[0, 1, 2].map((index) => (
                 <div key={index} className="flex items-center gap-2.5">
-                  <span className="w-6 h-6 rounded-full bg-[#f4f4f7] text-[#8a8a9a] text-[11px] font-bold flex items-center justify-center flex-shrink-0">
+                  <span className="w-6 h-6 rounded-full bg-surface-sunken text-ink-soft text-[11px] font-bold flex items-center justify-center flex-shrink-0">
                     {index + 1}
                   </span>
                   <input
@@ -547,7 +547,7 @@ export default function MorningPage() {
                     value={formData.dankbaarheid[index]}
                     onChange={(e) => updateDankbaarheid(index, e.target.value)}
                     placeholder="Ik ben dankbaar voor..."
-                    className="flex-1 px-4 py-3 bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] transition-colors"
+                    className="flex-1 px-4 py-3 bg-surface-sunken border border-line focus:border-primary outline-none rounded-[12px] text-[14px] text-ink placeholder-ink-soft transition-colors"
                   />
                 </div>
               ))}
@@ -558,24 +558,24 @@ export default function MorningPage() {
         {/* Step: Affirmatie */}
         {step === 'affirmatie' && (
           <div className="space-y-4">
-            <div className="rounded-[16px] bg-[#0a0a14] p-5">
+            <div className="rounded-[16px] bg-surface-inverse p-5">
               <p className="text-[13px] text-white/50 leading-relaxed">
                 Een krachtige affirmatie zet je neurale netwerk klaar voor succes. Schrijf vanuit geloof, niet vanuit verlangen.
               </p>
             </div>
-            <div className="rounded-[16px] border border-[#e8e8ec] p-5">
+            <div className="rounded-[16px] border border-line p-5">
               <div className="flex items-center gap-2 mb-3">
-                <Zap size={16} className="text-[#f59e0b]" />
-                <span className="text-[14px] font-semibold text-[#0a0a14]">Mijn affirmatie voor vandaag</span>
+                <Zap size={16} className="text-tertiary" />
+                <span className="text-[14px] font-semibold text-ink">Mijn affirmatie voor vandaag</span>
               </div>
               <textarea
                 value={formData.affirmatie}
                 onChange={(e) => setFormData({ ...formData, affirmatie: e.target.value })}
                 placeholder="Ik ben... Ik heb... Ik bereik..."
                 rows={4}
-                className="w-full resize-none bg-[#f4f4f7] border border-[#e8e8ec] focus:border-[#00cc66] outline-none rounded-[12px] px-4 py-3 text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] transition-colors"
+                className="w-full resize-none bg-surface-sunken border border-line focus:border-primary outline-none rounded-[12px] px-4 py-3 text-[14px] text-ink placeholder-ink-soft transition-colors"
               />
-              <p className="text-[11px] text-[#8a8a9a] mt-3 italic">
+              <p className="text-[11px] text-ink-soft mt-3 italic">
                 Tip: Schrijf in de tegenwoordige tijd. Bijv: &quot;Ik ben een krachtige, impactvolle ondernemer.&quot;
               </p>
             </div>
@@ -587,7 +587,7 @@ export default function MorningPage() {
           {currentIndex > 0 && (
             <button
               onClick={goPrev}
-              className="flex-1 py-3.5 rounded-[14px] border border-[#e8e8ec] text-[14px] font-medium text-[#8a8a9a] active:scale-[0.98] transition-transform"
+              className="flex-1 py-3.5 rounded-[14px] border border-line text-[14px] font-medium text-ink-soft active:scale-[0.98] transition-transform"
             >
               Vorige
             </button>
@@ -595,7 +595,7 @@ export default function MorningPage() {
           <button
             onClick={goNext}
             disabled={!canGoNext() || saving}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-[#00cc66] text-white text-[14px] font-semibold rounded-[14px] active:scale-[0.98] transition-transform disabled:opacity-40 shadow-[0_2px_12px_rgba(0,204,102,0.3)]"
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-primary text-white text-[14px] font-semibold rounded-[14px] active:scale-[0.98] transition-transform disabled:opacity-40 shadow-[0_2px_12px_rgba(81,96,80,0.3)]"
           >
             {saving ? (
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -620,10 +620,10 @@ export default function MorningPage() {
               key={s}
               className={`h-1.5 rounded-full transition-all duration-300 ${
                 i === currentIndex
-                  ? 'w-5 bg-[#00cc66]'
+                  ? 'w-5 bg-primary'
                   : i < currentIndex
-                  ? 'w-1.5 bg-[#00cc66]/40'
-                  : 'w-1.5 bg-[#e8e8ec]'
+                  ? 'w-1.5 bg-primary/40'
+                  : 'w-1.5 bg-line'
               }`}
             />
           ))}

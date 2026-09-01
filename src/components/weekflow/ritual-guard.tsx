@@ -47,10 +47,10 @@ export function RitualGuard({ children }: RitualGuardProps) {
   // Show loading state while checking
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gold-500 border-t-transparent mx-auto mb-4" />
-          <p className="text-slate-600 dark:text-slate-400 font-medium">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mx-auto mb-4" />
+          <p className="text-ink-soft font-medium">
             Even checken...
           </p>
         </div>

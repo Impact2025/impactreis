@@ -31,8 +31,8 @@ export function SmartWelcome({ userName }: SmartWelcomeProps) {
   if (!isClient || !recoveryStatus) {
     return (
       <div className="mb-8 animate-pulse">
-        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-48 mb-2" />
-        <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-64" />
+        <div className="h-8 bg-surface-sunken  rounded w-48 mb-2" />
+        <div className="h-5 bg-surface-sunken  rounded w-64" />
       </div>
     );
   }
@@ -47,14 +47,14 @@ export function SmartWelcome({ userName }: SmartWelcomeProps) {
     return (
       <div className="mb-8">
         {/* Recovery Banner */}
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl p-6 text-white mb-4">
+        <div className="bg-gradient-to-r from-accent to-accent rounded-2xl p-6 text-white mb-4">
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <RefreshCw size={24} />
                 <h2 className="text-2xl font-bold">Welkom terug!</h2>
               </div>
-              <p className="text-indigo-100 mb-4">
+              <p className="text-accent-soft mb-4">
                 {daysAwayFromApp >= 7
                   ? `Je was ${daysAwayFromApp} dagen weg. Geen zorgen - laten we opnieuw beginnen!`
                   : `Je was ${daysAwayFromApp} dagen weg. Laten we verder gaan waar je was gebleven.`}
@@ -63,7 +63,7 @@ export function SmartWelcome({ userName }: SmartWelcomeProps) {
                 {suggestedAction && (
                   <Link
                     href={suggestedAction.path}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 rounded-lg font-medium hover:bg-indigo-50 transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-white text-accent rounded-lg font-medium hover:bg-accent-soft transition-colors"
                   >
                     {suggestedAction.title}
                     <ArrowRight size={16} />
@@ -98,11 +98,11 @@ export function SmartWelcome({ userName }: SmartWelcomeProps) {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
+            <h2 className="text-2xl font-bold text-ink ">
               {welcome.greeting}
             </h2>
             {streakData.currentStreak > 0 && (
-              <p className={`text-sm ${streakMessage.type === 'warning' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>
+              <p className={`text-sm ${streakMessage.type === 'warning' ? 'text-tertiary ' : 'text-ink-soft'}`}>
                 {streakMessage.message}
               </p>
             )}
@@ -112,19 +112,19 @@ export function SmartWelcome({ userName }: SmartWelcomeProps) {
 
         {/* Weekly Start Prompt */}
         <div className={`rounded-2xl p-5 border ${isLastChance
-          ? 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-amber-200 dark:border-amber-800'
-          : 'bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-emerald-200 dark:border-emerald-800'
+          ? 'bg-gradient-to-r from-tertiary-soft to-tertiary-soft   border-tertiary-soft '
+          : 'bg-gradient-to-r from-primary-muted to-primary-muted   border-primary-muted '
           }`}>
           <div className="flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isLastChance ? 'bg-amber-500' : 'bg-emerald-500'
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isLastChance ? 'bg-tertiary' : 'bg-primary'
               }`}>
               <CalendarDays className="text-white" size={24} />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-slate-800 dark:text-white">
+              <h3 className="font-semibold text-ink ">
                 {isLastChance ? 'Laatste kans voor je weekstart!' : 'Je kunt je week nog starten'}
               </h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
+              <p className="text-sm text-ink-soft ">
                 {isLastChance
                   ? 'Vandaag is de laatste dag om je week te plannen.'
                   : 'Plan je week met focus en intentie.'}
@@ -134,15 +134,15 @@ export function SmartWelcome({ userName }: SmartWelcomeProps) {
               <Link
                 href="/weekly-start"
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${isLastChance
-                  ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                  : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                  ? 'bg-tertiary hover:bg-tertiary text-white'
+                  : 'bg-primary hover:bg-primary text-white'
                   }`}
               >
                 Start Week
               </Link>
               <Link
                 href="/morning"
-                className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors"
+                className="px-4 py-2 text-ink-soft  hover:text-ink  transition-colors"
               >
                 Ochtend
               </Link>
@@ -158,16 +158,16 @@ export function SmartWelcome({ userName }: SmartWelcomeProps) {
     <div className="mb-8">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-1">
+          <h2 className="text-2xl font-bold text-ink  mb-1">
             {welcome.greeting} {userName ? userName : ''}
           </h2>
-          <p className="text-slate-600 dark:text-slate-400">
+          <p className="text-ink-soft ">
             {welcome.subtitle}
           </p>
           {streakData.currentStreak > 0 && streakMessage.type !== 'neutral' && (
             <p className={`text-sm mt-1 ${streakMessage.type === 'warning'
-              ? 'text-amber-600 dark:text-amber-400'
-              : 'text-emerald-600 dark:text-emerald-400'
+              ? 'text-tertiary '
+              : 'text-primary '
               }`}>
               {streakMessage.message}
             </p>
@@ -178,14 +178,14 @@ export function SmartWelcome({ userName }: SmartWelcomeProps) {
 
       {/* Quick action if morning not done */}
       {suggestedAction && suggestedAction.type === 'morning' && (
-        <div className="mt-4 flex items-center gap-3 p-3 bg-orange-50 dark:bg-orange-950/30 rounded-xl border border-orange-200 dark:border-orange-800">
-          <Sunrise className="text-orange-500" size={20} />
-          <span className="text-sm text-slate-700 dark:text-slate-300 flex-1">
+        <div className="mt-4 flex items-center gap-3 p-3 bg-tertiary-soft  rounded-xl border border-tertiary-soft ">
+          <Sunrise className="text-tertiary" size={20} />
+          <span className="text-sm text-ink-soft  flex-1">
             {suggestedAction.description}
           </span>
           <Link
             href={suggestedAction.path}
-            className="text-sm font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700"
+            className="text-sm font-medium text-tertiary  hover:text-tertiary"
           >
             Start nu
           </Link>

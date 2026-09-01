@@ -82,39 +82,39 @@ function ShareContent() {
 
   if (saved) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gradient-to-br from-surface-inverse via-surface-inverse to-surface-inverse flex items-center justify-center p-6">
         <div className="text-center">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+          <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="w-8 h-8 text-primary" />
           </div>
           <h2 className="text-xl font-bold text-white mb-2">Opgeslagen!</h2>
-          <p className="text-slate-400">Je wordt doorgestuurd...</p>
+          <p className="text-ink-soft">Je wordt doorgestuurd...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-surface-inverse via-surface-inverse to-surface-inverse p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center">
-            <Share2 className="w-5 h-5 text-indigo-400" />
+          <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
+            <Share2 className="w-5 h-5 text-accent" />
           </div>
           <h1 className="text-xl font-bold text-white">Gedeelde content</h1>
         </div>
         <button
           onClick={handleClose}
-          className="p-2 hover:bg-slate-800 rounded-full transition-colors"
+          className="p-2 hover:bg-surface-inverse rounded-full transition-colors"
         >
-          <X className="w-5 h-5 text-slate-400" />
+          <X className="w-5 h-5 text-ink-soft" />
         </button>
       </div>
 
       {/* Type selector */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-slate-300 mb-3">
+        <label className="block text-sm font-medium text-outline mb-3">
           Opslaan als
         </label>
         <div className="flex gap-3">
@@ -122,8 +122,8 @@ function ShareContent() {
             onClick={() => setShareType('win')}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border transition-colors ${
               shareType === 'win'
-                ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:border-slate-600'
+                ? 'bg-tertiary/20 border-tertiary/50 text-tertiary'
+                : 'bg-surface-inverse/50 border-line/50 text-ink-soft hover:border-line'
             }`}
           >
             <Trophy className="w-5 h-5" />
@@ -133,8 +133,8 @@ function ShareContent() {
             onClick={() => setShareType('goal')}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border transition-colors ${
               shareType === 'goal'
-                ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
-                : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:border-slate-600'
+                ? 'bg-accent/20 border-accent/50 text-accent'
+                : 'bg-surface-inverse/50 border-line/50 text-ink-soft hover:border-line'
             }`}
           >
             <Target className="w-5 h-5" />
@@ -145,7 +145,7 @@ function ShareContent() {
 
       {/* Title */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-slate-300 mb-2">
+        <label className="block text-sm font-medium text-outline mb-2">
           Titel
         </label>
         <input
@@ -153,13 +153,13 @@ function ShareContent() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Geef een titel..."
-          className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50"
+          className="w-full px-4 py-3 bg-surface-inverse/50 border border-line/50 rounded-xl text-white placeholder-ink-soft focus:outline-none focus:border-accent/50"
         />
       </div>
 
       {/* Text */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-slate-300 mb-2">
+        <label className="block text-sm font-medium text-outline mb-2">
           Beschrijving
         </label>
         <textarea
@@ -167,18 +167,18 @@ function ShareContent() {
           onChange={(e) => setText(e.target.value)}
           placeholder="Beschrijving..."
           rows={4}
-          className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 resize-none"
+          className="w-full px-4 py-3 bg-surface-inverse/50 border border-line/50 rounded-xl text-white placeholder-ink-soft focus:outline-none focus:border-accent/50 resize-none"
         />
       </div>
 
       {/* URL */}
       {url && (
         <div className="mb-6">
-          <label className="block text-sm font-medium text-slate-300 mb-2">
+          <label className="block text-sm font-medium text-outline mb-2">
             Bron
           </label>
-          <div className="px-4 py-3 bg-slate-800/30 border border-slate-700/30 rounded-xl">
-            <p className="text-slate-400 text-sm truncate">{url}</p>
+          <div className="px-4 py-3 bg-surface-inverse/30 border border-line/30 rounded-xl">
+            <p className="text-ink-soft text-sm truncate">{url}</p>
           </div>
         </div>
       )}
@@ -187,7 +187,7 @@ function ShareContent() {
       <button
         onClick={handleSave}
         disabled={isSaving || !title.trim()}
-        className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+        className="w-full py-4 bg-accent hover:bg-accent disabled:bg-surface-inverse disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
       >
         {isSaving ? (
           <>
@@ -207,10 +207,10 @@ function ShareContent() {
 
 function ShareLoading() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-surface-inverse via-surface-inverse to-surface-inverse flex items-center justify-center p-6">
       <div className="text-center">
-        <Loader2 className="w-8 h-8 text-indigo-400 animate-spin mx-auto mb-4" />
-        <p className="text-slate-400">Laden...</p>
+        <Loader2 className="w-8 h-8 text-accent animate-spin mx-auto mb-4" />
+        <p className="text-ink-soft">Laden...</p>
       </div>
     </div>
   );

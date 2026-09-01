@@ -24,16 +24,16 @@ export function VisualizationWins({ values, onChange }: VisualizationWinsProps) 
   const allVisualized = visualizedIndex.size === 3 && values.every(v => v.trim().length > 0);
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <div className="bg-white  rounded-2xl border border-line  overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+      <div className="p-4 border-b border-line ">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-accent to-accent rounded-xl flex items-center justify-center">
             <Eye className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="font-semibold text-slate-900 dark:text-white">3 Wins Visualisatie</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <h3 className="font-semibold text-ink ">3 Wins Visualisatie</h3>
+            <p className="text-sm text-ink-soft ">
               Zie vandaag als al voltooid - voel het succes
             </p>
           </div>
@@ -41,15 +41,15 @@ export function VisualizationWins({ values, onChange }: VisualizationWinsProps) 
       </div>
 
       {/* Instructions */}
-      <div className="p-4 bg-violet-50 dark:bg-violet-900/20 border-b border-violet-200 dark:border-violet-800">
-        <p className="text-sm text-violet-700 dark:text-violet-300">
+      <div className="p-4 bg-accent-soft  border-b border-accent-soft ">
+        <p className="text-sm text-accent ">
           <strong>Instructie:</strong> Schrijf 3 dingen op die je vandaag wilt bereiken,
           en visualiseer ze als <em>al voltooid</em>. Sluit je ogen en voel hoe het voelt om te winnen.
         </p>
       </div>
 
       {/* Win Items */}
-      <div className="divide-y divide-slate-200 dark:divide-slate-800">
+      <div className="divide-y divide-line ">
         {[0, 1, 2].map((index) => {
           const hasValue = values[index]?.trim().length > 0;
           const isVisualized = visualizedIndex.has(index);
@@ -59,8 +59,8 @@ export function VisualizationWins({ values, onChange }: VisualizationWinsProps) 
               <div className="flex items-start gap-3">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${
                   isVisualized
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                    ? 'bg-primary text-white'
+                    : 'bg-surface-card  text-ink-soft'
                 }`}>
                   {isVisualized ? (
                     <Check className="w-4 h-4" />
@@ -74,13 +74,13 @@ export function VisualizationWins({ values, onChange }: VisualizationWinsProps) 
                     value={values[index] || ''}
                     onChange={(e) => updateValue(index, e.target.value)}
                     placeholder={`Win ${index + 1}: Ik heb vandaag...`}
-                    className="w-full bg-transparent border-none text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none"
+                    className="w-full bg-transparent border-none text-ink  placeholder:text-ink-soft focus:outline-none"
                   />
 
                   {hasValue && !isVisualized && (
                     <button
                       onClick={() => markAsVisualized(index)}
-                      className="mt-2 flex items-center gap-2 text-sm text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
+                      className="mt-2 flex items-center gap-2 text-sm text-accent  hover:text-accent  transition-colors"
                     >
                       <Eye size={14} />
                       Klik na visualisatie (30 sec)
@@ -88,7 +88,7 @@ export function VisualizationWins({ values, onChange }: VisualizationWinsProps) 
                   )}
 
                   {isVisualized && (
-                    <div className="mt-2 flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
+                    <div className="mt-2 flex items-center gap-2 text-sm text-primary ">
                       <Sparkles size={14} />
                       Gevisualiseerd als voltooid
                     </div>
@@ -102,7 +102,7 @@ export function VisualizationWins({ values, onChange }: VisualizationWinsProps) 
 
       {/* Completion message */}
       {allVisualized && (
-        <div className="p-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white text-center">
+        <div className="p-4 bg-gradient-to-r from-primary to-primary text-white text-center">
           <div className="flex items-center justify-center gap-2">
             <Sparkles className="w-5 h-5" />
             <span className="font-medium">Alle wins gevisualiseerd! Je dag is al gewonnen.</span>
@@ -112,10 +112,10 @@ export function VisualizationWins({ values, onChange }: VisualizationWinsProps) 
       )}
 
       {/* Tony Robbins Quote */}
-      <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700">
-        <p className="text-sm text-slate-600 dark:text-slate-400 italic text-center">
+      <div className="p-4 bg-surface-card  border-t border-line ">
+        <p className="text-sm text-ink-soft  italic text-center">
           "The past does not equal the future. Your present decisions create your future."
-          <span className="block text-xs text-slate-400 mt-1">— Tony Robbins</span>
+          <span className="block text-xs text-ink-soft mt-1">— Tony Robbins</span>
         </p>
       </div>
     </div>

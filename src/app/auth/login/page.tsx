@@ -53,14 +53,14 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="text-center mb-10">
-          <div className="w-12 h-12 rounded-[14px] bg-[#0a0a14] flex items-center justify-center mx-auto mb-5 text-white text-[16px] font-bold">
+          <div className="w-12 h-12 rounded-[14px] bg-surface-inverse flex items-center justify-center mx-auto mb-5 text-white text-[16px] font-bold">
             OS
           </div>
-          <h1 className="text-[28px] font-bold text-[#0a0a14] tracking-tight">
+          <h1 className="text-[28px] font-bold text-ink tracking-tight">
             Welkom terug
           </h1>
-          <p className="text-[13px] text-[#8a8a9a] mt-1.5">
-            Personal OS voor Hoogbegaafde Ondernemers
+          <p className="text-[13px] text-ink-soft mt-1.5">
+            Personal OS voor ondernemers die impact willen maken
           </p>
         </div>
 
@@ -72,7 +72,7 @@ export default function LoginPage() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3.5 rounded-[14px] bg-[#f4f4f7] border border-transparent text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66] focus:bg-white transition-all"
+              className="w-full px-4 py-3.5 rounded-[14px] bg-surface-sunken border border-transparent text-[14px] text-ink placeholder-ink-soft outline-none focus:border-primary focus:bg-white transition-all"
             />
             <div className="relative">
               <input
@@ -81,11 +81,11 @@ export default function LoginPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-3.5 rounded-[14px] bg-[#f4f4f7] border border-transparent text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66] focus:bg-white transition-all"
+                className="w-full px-4 py-3.5 rounded-[14px] bg-surface-sunken border border-transparent text-[14px] text-ink placeholder-ink-soft outline-none focus:border-primary focus:bg-white transition-all"
               />
             </div>
             <div className="text-right">
-              <Link href="/auth/forgot-password" className="text-[12px] text-[#8a8a9a] hover:text-[#00cc66] transition-colors">
+              <Link href="/auth/forgot-password" className="text-[12px] text-ink-soft hover:text-primary transition-colors">
                 Wachtwoord vergeten?
               </Link>
             </div>
@@ -100,10 +100,10 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-[14px] bg-[#00cc66] text-[#0a0a14] font-bold text-[14px] flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(0,204,102,0.35)] active:scale-[0.98] transition-all disabled:opacity-60 mt-2"
+              className="w-full py-3.5 rounded-[14px] bg-primary text-white font-bold text-[14px] flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(81,96,80,0.35)] active:scale-[0.98] transition-all disabled:opacity-60 mt-2"
             >
               {loading
-                ? <div className="w-4 h-4 border-2 border-[#0a0a14]/30 border-t-[#0a0a14] rounded-full animate-spin" />
+                ? <div className="w-4 h-4 border-2 border-ink/30 border-t-[#0a0a14] rounded-full animate-spin" />
                 : <>Inloggen <ArrowRight size={15} /></>
               }
             </button>
@@ -111,7 +111,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => { setMode('magic-link'); setError(''); }}
-              className="w-full py-3 rounded-[14px] border border-[#f0f0f3] text-[13px] text-[#0a0a14] font-semibold flex items-center justify-center gap-2 hover:border-[#00cc66] transition-colors"
+              className="w-full py-3 rounded-[14px] border border-[#f0f0f3] text-[13px] text-ink font-semibold flex items-center justify-center gap-2 hover:border-primary transition-colors"
             >
               <Mail size={15} /> Inloggen via magic link
             </button>
@@ -124,9 +124,9 @@ export default function LoginPage() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3.5 rounded-[14px] bg-[#f4f4f7] border border-transparent text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66] focus:bg-white transition-all"
+              className="w-full px-4 py-3.5 rounded-[14px] bg-surface-sunken border border-transparent text-[14px] text-ink placeholder-ink-soft outline-none focus:border-primary focus:bg-white transition-all"
             />
-            <p className="text-[12px] text-[#8a8a9a] px-1">
+            <p className="text-[12px] text-ink-soft px-1">
               We sturen je een inloglink per e-mail — geen wachtwoord nodig.
             </p>
 
@@ -140,10 +140,10 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-[14px] bg-[#00cc66] text-[#0a0a14] font-bold text-[14px] flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(0,204,102,0.35)] active:scale-[0.98] transition-all disabled:opacity-60 mt-2"
+              className="w-full py-3.5 rounded-[14px] bg-primary text-white font-bold text-[14px] flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(81,96,80,0.35)] active:scale-[0.98] transition-all disabled:opacity-60 mt-2"
             >
               {loading
-                ? <div className="w-4 h-4 border-2 border-[#0a0a14]/30 border-t-[#0a0a14] rounded-full animate-spin" />
+                ? <div className="w-4 h-4 border-2 border-ink/30 border-t-[#0a0a14] rounded-full animate-spin" />
                 : <>Stuur inloglink <ArrowRight size={15} /></>
               }
             </button>
@@ -151,16 +151,16 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => { setMode('password'); setError(''); }}
-              className="w-full py-3 rounded-[14px] border border-[#f0f0f3] text-[13px] text-[#0a0a14] font-semibold hover:border-[#00cc66] transition-colors"
+              className="w-full py-3 rounded-[14px] border border-[#f0f0f3] text-[13px] text-ink font-semibold hover:border-primary transition-colors"
             >
               Terug naar wachtwoord
             </button>
           </form>
         )}
 
-        <p className="text-center text-[13px] text-[#8a8a9a] mt-6">
+        <p className="text-center text-[13px] text-ink-soft mt-6">
           Nog geen account?{' '}
-          <Link href="/auth/register" className="text-[#0a0a14] font-semibold hover:text-[#00cc66] transition-colors">
+          <Link href="/auth/register" className="text-ink font-semibold hover:text-primary transition-colors">
             Registreer gratis
           </Link>
         </p>

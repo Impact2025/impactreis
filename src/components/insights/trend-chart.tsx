@@ -15,7 +15,7 @@ interface TrendChartProps {
 
 export function TrendChart({
   data,
-  color = '#6366f1',
+  color = '#53606c',
   height = 120,
   showLabels = true,
   label,
@@ -28,7 +28,7 @@ export function TrendChart({
   if (validData.length === 0) {
     return (
       <div
-        className="flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm"
+        className="flex items-center justify-center text-outline text-sm"
         style={{ height }}
       >
         Nog geen data beschikbaar
@@ -73,7 +73,7 @@ export function TrendChart({
   return (
     <div className="relative" style={{ height }}>
       {label && (
-        <div className="absolute top-0 left-0 text-xs font-medium text-slate-500 dark:text-slate-400">
+        <div className="absolute top-0 left-0 text-xs font-medium text-ink-soft">
           {label}
         </div>
       )}
@@ -92,7 +92,7 @@ export function TrendChart({
           y2={chartHeight / 2}
           stroke="currentColor"
           strokeWidth="0.3"
-          className="text-slate-200 dark:text-slate-700"
+          className="text-line"
         />
 
         {/* Area fill */}
@@ -129,15 +129,15 @@ export function TrendChart({
 
       {/* Labels */}
       {showLabels && validData.length > 0 && (
-        <div className="flex justify-between text-xs text-slate-400 dark:text-slate-500 mt-1">
+        <div className="flex justify-between text-xs text-outline mt-1">
           <span>{validData[0]?.date ? new Date(validData[0].date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) : ''}</span>
           <span
             className={`font-medium ${
               trend === 'up'
-                ? 'text-emerald-600 dark:text-emerald-400'
+                ? 'text-primary'
                 : trend === 'down'
-                ? 'text-red-500'
-                : 'text-slate-500'
+                ? 'text-error'
+                : 'text-ink-soft'
             }`}
           >
             {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→'} {validData[validData.length - 1]?.value?.toFixed(1) || '0'}
@@ -166,11 +166,11 @@ export function BarChart({ data, height = 200, maxValue }: BarChartProps) {
             className="w-full rounded-t-lg transition-all duration-500"
             style={{
               height: `${(item.value / max) * 100}%`,
-              backgroundColor: item.color || '#6366f1',
+              backgroundColor: item.color || '#53606c',
               minHeight: item.value > 0 ? '4px' : '0',
             }}
           />
-          <span className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-full">
+          <span className="text-xs text-ink-soft truncate max-w-full">
             {item.label}
           </span>
         </div>
@@ -190,7 +190,7 @@ export function DonutChart({ data, size = 120, thickness = 20 }: DonutChartProps
   if (total === 0) {
     return (
       <div
-        className="flex items-center justify-center text-slate-400 text-sm"
+        className="flex items-center justify-center text-outline text-sm"
         style={{ width: size, height: size }}
       >
         Geen data
@@ -228,7 +228,7 @@ export function DonutChart({ data, size = 120, thickness = 20 }: DonutChartProps
         })}
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-2xl font-bold text-slate-800 dark:text-white">{total}</span>
+        <span className="text-2xl font-bold text-ink">{total}</span>
       </div>
     </div>
   );
@@ -246,7 +246,7 @@ export function ProgressRing({
   progress,
   size = 80,
   strokeWidth = 8,
-  color = '#6366f1',
+  color = '#53606c',
   label,
 }: ProgressRingProps) {
   const radius = (size - strokeWidth) / 2;
@@ -264,7 +264,7 @@ export function ProgressRing({
           fill="none"
           stroke="currentColor"
           strokeWidth={strokeWidth}
-          className="text-slate-200 dark:text-slate-700"
+          className="text-line"
         />
         {/* Progress circle */}
         <circle
@@ -281,11 +281,11 @@ export function ProgressRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-lg font-bold text-slate-800 dark:text-white">
+        <span className="text-lg font-bold text-ink">
           {Math.round(progress)}%
         </span>
         {label && (
-          <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
+          <span className="text-xs text-ink-soft">{label}</span>
         )}
       </div>
     </div>
