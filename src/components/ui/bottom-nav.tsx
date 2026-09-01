@@ -125,7 +125,7 @@ export function BottomNav({ fab }: BottomNavProps) {
               <button
                 onClick={fab.onClick}
                 aria-label={fab.label ?? 'Toevoegen'}
-                className="rounded-full bg-primary text-white flex items-center justify-center shadow-[0_4px_20px_rgba(0,204,102,0.4)] active:scale-95 transition-transform -mt-6"
+                className="rounded-full bg-primary text-white flex items-center justify-center shadow-[0_4px_20px_rgba(81,96,80,0.4)] active:scale-95 transition-transform -mt-6"
                 style={{ width: 52, height: 52 }}
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -140,7 +140,7 @@ export function BottomNav({ fab }: BottomNavProps) {
               >
                 <span
                   className={`rounded-full flex items-center justify-center transition-colors ${
-                    isActive(TABS[2].href) ? 'bg-primary' : 'bg-ink'
+                    isActive(TABS[2].href) ? 'bg-primary' : 'bg-surface-inverse'
                   }`}
                   style={{ width: 44, height: 44, boxShadow: '0 4px 16px rgba(10,10,20,0.25)' }}
                 >

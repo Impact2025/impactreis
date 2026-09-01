@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Trash2, Sun, Moon } from 'lucide-react';
+import { ArrowLeft, Trash2, Sun, Moon, Check } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
@@ -21,11 +21,11 @@ interface DagboekEntry {
 }
 
 const STEMMINGEN = [
-  { waarde: 1, emoji: '😔', label: 'Zwaar' },
-  { waarde: 2, emoji: '😐', label: 'Matig' },
-  { waarde: 3, emoji: '🙂', label: 'Oké' },
-  { waarde: 4, emoji: '😊', label: 'Goed' },
-  { waarde: 5, emoji: '🤩', label: 'Super' },
+  { waarde: 1, label: 'Zwaar' },
+  { waarde: 2, label: 'Matig' },
+  { waarde: 3, label: 'Oké'   },
+  { waarde: 4, label: 'Goed'  },
+  { waarde: 5, label: 'Super' },
 ];
 
 function getMomentLabel(type: string) {
@@ -34,8 +34,8 @@ function getMomentLabel(type: string) {
 
 function getMomentIcon(type: string) {
   return type === 'dagboek_ochtend'
-    ? <Sun size={13} className="inline-block mr-1 text-amber-400" />
-    : <Moon size={13} className="inline-block mr-1 text-indigo-400" />;
+    ? <Sun size={13} className="inline-block mr-1 text-tertiary" />
+    : <Moon size={13} className="inline-block mr-1 text-accent" />;
 }
 
 function groupByDate(entries: DagboekEntry[]) {
@@ -120,27 +120,29 @@ export default function DagboekPage() {
   const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
   const alreadySaved = todayHasEntry(moment);
+  const savedEntry = entries.find(e => e.date_string === today && e.type === `dagboek_${moment}`);
+  const savedMood = STEMMINGEN.find(s => s.waarde === savedEntry?.data?.stemming);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#ffffff] flex items-center justify-center">
-        <div className="w-6 h-6 rounded-full border-2 border-[#00cc66] border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#ffffff] pb-28">
+    <div className="min-h-screen bg-surface pb-28">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#ffffff] border-b border-[#e8e8ec]">
+      <div className="sticky top-0 z-10 bg-surface border-b border-line">
         <div className="max-w-lg mx-auto px-5 py-4 flex items-center gap-3">
           <Link
             href="/dashboard"
-            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#f4f4f7] transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-sunken transition-colors"
           >
-            <ArrowLeft size={18} className="text-[#0a0a14]" />
+            <ArrowLeft size={18} className="text-ink" />
           </Link>
-          <h1 className="text-[17px] font-semibold text-[#0a0a14]">Dagboek</h1>
+          <h1 className="text-[17px] font-semibold text-ink">Dagboek</h1>
         </div>
       </div>
 
@@ -154,66 +156,74 @@ export default function DagboekPage() {
               onClick={() => { setMoment(m); setStemming(null); setTekst(''); }}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[12px] text-[13px] font-medium transition-colors ${
                 moment === m
-                  ? 'bg-[#0a0a14] text-white'
-                  : 'bg-[#f4f4f7] text-[#8a8a9a]'
+                  ? 'bg-surface-inverse text-on-surface-inverse'
+                  : 'bg-surface-sunken text-ink-soft'
               }`}
             >
               {m === 'ochtend'
-                ? <Sun size={14} className={moment === m ? 'text-amber-300' : 'text-amber-400'} />
-                : <Moon size={14} className={moment === m ? 'text-indigo-300' : 'text-indigo-400'} />}
+                ? <Sun size={14} className={moment === m ? 'text-tertiary-soft' : 'text-tertiary'} />
+                : <Moon size={14} className={moment === m ? 'text-accent-soft' : 'text-accent'} />}
               {m.charAt(0).toUpperCase() + m.slice(1)}
               {todayHasEntry(m) && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[#00cc66] ml-0.5" />
+                <span className="w-1.5 h-1.5 rounded-full bg-primary ml-0.5" />
               )}
             </button>
           ))}
         </div>
 
         {/* Entry form */}
-        <div className="rounded-[16px] border border-[#e8e8ec] p-5">
+        <div className="rounded-card border border-line bg-surface-card p-5 shadow-organic">
           {alreadySaved ? (
             <div className="text-center py-4">
-              <p className="text-[28px] mb-2">
-                {STEMMINGEN.find(s => s.waarde === entries.find(e => e.date_string === today && e.type === `dagboek_${moment}`)?.data?.stemming)?.emoji ?? '✓'}
+              <div className="w-11 h-11 rounded-full bg-primary-muted flex items-center justify-center mx-auto mb-3">
+                <Check size={20} className="text-primary" />
+              </div>
+              <p className="text-[14px] font-medium text-ink">
+                Al ingevuld vandaag{savedMood ? ` — ${savedMood.label.toLowerCase()}` : ''}
               </p>
-              <p className="text-[14px] font-medium text-[#0a0a14]">Al ingevuld vandaag</p>
-              <p className="text-[12px] text-[#8a8a9a] mt-1">
-                {entries.find(e => e.date_string === today && e.type === `dagboek_${moment}`)?.data?.tekst || ''}
+              <p className="text-[12px] text-ink-soft mt-1">
+                {savedEntry?.data?.tekst || ''}
               </p>
               <button
-                onClick={() => {
-                  const entry = entries.find(e => e.date_string === today && e.type === `dagboek_${moment}`);
-                  if (entry) handleDelete(entry.id);
-                }}
-                className="mt-4 text-[12px] text-[#8a8a9a] hover:text-red-500 transition-colors flex items-center gap-1 mx-auto"
+                onClick={() => { if (savedEntry) handleDelete(savedEntry.id); }}
+                className="mt-4 text-[12px] text-ink-soft hover:text-error transition-colors flex items-center gap-1 mx-auto"
               >
                 <Trash2 size={12} /> Opnieuw invullen
               </button>
             </div>
           ) : (
             <>
-              <p className="text-[13px] text-[#8a8a9a] mb-4">
+              <p className="text-[13px] text-ink-soft mb-4">
                 Hoe voel je je deze {moment}?
               </p>
 
-              {/* Mood selector */}
-              <div className="flex justify-between mb-5">
-                {STEMMINGEN.map((s) => (
-                  <button
-                    key={s.waarde}
-                    onClick={() => setStemming(s.waarde)}
-                    className={`flex flex-col items-center gap-1 flex-1 py-2 rounded-[10px] transition-all ${
-                      stemming === s.waarde
-                        ? 'bg-[#f4f4f7] scale-105'
-                        : 'hover:bg-[#f4f4f7]/60'
-                    }`}
-                  >
-                    <span className="text-[26px]">{s.emoji}</span>
-                    <span className={`text-[9px] font-medium ${stemming === s.waarde ? 'text-[#0a0a14]' : 'text-[#8a8a9a]'}`}>
-                      {s.label}
-                    </span>
-                  </button>
-                ))}
+              {/* Mood selector — 1-5 intensity scale, no emoji */}
+              <div className="flex justify-between gap-1.5 mb-5">
+                {STEMMINGEN.map((s) => {
+                  const selected = stemming === s.waarde;
+                  return (
+                    <button
+                      key={s.waarde}
+                      onClick={() => setStemming(s.waarde)}
+                      className={`flex flex-col items-center gap-2 flex-1 py-3 rounded-[12px] border transition-all ${
+                        selected
+                          ? 'bg-primary-muted border-primary/40'
+                          : 'bg-transparent border-line hover:bg-surface-sunken'
+                      }`}
+                    >
+                      <span
+                        className="w-3 h-3 rounded-full transition-colors"
+                        style={{
+                          backgroundColor: selected ? 'var(--green)' : 'var(--border)',
+                          opacity: selected ? 1 : 0.4 + s.waarde * 0.1,
+                        }}
+                      />
+                      <span className={`text-[9px] font-medium ${selected ? 'text-ink' : 'text-ink-soft'}`}>
+                        {s.label}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Optional text */}
@@ -223,14 +233,14 @@ export default function DagboekPage() {
                   onChange={(e) => setTekst(e.target.value)}
                   placeholder="Optioneel: schrijf iets over hoe je je voelt..."
                   rows={3}
-                  className="w-full resize-none bg-[#f4f4f7] border border-[#e8e8ec] rounded-[12px] px-4 py-3 text-[14px] text-[#0a0a14] placeholder-[#8a8a9a] outline-none focus:border-[#00cc66] transition-colors mb-4"
+                  className="w-full resize-none bg-surface-sunken border border-line rounded-[12px] px-4 py-3 text-[14px] text-ink placeholder-ink-soft outline-none focus:border-primary transition-colors mb-4"
                 />
               )}
 
               <button
                 onClick={handleSave}
                 disabled={!stemming || saving}
-                className="w-full py-3 bg-[#00cc66] text-white rounded-[12px] text-[14px] font-semibold disabled:opacity-40 active:scale-[0.98] transition-transform"
+                className="w-full py-3 bg-primary text-white rounded-[12px] text-[14px] font-semibold disabled:opacity-40 active:scale-[0.98] transition-transform"
               >
                 {saving ? 'Opslaan...' : 'Opslaan'}
               </button>
@@ -241,38 +251,45 @@ export default function DagboekPage() {
         {/* History */}
         {sortedDates.length > 0 && (
           <div className="space-y-3 pt-2">
-            <p className="text-[11px] font-medium text-[#8a8a9a] uppercase tracking-wider">Eerdere notities</p>
+            <p className="text-[11px] font-medium text-ink-soft uppercase tracking-wider">Eerdere notities</p>
             {sortedDates.map((date) => {
               const dayEntries = groups[date];
               const label = date === today
                 ? 'Vandaag'
                 : new Date(date).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
               return (
-                <div key={date} className="rounded-[16px] border border-[#e8e8ec] overflow-hidden">
-                  <div className="px-5 py-3 border-b border-[#e8e8ec] bg-[#f9f9fb]">
-                    <p className="text-[12px] font-semibold text-[#0a0a14] capitalize">{label}</p>
+                <div key={date} className="rounded-card border border-line bg-surface-card overflow-hidden">
+                  <div className="px-5 py-3 border-b border-line bg-surface-sunken">
+                    <p className="text-[12px] font-semibold text-ink capitalize">{label}</p>
                   </div>
                   {dayEntries.map((entry) => {
                     const d = typeof entry.data === 'string' ? JSON.parse(entry.data) : entry.data;
                     const s = STEMMINGEN.find(x => x.waarde === d.stemming);
                     return (
-                      <div key={entry.id} className="px-5 py-4 flex items-start gap-3 border-b border-[#e8e8ec] last:border-b-0">
-                        <span className="text-[22px] mt-0.5">{s?.emoji ?? '•'}</span>
+                      <div key={entry.id} className="px-5 py-4 flex items-start gap-3 border-b border-line last:border-b-0">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0"
+                          style={{ backgroundColor: 'var(--green)', opacity: 0.3 + (s?.waarde ?? 3) * 0.14 }}
+                          title={s?.label}
+                        />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 mb-0.5">
                             {getMomentIcon(entry.type)}
-                            <span className="text-[11px] font-medium text-[#8a8a9a]">{getMomentLabel(entry.type)}</span>
-                            <span className="text-[11px] text-[#8a8a9a] ml-auto">
+                            <span className="text-[11px] font-medium text-ink-soft">{getMomentLabel(entry.type)}</span>
+                            {s && (
+                              <span className="text-[11px] text-ink-soft">&middot; {s.label}</span>
+                            )}
+                            <span className="text-[11px] text-ink-soft ml-auto">
                               {new Date(entry.timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
                           {d.tekst && (
-                            <p className="text-[13px] text-[#0a0a14] leading-relaxed">{d.tekst}</p>
+                            <p className="text-[13px] text-ink leading-relaxed">{d.tekst}</p>
                           )}
                         </div>
                         <button
                           onClick={() => handleDelete(entry.id)}
-                          className="text-[#e8e8ec] hover:text-red-400 transition-colors flex-shrink-0"
+                          className="text-line hover:text-error transition-colors flex-shrink-0"
                         >
                           <Trash2 size={14} />
                         </button>

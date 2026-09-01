@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Bell, Sunrise, Moon, CalendarDays, TrendingUp,
-  Play, ChevronRight, Zap, Fingerprint, Sparkles,
+  Play, ChevronRight, Zap, Fingerprint, Sparkles, BookHeart,
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -143,7 +143,7 @@ export default function DashboardPage() {
         <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-md border-b border-line">
           <div className="max-w-lg mx-auto px-5 py-3.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-ink flex items-center justify-center text-white text-[13px] font-bold select-none">
+              <div className="w-9 h-9 rounded-full bg-surface-inverse flex items-center justify-center text-on-surface-inverse text-[13px] font-bold select-none">
                 {displayName.charAt(0)}
               </div>
               <div className="leading-tight">
@@ -198,27 +198,27 @@ export default function DashboardPage() {
 
           {/* ══ GOLDEN EGG — FOCUS VAN DE DAG ═══════════════════ */}
           {focusGoal ? (
-            <div className="rounded-hero bg-ink p-5 mb-6 shadow-organic-lg">
+            <div className="rounded-hero bg-surface-inverse p-5 mb-6 shadow-organic-lg">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-1.5">
-                  <span className="live-dot w-2 h-2 rounded-full bg-primary inline-block" />
-                  <span className="text-[9px] font-bold tracking-[0.2em] text-primary uppercase">
+                  <span className="live-dot w-2 h-2 rounded-full bg-primary-light inline-block" />
+                  <span className="text-[9px] font-bold tracking-[0.2em] text-primary-light uppercase">
                     Golden Egg — Focus van de dag
                   </span>
                 </div>
-                <Link href="/goals" className="text-[10px] font-semibold text-white/40 hover:text-white/70 transition-colors">
+                <Link href="/goals" className="text-[10px] font-semibold text-on-surface-inverse/50 hover:text-on-surface-inverse transition-colors">
                   {goalProgressLabel(focusGoal.progress)}
                 </Link>
               </div>
-              <h2 className="text-[19px] font-bold text-white leading-snug mb-1.5">
+              <h2 className="text-[19px] font-bold text-on-surface-inverse leading-snug mb-1.5">
                 {focusGoal.title}
               </h2>
-              <p className="text-[12px] text-white/40 mb-5">
+              <p className="text-[12px] text-on-surface-inverse/50 mb-5">
                 Prioriteit: Hoog &mdash; blijf gefocust op wat écht telt.
               </p>
               <Link
                 href="/focus"
-                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-[14px] bg-primary text-ink font-bold text-[14px] active:scale-[0.98] transition-transform shadow-[0_4px_20px_rgba(0,204,102,0.35)]"
+                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-[14px] bg-primary text-white font-bold text-[14px] active:scale-[0.98] transition-transform shadow-[0_4px_20px_rgba(81,96,80,0.35)]"
               >
                 <Play size={14} fill="currentColor" />
                 Start Focus Timer
@@ -227,16 +227,16 @@ export default function DashboardPage() {
           ) : (
             <Link
               href="/goals"
-              className="block rounded-hero bg-ink p-5 mb-6 shadow-organic-lg"
+              className="block rounded-hero bg-surface-inverse p-5 mb-6 shadow-organic-lg"
             >
               <div className="flex items-center gap-1.5 mb-3">
-                <span className="w-2 h-2 rounded-full bg-white/30 inline-block" />
-                <span className="text-[9px] font-bold tracking-[0.2em] text-white/40 uppercase">
+                <span className="w-2 h-2 rounded-full bg-on-surface-inverse/30 inline-block" />
+                <span className="text-[9px] font-bold tracking-[0.2em] text-on-surface-inverse/50 uppercase">
                   Geen actief doel
                 </span>
               </div>
-              <p className="text-[16px] font-bold text-white mb-1">Stel je focus in</p>
-              <p className="text-[12px] text-white/40">Voeg een doel toe om te starten →</p>
+              <p className="text-[16px] font-bold text-on-surface-inverse mb-1">Stel je focus in</p>
+              <p className="text-[12px] text-on-surface-inverse/50">Voeg een doel toe om te starten →</p>
             </Link>
           )}
 
@@ -255,8 +255,8 @@ export default function DashboardPage() {
                 className="flex-none w-[168px] snap-start rounded-card border border-line bg-surface-card p-4 shadow-organic hover:border-primary/30 transition-colors"
               >
                 <div className="flex items-center justify-between mb-3.5">
-                  <div className="w-9 h-9 rounded-[10px] bg-gold-soft flex items-center justify-center">
-                    <Sunrise size={17} className="text-gold" />
+                  <div className="w-9 h-9 rounded-[10px] bg-tertiary-soft flex items-center justify-center">
+                    <Sunrise size={17} className="text-tertiary" />
                   </div>
                   {ritualStatuses.morning.isComplete && (
                     <span className="text-[9px] font-bold text-primary bg-primary-muted px-1.5 py-0.5 rounded-full">✓ Klaar</span>
@@ -326,8 +326,8 @@ export default function DashboardPage() {
                   className="flex-none w-[168px] snap-start rounded-card border border-line bg-surface-card p-4 shadow-organic"
                 >
                   <div className="flex items-center justify-between mb-3.5">
-                    <div className="w-9 h-9 rounded-[10px] bg-violet-soft flex items-center justify-center">
-                      <TrendingUp size={17} className="text-violet" />
+                    <div className="w-9 h-9 rounded-[10px] bg-tertiary-soft flex items-center justify-center">
+                      <TrendingUp size={17} className="text-tertiary" />
                     </div>
                     {ritualStatuses.weeklyReview.isComplete && (
                       <span className="text-[9px] font-bold text-primary bg-primary-muted px-1.5 py-0.5 rounded-full">✓</span>
@@ -338,7 +338,7 @@ export default function DashboardPage() {
                   <p className="text-[10px] text-ink-soft mb-3">Evalueer je week</p>
                   <div className="h-1 rounded-full bg-surface-sunken overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-violet"
+                      className="h-full rounded-full bg-tertiary"
                       style={{ width: ritualStatuses.weeklyReview.isComplete ? '100%' : '0%' }}
                     />
                   </div>
@@ -417,17 +417,17 @@ export default function DashboardPage() {
           {/* ══ AIPA ═════════════════════════════════════════════ */}
           <Link
             href="/coach"
-            className="block rounded-card bg-ink p-4 mb-6 hover:opacity-95 transition-opacity shadow-organic"
+            className="block rounded-card bg-surface-inverse p-4 mb-6 hover:opacity-95 transition-opacity shadow-organic"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-[10px] bg-primary/15 flex items-center justify-center flex-shrink-0">
-                <Sparkles size={18} className="text-primary" />
+              <div className="w-10 h-10 rounded-[10px] bg-on-surface-inverse/10 flex items-center justify-center flex-shrink-0">
+                <Sparkles size={18} className="text-primary-light" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-bold text-white">AIPA</p>
-                <p className="text-[11px] text-white/50 leading-snug">Je business- en welzijnscoach — vraag een reflectie op je dag</p>
+                <p className="text-[13px] font-bold text-on-surface-inverse">AIPA</p>
+                <p className="text-[11px] text-on-surface-inverse/50 leading-snug">Je business- en welzijnscoach — vraag een reflectie op je dag</p>
               </div>
-              <ChevronRight size={16} className="text-white/40 flex-shrink-0" />
+              <ChevronRight size={16} className="text-on-surface-inverse/40 flex-shrink-0" />
             </div>
           </Link>
 
@@ -483,10 +483,10 @@ export default function DashboardPage() {
                 <p className="text-[26px] font-bold text-ink leading-none">{stats.activeGoals}</p>
                 <p className="text-[9px] text-ink-soft mt-1">actief</p>
               </div>
-              <div className="rounded-[14px] bg-gold-soft border border-[#fde68a] px-3 py-4">
-                <p className="text-[9px] font-bold text-gold uppercase tracking-[0.12em] mb-1.5">Streak</p>
+              <div className="rounded-[14px] bg-tertiary-soft border border-[#ffb5a1] px-3 py-4">
+                <p className="text-[9px] font-bold text-tertiary uppercase tracking-[0.12em] mb-1.5">Streak</p>
                 <p className="text-[26px] font-bold text-ink leading-none">{stats.streak}</p>
-                <p className="text-[9px] text-gold mt-1">dagen</p>
+                <p className="text-[9px] text-tertiary mt-1">dagen</p>
               </div>
               <div className="rounded-[14px] bg-surface-sunken px-3 py-4">
                 <p className="text-[9px] font-bold text-ink-soft uppercase tracking-[0.12em] mb-1.5">Week</p>
@@ -539,22 +539,22 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 gap-2.5">
               <Link
                 href="/identity"
-                className="rounded-card bg-ink p-4 flex items-center gap-3 hover:bg-[#151520] transition-colors"
+                className="rounded-card bg-surface-inverse p-4 flex items-center gap-3 hover:opacity-90 transition-opacity"
               >
-                <div className="w-9 h-9 rounded-[10px] bg-white/10 flex items-center justify-center">
-                  <Fingerprint size={17} className="text-white" />
+                <div className="w-9 h-9 rounded-[10px] bg-on-surface-inverse/10 flex items-center justify-center">
+                  <Fingerprint size={17} className="text-on-surface-inverse" />
                 </div>
                 <div>
-                  <p className="text-[12px] font-bold text-white">Identiteit</p>
-                  <p className="text-[10px] text-white/40">Claim wie je bent</p>
+                  <p className="text-[12px] font-bold text-on-surface-inverse">Identiteit</p>
+                  <p className="text-[10px] text-on-surface-inverse/50">Claim wie je bent</p>
                 </div>
               </Link>
               <Link
                 href="/dagboek"
                 className="rounded-card border border-line bg-surface-card p-4 flex items-center gap-3 hover:border-primary/30 transition-colors"
               >
-                <div className="w-9 h-9 rounded-[10px] bg-violet-soft flex items-center justify-center text-base">
-                  📔
+                <div className="w-9 h-9 rounded-[10px] bg-tertiary-soft flex items-center justify-center">
+                  <BookHeart size={17} className="text-tertiary" />
                 </div>
                 <div>
                   <p className="text-[12px] font-bold text-ink">Dagboek</p>
