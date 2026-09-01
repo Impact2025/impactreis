@@ -3,15 +3,16 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Bell, Sunrise, Moon, CalendarDays, TrendingUp,
-  Play, ChevronRight, Zap, Fingerprint, Sparkles, BookHeart,
+  Play, ChevronRight, Zap, Fingerprint, Sparkles, BookHeart, AlertCircle, X,
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { Win } from '@/types';
 import { RitualGuard } from '@/components/weekflow/ritual-guard';
-import { getDayType, isEveningRitualComplete } from '@/lib/weekflow.service';
+import { getDayType, isEveningRitualComplete, getNextRequiredRitual, getToday } from '@/lib/weekflow.service';
 import { initializeNotifications } from '@/lib/notifications.service';
 import { buildRecoveryProposalUrl } from '@/lib/calendar-proposal';
 import { canStillDoWeeklyStart } from '@/lib/ritual-recovery.service';
@@ -43,10 +44,15 @@ export default function DashboardPage() {
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [calendarConfigured, setCalendarConfigured] = useState(false);
   const [leverageGoal, setLeverageGoal] = useState<string | null>(null);
+  const [proactiveSignal, setProactiveSignal] = useState<{ signal: boolean; patternKey: string; message: string } | null>(null);
+  const [signalDismissed, setSignalDismissed] = useState(false);
+  const [proposals, setProposals] = useState<any[]>([]);
+  const [resolvingProposalId, setResolvingProposalId] = useState<string | number | null>(null);
   const router                      = useRouter();
 
   const ritualStatuses = useRitualStatus();
   const dayType        = getDayType();
+  const nextRitual      = getNextRequiredRitual();
 
   const categoryLabel: Record<string, string> = {
     business:      'BUSINESS',
@@ -58,13 +64,23 @@ export default function DashboardPage() {
 
   const fetchData = async (retry = 0) => {
     try {
-      const [goalsRes, focusRes, winsRes, calendarRes, onboardingRes] = await Promise.allSettled([
+      const [goalsRes, focusRes, winsRes, calendarRes, onboardingRes, signalRes, proposalsRes] = await Promise.allSettled([
         api.goals.getAll(),
         api.focus.getAll(),
         api.wins.getAll(),
         api.calendar.today(),
         api.onboarding.profile(),
+        api.coach.proactiveSignal(),
+        api.calendar.proposals.list(),
       ]);
+
+      if (signalRes.status === 'fulfilled' && signalRes.value.signal) {
+        setProactiveSignal(signalRes.value);
+      }
+
+      if (proposalsRes.status === 'fulfilled') {
+        setProposals(proposalsRes.value.proposals ?? []);
+      }
 
       if (calendarRes.status === 'fulfilled') {
         setCalendarConfigured(calendarRes.value.configured);
@@ -127,6 +143,30 @@ export default function DashboardPage() {
   const missedEveningYesterday =
     yesterdayDay >= 1 && yesterdayDay <= 5 && !isEveningRitualComplete(yesterday);
 
+  const today = getToday();
+  const dismissSignalKey = proactiveSignal ? `proactiveSignalDismissed_${today}_${proactiveSignal.patternKey}` : null;
+  const showProactiveSignal =
+    proactiveSignal && !signalDismissed &&
+    (typeof window === 'undefined' || !dismissSignalKey || !localStorage.getItem(dismissSignalKey));
+
+  const dismissSignal = () => {
+    if (dismissSignalKey) localStorage.setItem(dismissSignalKey, 'true');
+    setSignalDismissed(true);
+  };
+
+  const resolveProposal = async (id: string | number, action: 'approve' | 'reject') => {
+    setResolvingProposalId(id);
+    try {
+      if (action === 'approve') await api.calendar.proposals.approve(id);
+      else await api.calendar.proposals.reject(id);
+      setProposals((prev) => prev.filter((p) => p.id !== id));
+    } catch {
+      // Laat het voorstel staan zodat de gebruiker het opnieuw kan proberen.
+    } finally {
+      setResolvingProposalId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
@@ -143,11 +183,16 @@ export default function DashboardPage() {
         <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-md border-b border-line">
           <div className="max-w-lg mx-auto px-5 py-3.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-surface-inverse flex items-center justify-center text-on-surface-inverse text-[13px] font-bold select-none">
-                {displayName.charAt(0)}
-              </div>
+              <Image
+                src="/logo.png"
+                alt="myAiPA logo"
+                width={36}
+                height={36}
+                className="rounded-full"
+                priority
+              />
               <div className="leading-tight">
-                <p className="text-[13px] font-bold text-ink">MyAIPA</p>
+                <p className="text-[13px] font-bold text-ink">myAiPA</p>
                 <p className="text-[9px] font-bold tracking-[0.18em] text-primary uppercase">
                   Jouw persoonlijke AI PA
                 </p>
@@ -179,6 +224,58 @@ export default function DashboardPage() {
               </p>
             )}
           </div>
+
+          {/* ══ PROACTIEVE SIGNAALKAART (AIPA) ══════════════════ */}
+          {showProactiveSignal && proactiveSignal && (
+            <div className="rounded-card border border-accent/25 bg-accent-soft p-4 mb-5">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-[10px] bg-accent/15 flex items-center justify-center flex-shrink-0">
+                  <AlertCircle size={17} className="text-accent" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] font-bold tracking-[0.15em] text-accent uppercase mb-1">AIPA signaleert</p>
+                  <p className="text-[13px] text-ink leading-relaxed mb-3">{proactiveSignal.message}</p>
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href="/coach"
+                      className="text-[12px] font-semibold text-accent"
+                    >
+                      Bespreek met AIPA →
+                    </Link>
+                    <button
+                      onClick={dismissSignal}
+                      className="text-[12px] font-medium text-ink-soft"
+                    >
+                      Negeren voor vandaag
+                    </button>
+                  </div>
+                </div>
+                <button
+                  onClick={dismissSignal}
+                  aria-label="Sluiten"
+                  className="text-ink-soft hover:text-ink flex-shrink-0"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ══ NOG TE DOEN: RITUEEL ═════════════════════════════ */}
+          {nextRitual && nextRitual.isAvailable && (
+            <Link
+              href={nextRitual.path}
+              className="flex items-center gap-3 rounded-card border border-primary/25 bg-primary-muted p-4 mb-5 active:scale-[0.99] transition-transform"
+            >
+              <div className="w-9 h-9 rounded-[10px] bg-primary/15 flex items-center justify-center flex-shrink-0">
+                <Sunrise size={17} className="text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold text-ink">Nog te doen: {nextRitual.title}</p>
+                <p className="text-[11px] text-primary">{nextRitual.reason} →</p>
+              </div>
+            </Link>
+          )}
 
           {/* ══ GEMIST AVONDRITUEEL BANNER ══════════════════════ */}
           {missedEveningYesterday && (
@@ -414,6 +511,47 @@ export default function DashboardPage() {
             );
           })()}
 
+          {/* ══ VOORGESTELDE TIJDBLOKKEN ═════════════════════════ */}
+          {proposals.length > 0 && (
+            <section className="mb-6">
+              <div className="flex items-center gap-2.5 mb-3.5">
+                <div className="w-8 h-8 rounded-[10px] bg-primary-muted flex items-center justify-center">
+                  <Sparkles size={15} className="text-primary" />
+                </div>
+                <h2 className="text-[15px] font-bold text-ink">Voorgestelde tijdblokken</h2>
+              </div>
+              <div className="space-y-2.5">
+                {proposals.map((p) => (
+                  <div key={p.id} className="rounded-card border border-line bg-surface-card p-4">
+                    <p className="text-[13px] font-semibold text-ink mb-0.5">{p.summary}</p>
+                    <p className="text-[11px] text-ink-soft mb-1">
+                      {new Date(p.start_time).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+                      {' – '}
+                      {new Date(p.end_time).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                    {p.reason && <p className="text-[11px] text-ink-soft mb-3 leading-snug">{p.reason}</p>}
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => resolveProposal(p.id, 'approve')}
+                        disabled={resolvingProposalId === p.id}
+                        className="flex-1 py-2.5 rounded-[12px] bg-primary text-white text-[12px] font-bold disabled:opacity-50 active:scale-[0.98] transition-transform"
+                      >
+                        Goedkeuren
+                      </button>
+                      <button
+                        onClick={() => resolveProposal(p.id, 'reject')}
+                        disabled={resolvingProposalId === p.id}
+                        className="flex-1 py-2.5 rounded-[12px] bg-surface-sunken text-ink-soft text-[12px] font-semibold disabled:opacity-50"
+                      >
+                        Afwijzen
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* ══ AIPA ═════════════════════════════════════════════ */}
           <Link
             href="/coach"
@@ -563,8 +701,8 @@ export default function DashboardPage() {
               </Link>
             </div>
             <p className="text-[11px] text-ink-soft text-center mt-3">
-              Meer secties zoals Controle Cirkel, ACA, ADHD en Cursussen vind je onder{' '}
-              <span className="font-semibold text-ink">Menu</span> hieronder.
+              Verdieping (Controle Cirkel, ACA, ADHD, Cursussen) vind je onder{' '}
+              <span className="font-semibold text-ink">Menu → Verdieping</span> hieronder.
             </p>
           </section>
 

@@ -29,7 +29,8 @@ interface MenuGroup {
   items: MenuItem[];
 }
 
-const MENU_GROUPS: MenuGroup[] = [
+/** Bovenste helft van het menu: dagelijkse/wekelijkse kernflow. */
+const DAILY_GROUPS: MenuGroup[] = [
   {
     title: 'Rituelen',
     items: [
@@ -44,27 +45,21 @@ const MENU_GROUPS: MenuGroup[] = [
     items: [
       { href: '/goals',    icon: Target,     label: 'Doelen',    description: 'RPM-doelen beheren' },
       { href: '/insights', icon: TrendingUp, label: 'Insights',  description: 'Trends en patronen' },
-      { href: '/identity', icon: Fingerprint, label: 'Identiteit', description: 'Claim wie je bent' },
     ],
   },
+];
+
+/** Onderste helft van het menu: minder frequente verdieping + systeem. */
+const SECONDARY_GROUPS: MenuGroup[] = [
   {
-    title: 'Reflectie',
+    title: 'Verdieping',
     items: [
-      { href: '/dagboek',         icon: BookHeart,      label: 'Dagboek',        description: 'Hoe voel je je?' },
+      { href: '/identity',        icon: Fingerprint,    label: 'Identiteit',      description: 'Claim wie je bent' },
+      { href: '/dagboek',         icon: BookHeart,      label: 'Dagboek',         description: 'Hoe voel je je?' },
       { href: '/controle-cirkel', icon: Compass,        label: 'Controle Cirkel', description: 'Energie-oefening' },
-    ],
-  },
-  {
-    title: 'Herstelpaden',
-    items: [
-      { href: '/aca',  icon: HeartHandshake, label: 'ACA Herstelpad', description: '7 weken naar de Liefdevolle Ouder' },
-      { href: '/adhd', icon: Brain,          label: 'ADHD Klachten',  description: 'Meting voor medicatiestart' },
-    ],
-  },
-  {
-    title: 'Leren',
-    items: [
-      { href: '/courses', icon: GraduationCap, label: 'Cursussen', description: 'Unleash Your Power' },
+      { href: '/aca',             icon: HeartHandshake, label: 'ACA Herstelpad',  description: '7 weken naar de Liefdevolle Ouder' },
+      { href: '/adhd',            icon: Brain,          label: 'ADHD Klachten',   description: 'Meting voor medicatiestart' },
+      { href: '/courses',         icon: GraduationCap,  label: 'Cursussen',       description: 'Unleash Your Power' },
     ],
   },
   {
@@ -74,6 +69,8 @@ const MENU_GROUPS: MenuGroup[] = [
     ],
   },
 ];
+
+const MENU_GROUPS: MenuGroup[] = [...DAILY_GROUPS, ...SECONDARY_GROUPS];
 
 interface BottomNavProps {
   fab?: {
@@ -202,7 +199,7 @@ export function BottomNav({ fab }: BottomNavProps) {
           >
             <div className="sticky top-0 bg-surface/95 backdrop-blur-md px-5 pt-4 pb-3 flex items-center justify-between border-b border-line">
               <div>
-                <p className="text-[9px] font-bold tracking-[0.18em] text-primary uppercase">MyAIPA</p>
+                <p className="text-[9px] font-bold tracking-[0.18em] text-primary uppercase">myAiPA</p>
                 <h2 className="text-[18px] font-bold text-ink">Alles op één plek</h2>
               </div>
               <button
@@ -215,7 +212,41 @@ export function BottomNav({ fab }: BottomNavProps) {
             </div>
 
             <div className="px-5 py-2">
-              {MENU_GROUPS.map((group) => (
+              {DAILY_GROUPS.map((group) => (
+                <section key={group.title} className="py-3.5">
+                  <h3 className="text-[10px] font-bold text-ink-soft tracking-[0.15em] uppercase mb-2 px-1">
+                    {group.title}
+                  </h3>
+                  <div className="rounded-card border border-line bg-surface-card overflow-hidden">
+                    {group.items.map((item, i) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMenuOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3.5 hover:bg-surface-sunken transition-colors ${
+                          i > 0 ? 'border-t border-line' : ''
+                        }`}
+                      >
+                        <div className="w-9 h-9 rounded-[10px] bg-primary-muted flex items-center justify-center flex-shrink-0">
+                          <item.icon size={16} className="text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-semibold text-ink">{item.label}</p>
+                          <p className="text-[11px] text-ink-soft truncate">{item.description}</p>
+                        </div>
+                        <ChevronRight size={16} className="text-ink-soft flex-shrink-0" />
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              ))}
+
+              <div className="my-1 border-t border-line" />
+              <p className="text-[9px] font-bold text-ink-soft/70 tracking-[0.15em] uppercase px-1 pt-3.5">
+                Minder vaak
+              </p>
+
+              {SECONDARY_GROUPS.map((group) => (
                 <section key={group.title} className="py-3.5">
                   <h3 className="text-[10px] font-bold text-ink-soft tracking-[0.15em] uppercase mb-2 px-1">
                     {group.title}
