@@ -136,8 +136,7 @@ export default function MorningPage() {
         await api.logs.create({
           type: 'morning',
           date: todayStr,
-          data: formData,
-          createdAt: new Date().toISOString(),
+          ...formData,
         });
       } catch (err) {
         console.error('API save error:', err);

@@ -155,8 +155,7 @@ function EveningContent() {
       await api.logs.create({
         type: 'evening',
         date: targetDate,
-        data: formData,
-        createdAt: new Date().toISOString()
+        ...formData,
       });
       const token = localStorage.getItem('token');
       if (token) {
