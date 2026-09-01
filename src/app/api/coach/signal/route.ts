@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { checkBridgeToken, detectProactiveSignal, loadRecentMorningEnergy, loadSingleUserId } from '@/lib/coach';
+import { resolveBridgeOrganization, detectProactiveSignal, loadRecentMorningEnergy } from '@/lib/coach';
 
 /** Machine-to-machine endpoint voor ImpactOS' coach_whatsapp_check-job (zie CLAUDE.md,
  * coach_bridge-domein). Geen JWT hier — dit is geen browsersessie maar een server-naar-server
- * call met een gedeeld geheim (dezelfde COACH_BRIDGE_TOKEN aan beide kanten). */
+ * call met een bridge-token per klant (client_bridge_tokens). */
 export async function GET(request: NextRequest) {
-  if (!checkBridgeToken(request.headers.get('authorization'))) {
+  const bridge = await resolveBridgeOrganization(request.headers.get('authorization'));
+  if (!bridge) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
-  const userId = await loadSingleUserId();
-  if (!userId) {
-    return NextResponse.json({ signal: false, patternKey: '', message: '' });
-  }
+  const { userId } = bridge;
 
   const [recentMorningEnergy, recentEnergyLog] = await Promise.all([
     loadRecentMorningEnergy(userId, 5),

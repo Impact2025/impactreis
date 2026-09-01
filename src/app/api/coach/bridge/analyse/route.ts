@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkBridgeToken, loadSingleUserId, loadUserOrganizationId, runCoachAnalysis } from '@/lib/coach';
+import { resolveBridgeOrganization, runCoachAnalysis } from '@/lib/coach';
 
 /** Zelfde reflectie als /api/coach/analyse, maar aangeroepen vanuit ImpactOS' Control Room
- * (server-naar-server, gedeeld token) in plaats van vanuit de browser (JWT). Vincent wilde de
- * coach ook zichtbaar in ImpactOS zelf zien, niet alleen in deze app apart. */
+ * (server-naar-server, per-klant bridge-token) in plaats van vanuit de browser (JWT). Vincent
+ * wilde de coach ook zichtbaar in ImpactOS zelf zien, niet alleen in deze app apart. */
 export async function POST(request: NextRequest) {
-  if (!checkBridgeToken(request.headers.get('authorization'))) {
+  const bridge = await resolveBridgeOrganization(request.headers.get('authorization'));
+  if (!bridge) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const userId = await loadSingleUserId();
-  if (!userId) {
-    return NextResponse.json({ error: 'Nog geen gebruiker in mijn-ondernemers-os.' }, { status: 404 });
-  }
-
-  const organizationId = await loadUserOrganizationId(userId);
+  const { userId, organizationId } = bridge;
   const result = await runCoachAnalysis(userId, organizationId);
   if (!result.ok) {
     const { ok, status, ...body } = result;

@@ -5,6 +5,7 @@
 // Kiest deterministisch een coachtechniek op basis van het signaal (zie chooseTechnique), en
 // onthoudt wat blijkt te kloppen via coach_lessons — een observatie is pas een les na bewijs,
 // niet na één keer zenden. Zelfde filosofie als iris_lessons in Impact OS.
+import { createHash } from 'node:crypto';
 import { sql } from './db';
 
 export type Technique =
@@ -423,29 +424,37 @@ export async function updateUserContext(userId: string, organizationId: number |
   `;
 }
 
-/** Machine-to-machine auth voor de bridge-routes (ImpactOS -> mijn-ondernemers-os): een
- *  gedeeld geheim in plaats van een browsersessie. Fail closed — geen COACH_BRIDGE_TOKEN
- *  geconfigureerd betekent geen enkele aanroeper wordt doorgelaten, nooit "open by default". */
-export function checkBridgeToken(authorizationHeader: string | null): boolean {
-  const expected = process.env.COACH_BRIDGE_TOKEN;
-  if (!expected) return false;
+export interface BridgeOrganization {
+  userId: string;
+  organizationId: number;
+}
+
+/** Machine-to-machine auth voor de bridge-routes (ImpactOS -> mijn-ondernemers-os), per
+ *  organisatie i.p.v. het vroegere ene gedeelde COACH_BRIDGE_TOKEN dat altijd naar de eerste
+ *  gebruiker in de hele tabel resolvede (loadSingleUserId — brak zodra er een tweede
+ *  organisatie bijkwam, zoals het bestaande demo-account). Hasht het token en zoekt 'm op in
+ *  client_bridge_tokens; geeft de eerste user van díe organisatie terug. Fail closed: geen of
+ *  onbekend token betekent null, nooit "open by default" of een gok naar de verkeerde klant.
+ *  Zelfde patroon als ImpactOS' remote/api/_lib.js:resolveBridgeTenant(). */
+export async function resolveBridgeOrganization(
+  authorizationHeader: string | null
+): Promise<BridgeOrganization | null> {
   const auth = authorizationHeader ?? '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
-  return token.length > 0 && token === expected;
-}
+  if (!token) return null;
 
-/** Eén-gebruiker-app: geen tenant-model nodig, de eerste (en enige) gebruiker is Vincent. */
-export async function loadSingleUserId(): Promise<string | null> {
-  const users = await sql`SELECT id FROM users ORDER BY id ASC LIMIT 1`;
-  return users.length > 0 ? String(users[0].id) : null;
-}
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  const rows = await sql`
+    SELECT organization_id FROM client_bridge_tokens WHERE token_hash = ${tokenHash}
+  `;
+  if (rows.length === 0) return null;
+  const organizationId = rows[0].organization_id;
 
-/** organization_id bij een userId — alleen nodig voor de bridge-analyse-route, die (anders dan
- *  bridge/lessons en signal) ook schrijft naar coach_lessons/user_context, en die kolom is
- *  NOT NULL. */
-export async function loadUserOrganizationId(userId: string): Promise<number | null> {
-  const rows = await sql`SELECT organization_id FROM users WHERE id = ${userId}`;
-  return rows[0]?.organization_id ?? null;
+  const users = await sql`
+    SELECT id FROM users WHERE organization_id = ${organizationId} ORDER BY id ASC LIMIT 1
+  `;
+  if (users.length === 0) return null;
+  return { userId: String(users[0].id), organizationId };
 }
 
 function slugifyPattern(text: string): string {

@@ -36,6 +36,18 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+// Machine-to-machine auth voor externe systemen (vandaag: ImpactOS' coach-bridge) — één token
+// per organisatie, i.p.v. het vroegere enkele gedeelde COACH_BRIDGE_TOKEN dat altijd naar de
+// eerste gebruiker in de hele tabel resolvede (loadSingleUserId, nu vervangen). Zie
+// src/lib/coach.ts:resolveBridgeOrganization().
+export const clientBridgeTokens = pgTable('client_bridge_tokens', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
+  tokenHash: text('token_hash').notNull().unique(),
+  label: text('label').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const habits = pgTable('habits', {
   id: serial('id').primaryKey(),
   organizationId: integer('organization_id').references(() => organizations.id).notNull(),

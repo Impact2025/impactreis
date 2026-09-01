@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { checkBridgeToken, loadSingleUserId, TECHNIQUE_LABELS, Technique } from '@/lib/coach';
+import { resolveBridgeOrganization, TECHNIQUE_LABELS, Technique } from '@/lib/coach';
 
 /** Zelfde lijst als /api/coach/lessons, token-authed voor ImpactOS' Control Room. */
 export async function GET(request: NextRequest) {
-  if (!checkBridgeToken(request.headers.get('authorization'))) {
+  const bridge = await resolveBridgeOrganization(request.headers.get('authorization'));
+  if (!bridge) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
-  const userId = await loadSingleUserId();
-  if (!userId) {
-    return NextResponse.json({ lessons: [] });
-  }
+  const { userId } = bridge;
 
   const rows = await sql`
     SELECT id, pattern_key, technique, insight, confidence, times_confirmed, times_disproven, updated_at

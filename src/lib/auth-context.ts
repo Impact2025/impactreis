@@ -3,10 +3,11 @@
 // Drie geldige manieren om ingelogd te zijn, allevier tot een organizationId herleid:
 //  1. JWT bearer-token (bestaande login, src/lib/auth.ts) — blijft werken, dit is vandaag
 //     de enige manier waarop de UI daadwerkelijk inlogt.
-//  2. COACH_BRIDGE_TOKEN (machine-to-machine, ImpactOS -> hier) — zelfde gedeelde geheim als
-//     de bestaande coach-bridge-routes (src/lib/coach.ts:checkBridgeToken), nu ook geldig voor
-//     /api/logs, /api/focus, /api/wins, /api/weekly-reviews zodat ImpactOS' rituals-domein
-//     hier direct tegen kan lezen/schrijven i.p.v. een eigen lokale kopie bij te houden.
+//  2. Bridge-token per organisatie (machine-to-machine, ImpactOS -> hier) — zie
+//     src/lib/coach.ts:resolveBridgeOrganization(), geldig voor /api/logs, /api/focus,
+//     /api/wins, /api/weekly-reviews zodat ImpactOS' rituals-domein hier direct tegen kan
+//     lezen/schrijven i.p.v. een eigen lokale kopie bij te houden. Eén token per klant
+//     (client_bridge_tokens), niet één gedeeld geheim voor de hele app.
 //  3. Auth.js database-sessie (magic link, src/auth.ts) — nieuw, klaar voor zodra de UI
 //     een magic-link-scherm heeft.
 //
@@ -16,7 +17,7 @@ import { NextRequest } from 'next/server';
 import { authenticateToken } from './auth';
 import { auth } from '@/auth';
 import { sql } from './db';
-import { checkBridgeToken, loadSingleUserId, loadUserOrganizationId } from './coach';
+import { resolveBridgeOrganization } from './coach';
 
 export interface AuthContext {
   userId: number;
@@ -30,12 +31,9 @@ export async function getAuthContext(request: NextRequest): Promise<AuthContext 
     return { userId: jwtUserId, organizationId: rows[0]?.organization_id ?? null };
   }
 
-  if (checkBridgeToken(request.headers.get('authorization'))) {
-    const bridgeUserId = await loadSingleUserId();
-    if (bridgeUserId) {
-      const organizationId = await loadUserOrganizationId(bridgeUserId);
-      return { userId: Number(bridgeUserId), organizationId };
-    }
+  const bridge = await resolveBridgeOrganization(request.headers.get('authorization'));
+  if (bridge) {
+    return { userId: Number(bridge.userId), organizationId: bridge.organizationId };
   }
 
   const session = await auth();
