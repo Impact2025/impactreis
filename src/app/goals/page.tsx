@@ -28,7 +28,9 @@ interface Goal {
   createdAt: string;
   deadline?: string;
   progress: number;
-  category: 'business' | 'health' | 'relationships' | 'personal';
+  // Runtime kan dit ook 'other'/legacy-waarden bevatten (zie defaultCategoryConfig) — de vier
+  // RPM-categorieën zijn alleen de waarden die het formulier zelf aanbiedt.
+  category: string;
   isRock?: boolean;
   quarter?: string | null;
 }
@@ -39,6 +41,11 @@ const categoryConfig = {
   relationships: { label: 'Relaties',    bg: '#ffdbd1', text: '#884b3b' },
   personal:      { label: 'Persoonlijk', bg: '#e9e8e5', text: '#444842' },
 };
+
+// Fallback voor doelen met een categorie buiten de vier RPM-categorieën (bv. oudere goals uit
+// de PWA-share-target, die 'other' meestuurt) — voorkomt een crash van de hele pagina op een
+// onbekende sleutel in plaats van een nette badge te tonen.
+const defaultCategoryConfig = { label: 'Overig', bg: '#e9e8e5', text: '#444842' };
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -416,7 +423,7 @@ export default function GoalsPage() {
             </div>
           ) : (
             goals.map((goal) => {
-              const cfg = categoryConfig[goal.category];
+              const cfg = (categoryConfig as Record<string, typeof defaultCategoryConfig>)[goal.category] ?? defaultCategoryConfig;
               const isExpanded = expandedGoal === goal.id;
               return (
                 <div
