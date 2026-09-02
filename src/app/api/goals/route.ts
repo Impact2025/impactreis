@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { createGoalSchema } from '@/lib/schemas/goals.schema';
 import { getAuthContext } from '@/lib/auth-context';
+import { normalizeNextActions } from '@/lib/goal-actions';
 import { randomUUID } from 'node:crypto';
 
 // De echte `goals`-tabel heeft user_id/id/data(jsonb)/updated_at/organization_id — niet de
@@ -23,7 +24,14 @@ export async function GET(request: NextRequest) {
       ORDER BY updated_at DESC
     `;
 
-    const goals = rows.map((row: any) => ({ id: row.id, updatedAt: row.updated_at, ...row.data }));
+    // Oude goals hebben nextActions nog als string[] — normaliseer altijd naar de objectvorm
+    // zodat de frontend nooit twee vormen hoeft te onderscheiden (zie Fase 3).
+    const goals = rows.map((row: any) => ({
+      id: row.id,
+      updatedAt: row.updated_at,
+      ...row.data,
+      nextActions: normalizeNextActions(row.data?.nextActions),
+    }));
 
     return NextResponse.json(goals);
   } catch (error) {
@@ -51,7 +59,7 @@ export async function POST(request: NextRequest) {
       why: parsed.why || '',
       painIfNot: parsed.painIfNot || '',
       pleasureIfDone: parsed.pleasureIfDone || '',
-      nextActions: parsed.nextActions || [],
+      nextActions: normalizeNextActions(parsed.nextActions),
       deadline: parsed.deadline || null,
       category: parsed.category || 'business',
       completed: false,

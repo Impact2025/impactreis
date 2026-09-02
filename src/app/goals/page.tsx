@@ -10,6 +10,7 @@ import {
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { getCurrentQuarter } from '@/lib/weekflow.service';
+import type { GoalAction } from '@/lib/goal-actions';
 import { Celebration } from '@/components/robbins/celebration';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
@@ -22,7 +23,7 @@ interface Goal {
   why: string;
   painIfNot: string;
   pleasureIfDone: string;
-  nextActions: string[];
+  nextActions: GoalAction[];
   completed: boolean;
   createdAt: string;
   deadline?: string;
@@ -47,7 +48,9 @@ export default function GoalsPage() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [rockLimitMessage, setRockLimitMessage] = useState<string | null>(null);
   const [celebrationMessage, setCelebrationMessage] = useState('');
-  const [newGoal, setNewGoal] = useState<Partial<Goal>>({
+  // Het formulier werkt met kale strings voor nieuwe acties (eenvoudige UX bij het aanmaken) —
+  // de server zet dit om naar de GoalAction-vorm (completed/leverage) via normalizeNextActions().
+  const [newGoal, setNewGoal] = useState<Omit<Partial<Goal>, 'nextActions'> & { nextActions: string[] }>({
     title: '', description: '', why: '', painIfNot: '', pleasureIfDone: '',
     nextActions: [''], deadline: '', category: 'business',
   });
@@ -119,6 +122,22 @@ export default function GoalsPage() {
     const updated = await api.goals.update(id, { isRock: !goal.isRock, quarter: currentQuarter });
     setGoals(prev => prev.map(g => g.id === id ? { ...g, ...updated } : g));
   };
+
+  // 80/20: een actie markeren als hefboom betekent "dit is een van de weinige die er echt toe
+  // doen" — geen volledige Eisenhower-matrix, gewoon een aan/uit-vlag per actie.
+  const updateAction = async (goalId: string, actionId: string, changes: Partial<GoalAction>) => {
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal) return;
+    const nextActions = goal.nextActions.map(a => a.id === actionId ? { ...a, ...changes } : a);
+    setGoals(prev => prev.map(g => g.id === goalId ? { ...g, nextActions } : g));
+    await api.goals.update(goalId, { nextActions });
+  };
+
+  const toggleActionCompleted = (goalId: string, action: GoalAction) =>
+    updateAction(goalId, action.id, { completed: !action.completed });
+
+  const toggleActionLeverage = (goalId: string, action: GoalAction) =>
+    updateAction(goalId, action.id, { leverage: !action.leverage });
 
   const updateNextAction = (index: number, value: string) => {
     const actions = [...(newGoal.nextActions || [''])];
@@ -519,12 +538,28 @@ export default function GoalsPage() {
                             Volgende Acties
                           </p>
                           <div className="space-y-1.5">
-                            {goal.nextActions.map((action, index) => (
-                              <div key={index} className="flex items-center gap-2 text-[13px] text-ink">
-                                <span className="w-5 h-5 shrink-0 bg-surface-sunken rounded-[5px] text-[10px] font-semibold flex items-center justify-center text-ink-soft">
-                                  {index + 1}
+                            {goal.nextActions.map((action) => (
+                              <div key={action.id} className="flex items-center gap-2">
+                                <button
+                                  onClick={() => toggleActionCompleted(goal.id, action)}
+                                  className="shrink-0 active:scale-90 transition-transform"
+                                >
+                                  {action.completed
+                                    ? <CheckCircle size={17} className="text-primary" />
+                                    : <Circle size={17} className="text-line" />}
+                                </button>
+                                <span className={`flex-1 text-[13px] ${action.completed ? 'line-through text-ink-soft' : 'text-ink'}`}>
+                                  {action.text}
                                 </span>
-                                {action}
+                                <button
+                                  onClick={() => toggleActionLeverage(goal.id, action)}
+                                  title={action.leverage ? 'Hefboom verwijderen' : 'Markeer als hefboom (80/20)'}
+                                  className={`w-6 h-6 shrink-0 flex items-center justify-center rounded-full transition-colors ${
+                                    action.leverage ? 'text-tertiary bg-tertiary-soft' : 'text-line hover:text-tertiary'
+                                  }`}
+                                >
+                                  <Flame size={12} />
+                                </button>
                               </div>
                             ))}
                           </div>

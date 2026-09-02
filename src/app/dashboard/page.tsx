@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   Bell, Sunrise, Moon, CalendarDays, TrendingUp,
-  Play, ChevronRight, Zap, Fingerprint, Sparkles, BookHeart, AlertCircle, X, Mountain,
+  Play, ChevronRight, Zap, Fingerprint, Sparkles, BookHeart, AlertCircle, X, Mountain, Flame,
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -18,6 +18,7 @@ import { initializeNotifications } from '@/lib/notifications.service';
 import { buildRecoveryProposalUrl } from '@/lib/calendar-proposal';
 import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { BottomNav } from '@/components/ui/bottom-nav';
+import type { GoalAction } from '@/lib/goal-actions';
 
 interface Goal {
   id: string;
@@ -27,6 +28,7 @@ interface Goal {
   status: string;
   isRock?: boolean;
   quarter?: string | null;
+  nextActions?: GoalAction[];
 }
 
 interface CalendarEvent {
@@ -52,6 +54,7 @@ export default function DashboardPage() {
   const [resolvingProposalId, setResolvingProposalId] = useState<string | number | null>(null);
   const [canAccessDemo, setCanAccessDemo] = useState(false);
   const [todayDayType, setTodayDayType] = useState<'focus' | 'buffer' | 'free' | null>(null);
+  const [leverageTasks, setLeverageTasks] = useState<{ goal: Goal; action: GoalAction }[]>([]);
   const [nsdrDismissed, setNsdrDismissed] = useState(false);
   const router                      = useRouter();
 
@@ -112,6 +115,18 @@ export default function DashboardPage() {
 
       setGoals(activeGoals.slice(0, 4));
       setStats({ activeGoals: activeGoals.length, weeklyProgress: weeklyProg });
+
+      // Hefboom-taken vandaag: 80/20-gemarkeerde, nog niet voltooide acties uit alle actieve
+      // Rocks van dit kwartaal (niet beperkt tot de 4 getoonde "Actuele Doelen") — Pareto-
+      // discipline zit in de begrenzing tot 5, niet in een aparte prioriteitsberekening.
+      const currentQ = getCurrentQuarter();
+      const tasks = activeGoals
+        .filter((g: Goal) => g.isRock && g.quarter === currentQ)
+        .flatMap((g: Goal) => (g.nextActions ?? [])
+          .filter((a) => a.leverage && !a.completed)
+          .map((action) => ({ goal: g, action })))
+        .slice(0, 5);
+      setLeverageTasks(tasks);
 
       if (winsRes.status === 'fulfilled') {
         setRecentWins(
@@ -182,6 +197,12 @@ export default function DashboardPage() {
   const dismissNsdr = () => {
     localStorage.setItem(nsdrDismissKey, 'true');
     setNsdrDismissed(true);
+  };
+
+  const completeLeverageTask = async (goal: Goal, action: GoalAction) => {
+    setLeverageTasks(prev => prev.filter(t => t.action.id !== action.id));
+    const nextActions = (goal.nextActions ?? []).map(a => a.id === action.id ? { ...a, completed: true } : a);
+    await api.goals.update(goal.id, { nextActions });
   };
 
   const resolveProposal = async (id: string | number, action: 'approve' | 'reject') => {
@@ -378,6 +399,32 @@ export default function DashboardPage() {
               <p className="text-[16px] font-bold text-on-surface-inverse mb-1">Stel je focus in</p>
               <p className="text-[12px] text-on-surface-inverse/50">Voeg een doel toe om te starten →</p>
             </Link>
+          )}
+
+          {/* ══ HEFBOOM-TAKEN VANDAAG (80/20) ════════════════════ */}
+          {leverageTasks.length > 0 && (
+            <section className="mb-6">
+              <div className="flex items-center gap-2.5 mb-3.5">
+                <div className="w-8 h-8 rounded-[10px] bg-tertiary-soft flex items-center justify-center">
+                  <Flame size={15} className="text-tertiary" />
+                </div>
+                <h2 className="text-[15px] font-bold text-ink">Hefboom-taken vandaag</h2>
+              </div>
+              <div className="space-y-2">
+                {leverageTasks.map(({ goal, action }) => (
+                  <div key={action.id} className="flex items-center gap-3 px-4 py-3 rounded-[14px] border border-line bg-surface-card">
+                    <button
+                      onClick={() => completeLeverageTask(goal, action)}
+                      className="w-6 h-6 shrink-0 rounded-full border-2 border-tertiary flex items-center justify-center active:scale-90 transition-transform"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium text-ink truncate">{action.text}</p>
+                      <p className="text-[11px] text-ink-soft truncate">{goal.title}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
           )}
 
           {/* ══ MIJN ROUTINES ═══════════════════════════════════ */}
