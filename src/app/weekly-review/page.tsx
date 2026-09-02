@@ -317,7 +317,7 @@ export default function WeeklyReviewPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Rocks van dit kwartaal — hoe staat het ervoor? */}
           {rocks.length > 0 && (
-            <div className="rounded-[16px] border border-line p-5">
+            <div data-testid="rocks-section" className="rounded-[16px] border border-line p-5">
               <div className="flex items-center gap-2.5 mb-4">
                 <div className="w-8 h-8 rounded-[10px] bg-tertiary-soft flex items-center justify-center">
                   <Mountain size={15} className="text-tertiary" />

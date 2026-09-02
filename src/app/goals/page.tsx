@@ -437,6 +437,8 @@ export default function GoalsPage() {
               return (
                 <div
                   key={goal.id}
+                  data-testid="goal-card"
+                  data-goal-title={goal.title}
                   className={`bg-white rounded-[16px] border p-5 transition-all ${
                     goal.completed ? 'border-primary/30' : 'border-line'
                   }`}

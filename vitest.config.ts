@@ -9,6 +9,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: true,
+    // e2e/ bevat Playwright-specs (eigen `test`-object) — Vitest zou ze anders ook proberen
+    // te draaien en crasht daarop ("did not expect test.describe() to be called here").
+    exclude: ['node_modules/**', 'e2e/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
