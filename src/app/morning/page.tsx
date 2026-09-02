@@ -57,7 +57,7 @@ interface MorningData {
 export default function MorningPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [step, setStep] = useState<Step>('intentie');
+  const [step, setStep] = useState<Step>('dagtype');
   const [alVoltooid, setAlVoltooid] = useState(false);
   const [meetingCount, setMeetingCount] = useState<number | null>(null);
   const router = useRouter();
@@ -208,7 +208,7 @@ export default function MorningPage() {
     );
   }
 
-  if (alVoltooid && step === 'intentie') {
+  if (alVoltooid && step === 'dagtype') {
     return (
       <div className="min-h-screen bg-surface-card pb-28">
         <div className="sticky top-0 z-10 bg-surface-card border-b border-line">

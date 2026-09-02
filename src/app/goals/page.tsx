@@ -63,12 +63,21 @@ export default function GoalsPage() {
   });
   const router = useRouter();
 
+  // Oudere/seed-doelen missen soms `progress` (bv. via een ander aanmaakpad dan dit formulier) —
+  // zonder deze normalisatie propageert dat naar NaN% in de statistieken (bevonden tijdens live
+  // browsertest).
+  const normalizeGoal = (g: any): Goal => ({
+    ...g,
+    progress: typeof g.progress === 'number' ? g.progress : 0,
+    nextActions: Array.isArray(g.nextActions) ? g.nextActions : [],
+  });
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
         if (!AuthService.getUser()) { router.push('/auth/login'); return; }
         const savedGoals = await api.goals.getAll();
-        setGoals(savedGoals as Goal[]);
+        setGoals((savedGoals as any[]).map(normalizeGoal));
       } catch { /* geen doelen of offline — laat de lege staat zien */ }
       finally { setLoading(false); }
     };
@@ -101,7 +110,7 @@ export default function GoalsPage() {
       setTimeout(() => setShowCelebration(false), 3000);
     }
     const updated = await api.goals.update(id, { completed: !goal.completed, progress: goal.completed ? 0 : 100 });
-    setGoals(prev => prev.map(g => g.id === id ? { ...g, ...updated } : g));
+    setGoals(prev => prev.map(g => g.id === id ? normalizeGoal({ ...g, ...updated }) : g));
   };
 
   const updateProgress = async (id: string, progress: number) => {
@@ -127,7 +136,7 @@ export default function GoalsPage() {
       return;
     }
     const updated = await api.goals.update(id, { isRock: !goal.isRock, quarter: currentQuarter });
-    setGoals(prev => prev.map(g => g.id === id ? { ...g, ...updated } : g));
+    setGoals(prev => prev.map(g => g.id === id ? normalizeGoal({ ...g, ...updated }) : g));
   };
 
   // 80/20: een actie markeren als hefboom betekent "dit is een van de weinige die er echt toe
