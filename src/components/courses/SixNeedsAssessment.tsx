@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { SixNeedsResults } from '@/types';
 import { Shield, Shuffle, Star, Heart, TrendingUp, Gift, ChevronRight, ChevronLeft } from 'lucide-react';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
 
 interface SixNeedsAssessmentProps {
   initialValues?: SixNeedsResults;
@@ -17,6 +18,12 @@ const needs = [
     icon: Shield,
     color: '#3b82f6',
     description: 'De behoefte aan veiligheid, stabiliteit, comfort en voorspelbaarheid.',
+    pro: 'Zekerheid is de eerste van de "overlevingsbehoeften" bij Robbins. Een hoge score betekent dat verandering en onzekerheid je energie kosten — herken je dat als ondernemer, bouw dan bewust structuur in (vaste routines, buffers) in plaats van te vechten tegen de onrust.',
+    suggestions: [
+      'Beantwoord vanuit je huidige leven, niet hoe je zou willen zijn',
+      'Denk aan financiën, gezondheid én relaties — zekerheid speelt overal',
+      'Een lage score is niet "fout": het betekent dat je makkelijker met chaos omgaat',
+    ],
     questions: [
       'Ik heb behoefte aan een vaste routine en structuur',
       'Ik voel me oncomfortabel bij grote veranderingen',
@@ -29,6 +36,12 @@ const needs = [
     icon: Shuffle,
     color: '#f97316',
     description: 'De behoefte aan verandering, avontuur, uitdaging en nieuwe ervaringen.',
+    pro: 'Variatie is de tegenpool van Zekerheid — de twee vormen samen de eerste spanning in het model. Een hoge score verklaart vaak waarom puur repetitief werk je uitput, ook als het "goed" voor je zou zijn.',
+    suggestions: [
+      'Herken je onrust bij lange, voorspelbare periodes? Dat wijst op een hoge score',
+      'Vergelijk je antwoord hier met dat bij Zekerheid — de combinatie zegt meer dan één score los',
+      'Een hoge score + ondernemerschap is een veelvoorkomende, productieve match',
+    ],
     questions: [
       'Ik houd van spontaniteit en onverwachte situaties',
       'Ik zoek actief naar nieuwe uitdagingen',
@@ -41,6 +54,12 @@ const needs = [
     icon: Star,
     color: '#eab308',
     description: 'De behoefte om je speciaal, uniek, belangrijk of nodig te voelen.',
+    pro: 'Significantie zoeken kan via twee wegen: verheffen (jezelf groter maken, vergelijken, status) of bijdragen (waardevol zijn voor anderen). Een hoge score is niet negatief — de manier waarop je die invult, bepaalt of het gezond is.',
+    suggestions: [
+      'Denk aan hoe je significantie zoekt: door prestaties, door uniek te zijn, of door onmisbaar te zijn?',
+      'Let op signalen als vergelijken met concurrenten of behoefte aan erkenning op social media',
+      'Een hoge score gecombineerd met een hoge Bijdrage-score is meestal een gezonde combinatie',
+    ],
     questions: [
       'Het is belangrijk dat anderen mij waarderen',
       'Ik wil me onderscheiden van anderen',
@@ -53,6 +72,12 @@ const needs = [
     icon: Heart,
     color: '#ec4899',
     description: 'De behoefte aan liefde, intimiteit en diepe connecties met anderen.',
+    pro: 'Verbinding is vaak de behoefte die als eerste sneuvelt bij drukke ondernemers — werk verdringt relaties omdat het urgenter voelt. Een hoge score hier is een signaal om verbinding net zo bewust in te plannen als een vergadering.',
+    suggestions: [
+      'Denk aan zowel zakelijke als persoonlijke relaties',
+      'Merk je dat je sociale contacten inleveren voor werk? Dat wijst op spanning met deze behoefte',
+      'Kwaliteit van contact telt zwaarder dan kwantiteit',
+    ],
     questions: [
       'Ik heb sterke, diepe relaties nodig om gelukkig te zijn',
       'Ik voel me het beste wanneer ik me verbonden voel met anderen',
@@ -65,6 +90,12 @@ const needs = [
     icon: TrendingUp,
     color: '#22c55e',
     description: 'De behoefte om te leren, te ontwikkelen en beter te worden.',
+    pro: 'Groei is één van de twee "behoeften van de geest" (naast Bijdrage) — Robbins noemt deze twee de sleutel tot langdurige vervulling, in tegenstelling tot de vier overlevingsbehoeften hierboven die alleen tevredenheid geven.',
+    suggestions: [
+      'Denk aan leren in brede zin: vaardigheden, inzicht, fysieke of mentale ontwikkeling',
+      'Een lage score is een goed signaal om bewust een leerdoel toe te voegen aan je Rocks',
+      'Groei zonder toepassing blijft kennis — koppel het waar mogelijk aan een concreet doel',
+    ],
     questions: [
       'Ik ben constant bezig met zelfontwikkeling',
       'Stilstand voelt als achteruitgang',
@@ -77,6 +108,12 @@ const needs = [
     icon: Gift,
     color: '#8b5cf6',
     description: 'De behoefte om bij te dragen, te geven en verschil te maken voor anderen.',
+    pro: 'Bijdrage is de tweede "behoefte van de geest" en volgens Robbins de meest onderschatte drijfveer voor blijvende voldoening. Een business die enkel op Significantie draait, voelt vaak leeg; een business die ook Bijdrage voedt, houdt langer stand.',
+    suggestions: [
+      'Denk aan impact op klanten, team, familie of maatschappij — niet alleen liefdadigheid',
+      'Een lage score hier is een goede reden om een "waarom" achter je werk scherper te maken',
+      'Combineer dit inzicht met je Identiteit-pagina voor een compleet beeld van je drijfveren',
+    ],
     questions: [
       'Ik voel me het meest vervuld als ik anderen help',
       'Het maken van impact is belangrijker dan geld verdienen',
@@ -251,9 +288,17 @@ export function SixNeedsAssessment({ initialValues, onComplete, readOnly = false
           </div>
           <div>
             <p className="text-sm text-ink-soft">Behoefte {step + 1} van {needs.length}</p>
-            <h3 className="text-xl font-semibold text-ink ">
-              {currentNeed.label}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xl font-semibold text-ink ">
+                {currentNeed.label}
+              </h3>
+              <InfoTooltip
+                title={currentNeed.label}
+                explanation={currentNeed.pro}
+                suggestions={currentNeed.suggestions}
+                size="md"
+              />
+            </div>
           </div>
         </div>
         <p className="mt-3 text-ink-soft ">{currentNeed.description}</p>

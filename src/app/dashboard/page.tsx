@@ -18,7 +18,38 @@ import { initializeNotifications } from '@/lib/notifications.service';
 import { buildRecoveryProposalUrl } from '@/lib/calendar-proposal';
 import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { BottomNav } from '@/components/ui/bottom-nav';
+import { WelcomeTour, type TourStep } from '@/components/ui/welcome-tour';
 import type { GoalAction } from '@/lib/goal-actions';
+
+const dashboardTourSteps: TourStep[] = [
+  {
+    target: '[data-tour="golden-egg"]',
+    title: 'Golden Egg — jouw Focus van de dag',
+    content: 'Dit is het ene doel dat er vandaag het meest toe doet. AIPA kiest deze op basis van je actieve Rocks (kwartaaldoelen) — zo weet je bij twijfel altijd waar je energie heen moet.',
+  },
+  {
+    target: '[data-tour="leverage-tasks"]',
+    title: 'Hefboom-taken (80/20)',
+    content: 'De taken hier zijn met opzet gemarkeerd als "leverage": ze leveren onevenredig veel resultaat op. Werk deze als eerste af, vóór je aan de rest van je to-do lijst begint.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="routines"]',
+    title: 'Ochtend- & avondritueel',
+    content: 'Je dagelijkse rituelen bouwen de discipline die grote doelen mogelijk maakt. De voortgangsbalk laat zien hoever je vandaag al bent — mis je een dag, dan zie je dat terug als banner boven.',
+  },
+  {
+    target: '[data-tour="aipa"]',
+    title: 'AIPA — je coach',
+    content: 'Praat hier met je AI-coach voor een reflectie op je dag, een sparringspartner bij lastige keuzes, of hulp om patronen in je gedrag te herkennen.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="stats"]',
+    title: 'Streak & voortgang',
+    content: 'Je streak is een momentum-indicator: hoe langer de reeks, hoe groter de kans dat je een gewoonte volhoudt. Eén gemiste dag breekt hem niet meteen — pas 2 op rij.',
+  },
+];
 
 interface Goal {
   id: string;
@@ -56,6 +87,7 @@ export default function DashboardPage() {
   const [todayDayType, setTodayDayType] = useState<'focus' | 'buffer' | 'free' | null>(null);
   const [leverageTasks, setLeverageTasks] = useState<{ goal: Goal; action: GoalAction }[]>([]);
   const [nsdrDismissed, setNsdrDismissed] = useState(false);
+  const [restartTour, setRestartTour] = useState(false);
   const router                      = useRouter();
 
   const ritualStatuses = useRitualStatus();
@@ -249,9 +281,19 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-            <button className="w-9 h-9 rounded-full bg-surface-sunken flex items-center justify-center text-ink-soft hover:text-ink transition-colors">
-              <Bell size={16} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setRestartTour(true)}
+                aria-label="Rondleiding opnieuw bekijken"
+                title="Rondleiding opnieuw bekijken"
+                className="w-9 h-9 rounded-full bg-surface-sunken flex items-center justify-center text-[13px] font-bold text-ink-soft hover:text-primary transition-colors"
+              >
+                ?
+              </button>
+              <button className="w-9 h-9 rounded-full bg-surface-sunken flex items-center justify-center text-ink-soft hover:text-ink transition-colors">
+                <Bell size={16} />
+              </button>
+            </div>
           </div>
         </header>
 
@@ -359,7 +401,7 @@ export default function DashboardPage() {
 
           {/* ══ GOLDEN EGG — FOCUS VAN DE DAG ═══════════════════ */}
           {focusGoal ? (
-            <div className="rounded-hero bg-surface-inverse p-5 mb-6 shadow-organic-lg">
+            <div data-tour="golden-egg" className="rounded-hero bg-surface-inverse p-5 mb-6 shadow-organic-lg">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-1.5">
                   <span className="live-dot w-2 h-2 rounded-full bg-primary-light inline-block" />
@@ -403,7 +445,7 @@ export default function DashboardPage() {
 
           {/* ══ HEFBOOM-TAKEN VANDAAG (80/20) ════════════════════ */}
           {leverageTasks.length > 0 && (
-            <section className="mb-6">
+            <section data-tour="leverage-tasks" className="mb-6">
               <div className="flex items-center gap-2.5 mb-3.5">
                 <div className="w-8 h-8 rounded-[10px] bg-tertiary-soft flex items-center justify-center">
                   <Flame size={15} className="text-tertiary" />
@@ -428,7 +470,7 @@ export default function DashboardPage() {
           )}
 
           {/* ══ MIJN ROUTINES ═══════════════════════════════════ */}
-          <section className="mb-6">
+          <section data-tour="routines" className="mb-6">
             <div className="flex items-center justify-between mb-3.5">
               <h2 className="text-[15px] font-bold text-ink">Mijn Routines</h2>
               <Link href="/morning" className="text-[12px] font-semibold text-primary">
@@ -676,6 +718,7 @@ export default function DashboardPage() {
           {/* ══ AIPA ═════════════════════════════════════════════ */}
           <Link
             href="/coach"
+            data-tour="aipa"
             className="block rounded-card bg-surface-inverse p-4 mb-6 hover:opacity-95 transition-opacity shadow-organic"
           >
             <div className="flex items-center gap-3">
@@ -735,7 +778,7 @@ export default function DashboardPage() {
           )}
 
           {/* ══ STATS ROW ═══════════════════════════════════════ */}
-          <section className="mb-6">
+          <section data-tour="stats" className="mb-6">
             <div className="grid grid-cols-3 gap-2.5">
               <div className="rounded-[14px] bg-surface-sunken px-3 py-4">
                 <p className="text-[9px] font-bold text-ink-soft uppercase tracking-[0.12em] mb-1.5">Doelen</p>
@@ -831,6 +874,13 @@ export default function DashboardPage() {
 
         {/* ══ BOTTOM NAV ══════════════════════════════════════ */}
         <BottomNav />
+
+        <WelcomeTour
+          tourId="dashboard"
+          steps={dashboardTourSteps}
+          forceOpen={restartTour}
+          onForceOpenHandled={() => setRestartTour(false)}
+        />
       </div>
     </RitualGuard>
   );
