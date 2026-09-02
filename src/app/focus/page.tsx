@@ -383,7 +383,7 @@ export default function FocusPage() {
               <circle
                 cx="100" cy="100" r={radius}
                 fill="none"
-                stroke={isWorkMode ? '#2f312f' : '#516050'}
+                stroke={isWorkMode ? '#3c4a39' : '#516050'}
                 strokeWidth="10"
                 strokeLinecap="round"
                 strokeDasharray={circumference}

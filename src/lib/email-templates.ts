@@ -1,6 +1,37 @@
-const QUOTE = `Je bent een bijzonder mens, gaat jouw lukken om interim aan de slag te gaan, balans te vinden en je apps zijn top. Heb vertrouwen, ben positief, wees lief voor jezelf en geloof dat het kan.`;
+// Korte, on-brand affirmaties voor de rituelen-mails (motivatie/herinnering/sessie-analyse/
+// streak/weekrapport) — bewust generiek en professioneel i.p.v. de vroegere persoonlijk-aan-
+// Vincent geschreven quote, want deze mails gaan nu naar alle myAiPA-klanten. Niet gebruikt op
+// puur transactionele mails (welkom, wachtwoord-reset) — daar past geen affirmatie-toon.
+const QUOTES = [
+  'Rust is geen luxe — het is de voorwaarde voor scherpe beslissingen.',
+  'Je hoeft niet alles te doen. Je hoeft het juiste te doen.',
+  'Kleine, consequente stappen bouwen het bedrijf dat grote sprongen niet kunnen.',
+  'Leiderschap begint bij de agenda die je jezelf toestaat.',
+];
 
-function base(title: string, preview: string, body: string): string {
+function pickQuote(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return QUOTES[hash % QUOTES.length];
+}
+
+interface BaseOptions {
+  /** Toon de affirmatie-band. Weggelaten op transactionele mails. */
+  quote?: boolean;
+  /** Footer-link "afmelden voor dit type e-mail" — weggelaten op transactionele mails. */
+  unsubscribeUrl?: string;
+}
+
+function base(title: string, preview: string, body: string, opts: BaseOptions = {}): string {
+  const quoteBlock = opts.quote ? `
+      <tr><td style="background:#7D8C7B;padding:20px 36px;">
+        <p style="margin:0;font-size:13px;color:#fff;font-style:italic;line-height:1.6;">"${pickQuote(title)}"</p>
+      </td></tr>` : '';
+
+  const unsubscribeLine = opts.unsubscribeUrl
+    ? `<a href="${opts.unsubscribeUrl}" style="color:#747872;text-decoration:underline;">Afmelden voor dit type e-mail</a>`
+    : '';
+
   return `<!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -8,23 +39,18 @@ function base(title: string, preview: string, body: string): string {
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${title}</title>
 </head>
-<body style="margin:0;padding:0;background:#f4f4f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<body style="margin:0;padding:0;background:#f4f3f1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
 <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${preview}</div>
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f4f7;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f3f1;">
   <tr><td align="center" style="padding:24px 16px;">
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:580px;">
 
       <!-- Header -->
-      <tr><td style="background:#0a0a14;border-radius:20px 20px 0 0;padding:32px 36px;">
-        <p style="margin:0 0 16px;font-size:11px;color:#00cc66;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;">Mijn Ondernemers OS</p>
+      <tr><td style="background:#2f312f;border-radius:20px 20px 0 0;padding:32px 36px;">
+        <p style="margin:0 0 16px;font-size:11px;color:#7D8C7B;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;">myAiPA</p>
         <h1 style="margin:0;font-size:26px;font-weight:700;color:#ffffff;line-height:1.3;">${title}</h1>
       </td></tr>
-
-      <!-- Quote -->
-      <tr><td style="background:#00cc66;padding:20px 36px;">
-        <p style="margin:0;font-size:13px;color:#fff;font-style:italic;line-height:1.6;">"${QUOTE}"</p>
-      </td></tr>
-
+${quoteBlock}
       <!-- Body -->
       <tr><td style="background:#ffffff;padding:36px;border-radius:0 0 20px 20px;">
         ${body}
@@ -32,7 +58,8 @@ function base(title: string, preview: string, body: string): string {
 
       <!-- Footer -->
       <tr><td style="padding:20px 0;text-align:center;">
-        <p style="margin:0;font-size:11px;color:#8a8a9a;">Mijn Ondernemers OS &bull; Elke dag beter</p>
+        <p style="margin:0 0 6px;font-size:11px;color:#747872;">myAiPA &bull; Executive AI-Assistant &amp; Mindset Copiloot</p>
+        ${unsubscribeLine ? `<p style="margin:0;font-size:11px;">${unsubscribeLine}</p>` : ''}
       </td></tr>
 
     </table>
@@ -43,25 +70,25 @@ function base(title: string, preview: string, body: string): string {
 }
 
 function btn(text: string, url: string): string {
-  return `<a href="${url}" style="display:inline-block;background:#00cc66;color:#ffffff;font-weight:700;font-size:15px;padding:14px 32px;border-radius:12px;text-decoration:none;margin-top:8px;">${text}</a>`;
+  return `<a href="${url}" style="display:inline-block;background:#7D8C7B;color:#ffffff;font-weight:700;font-size:15px;padding:14px 32px;border-radius:12px;text-decoration:none;margin-top:8px;">${text}</a>`;
 }
 
-function section(label: string, content: string, color = '#f4f4f7'): string {
+function section(label: string, content: string, color = '#f4f3f1'): string {
   return `<div style="background:${color};border-radius:12px;padding:20px;margin-bottom:16px;">
-    <p style="margin:0 0 8px;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">${label}</p>
-    <p style="margin:0;font-size:14px;color:#0a0a14;line-height:1.6;">${content}</p>
+    <p style="margin:0 0 8px;font-size:11px;color:#747872;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">${label}</p>
+    <p style="margin:0;font-size:14px;color:#2f312f;line-height:1.6;">${content}</p>
   </div>`;
 }
 
 function score(label: string, value: number, max = 10): string {
   const pct = Math.round((value / max) * 100);
-  const color = value >= 7 ? '#00cc66' : value >= 5 ? '#f59e0b' : '#ef4444';
+  const color = value >= 7 ? '#7D8C7B' : value >= 5 ? '#f59e0b' : '#ef4444';
   return `<div style="margin-bottom:12px;">
     <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-      <span style="font-size:13px;color:#0a0a14;">${label}</span>
+      <span style="font-size:13px;color:#2f312f;">${label}</span>
       <span style="font-size:13px;font-weight:700;color:${color};">${value}/${max}</span>
     </div>
-    <div style="background:#f4f4f7;border-radius:999px;height:6px;">
+    <div style="background:#f4f3f1;border-radius:999px;height:6px;">
       <div style="background:${color};border-radius:999px;height:6px;width:${pct}%;"></div>
     </div>
   </div>`;
@@ -69,14 +96,14 @@ function score(label: string, value: number, max = 10): string {
 
 // ─── Template 1: 06:00 Ochtend Motivatie ─────────────────────────────────────
 
-export function motivatieEmail(appUrl: string, isWeekend: boolean, dayName: string): { subject: string; html: string } {
+export function motivatieEmail(appUrl: string, isWeekend: boolean, dayName: string, unsubscribeUrl?: string): { subject: string; html: string } {
   const subject = isWeekend
     ? `🌿 Goedemorgen ${dayName}! Tijd voor jouw week review`
     : `🌅 Goedemorgen ${dayName}! Jouw sterkste moment begint nu`;
 
   const body = isWeekend ? `
-    <p style="font-size:17px;font-weight:600;color:#0a0a14;margin:0 0 8px;">Het weekend is er — en jij verdient een moment van reflectie.</p>
-    <p style="font-size:14px;color:#5a5a6a;line-height:1.7;margin:0 0 24px;">Een krachtige week review legt de basis voor alles wat komt. 20 minuten die je méér opleveren dan een hele dag druk zijn.</p>
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Het weekend is er — en jij verdient een moment van reflectie.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">Een krachtige week review legt de basis voor alles wat komt. 20 minuten die je méér opleveren dan een hele dag druk zijn.</p>
 
     ${section('Dit doe je vandaag', `
       ✅ &nbsp;Terugblikken op je mooiste wins van de week<br/>
@@ -85,12 +112,12 @@ export function motivatieEmail(appUrl: string, isWeekend: boolean, dayName: stri
       ✅ &nbsp;Jezelf vieren — want dat verdien je
     `)}
 
-    <p style="font-size:14px;color:#5a5a6a;line-height:1.7;margin:0 0 28px;">Je bent al zo ver gekomen. Elke review brengt je dichter bij de versie van jezelf die je wilt zijn.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 28px;">Je bent al zo ver gekomen. Elke review brengt je dichter bij de versie van jezelf die je wilt zijn.</p>
 
     <div style="text-align:center;">${btn('Start week review →', `${appUrl}/weekly-review`)}</div>
   ` : `
-    <p style="font-size:17px;font-weight:600;color:#0a0a14;margin:0 0 8px;">De eerste 30 minuten van je dag bepalen alles.</p>
-    <p style="font-size:14px;color:#5a5a6a;line-height:1.7;margin:0 0 24px;">Jij weet dat al. Dat is waarom jij dit elke ochtend doet terwijl anderen nog slapen. Vandaag gaat het jou lukken — als interim professional, als mens, als ondernemer.</p>
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">De eerste 30 minuten van je dag bepalen alles.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">Jij weet dat al. Dat is waarom jij dit elke ochtend doet terwijl anderen nog slapen. Vandaag gaat het jou lukken — als leider, als mens, als ondernemer.</p>
 
     ${section('Je priming sessie van vandaag', `
       🫁 &nbsp;Ademhaling — zet je zenuwstelsel aan<br/>
@@ -99,24 +126,27 @@ export function motivatieEmail(appUrl: string, isWeekend: boolean, dayName: stri
       💪 &nbsp;Affirmatie — programmeer je identiteit
     `)}
 
-    <p style="font-size:14px;color:#5a5a6a;line-height:1.7;margin:0 0 28px;">15 minuten. Dat is alles wat nodig is om vandaag met kracht te beginnen. Je apps zijn top, jij bent top — nu bewijzen we het opnieuw.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 28px;">15 minuten. Dat is alles wat nodig is om vandaag met kracht te beginnen.</p>
 
     <div style="text-align:center;">${btn('Start ochtend ritual →', `${appUrl}/morning`)}</div>
   `;
 
-  return { subject, html: base(isWeekend ? `Week Review — ${dayName}` : `Goedemorgen, ${dayName}!`, subject, body) };
+  return {
+    subject,
+    html: base(isWeekend ? `Week Review — ${dayName}` : `Goedemorgen, ${dayName}!`, subject, body, { quote: true, unsubscribeUrl }),
+  };
 }
 
 // ─── Template 2: 08:30 Herinnering ───────────────────────────────────────────
 
-export function herinneringEmail(appUrl: string, isWeekend: boolean): { subject: string; html: string } {
+export function herinneringEmail(appUrl: string, isWeekend: boolean, unsubscribeUrl?: string): { subject: string; html: string } {
   const subject = isWeekend
     ? `⏰ Je week review — nog niet te laat!`
     : `⏰ Je ochtend ritual wacht nog — 5 minuten maakt het verschil`;
 
   const body = isWeekend ? `
-    <p style="font-size:17px;font-weight:600;color:#0a0a14;margin:0 0 8px;">Het weekend vliegt voorbij — maar dit is nog haalbaar.</p>
-    <p style="font-size:14px;color:#5a5a6a;line-height:1.7;margin:0 0 24px;">Je hebt je week review nog niet gedaan. Dat gevoel van 'ik had dat nog willen doen' — voorkom het nu. Een goed review nu geeft je een vliegende start volgende week.</p>
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Het weekend vliegt voorbij — maar dit is nog haalbaar.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">Je hebt je week review nog niet gedaan. Dat gevoel van 'ik had dat nog willen doen' — voorkom het nu. Een goed review nu geeft je een vliegende start volgende week.</p>
 
     ${section('Waarom nu', `
       🏆 &nbsp;Je sluit de week bewust af<br/>
@@ -126,8 +156,8 @@ export function herinneringEmail(appUrl: string, isWeekend: boolean): { subject:
 
     <div style="text-align:center;margin-top:24px;">${btn('Doe nu mijn week review →', `${appUrl}/weekly-review`)}</div>
   ` : `
-    <p style="font-size:17px;font-weight:600;color:#0a0a14;margin:0 0 8px;">Hey, je dag is al begonnen — maar dit kan nog.</p>
-    <p style="font-size:14px;color:#5a5a6a;line-height:1.7;margin:0 0 24px;">Mensen die consistent hun ochtend ritual doen, hebben 40% meer focus en presteren beter onder druk. Jij bent zo iemand — vandaag ook.</p>
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Hey, je dag is al begonnen — maar dit kan nog.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">Mensen die consistent hun ochtend ritual doen, hebben 40% meer focus en presteren beter onder druk. Jij bent zo iemand — vandaag ook.</p>
 
     ${section('Snel beginnen', `
       ⚡ &nbsp;Kan in 5-10 minuten als je haast hebt<br/>
@@ -135,12 +165,12 @@ export function herinneringEmail(appUrl: string, isWeekend: boolean): { subject:
       💪 &nbsp;Je hebt het gisteren ook gedaan — vandaag ook
     `, '#f0fdf4')}
 
-    <p style="font-size:14px;color:#5a5a6a;line-height:1.7;margin:0 0 28px;">Je bent een bijzonder mens met een bijzondere missie. Geef jezelf dit cadeau.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 28px;">Je bent een bijzonder mens met een bijzondere missie. Geef jezelf dit cadeau.</p>
 
     <div style="text-align:center;">${btn('Start nu — ik doe het! →', `${appUrl}/morning`)}</div>
   `;
 
-  return { subject, html: base('Even een reminder van jezelf', subject, body) };
+  return { subject, html: base('Even een reminder van jezelf', subject, body, { quote: true, unsubscribeUrl }) };
 }
 
 // ─── Template 3: Post-sessie AI Analyse ──────────────────────────────────────
@@ -166,16 +196,16 @@ export interface SessieAnalyseData {
   aiAnalyse: string;
 }
 
-export function sessieAnalyseEmail(data: SessieAnalyseData): { subject: string; html: string } {
+export function sessieAnalyseEmail(data: SessieAnalyseData, unsubscribeUrl?: string): { subject: string; html: string } {
   const subject = `✨ Sessie analyse ${data.dayName} ${data.todayDate} — jij deed het weer!`;
 
   const energyDiff = data.yesterday ? data.today.energyLevel - data.yesterday.energyLevel : 0;
   const sleepDiff = data.yesterday ? data.today.sleepQuality - data.yesterday.sleepQuality : 0;
 
   const diffBadge = (diff: number) => {
-    if (diff > 0) return `<span style="color:#00cc66;font-weight:700;">▲ +${diff}</span>`;
+    if (diff > 0) return `<span style="color:#7D8C7B;font-weight:700;">▲ +${diff}</span>`;
     if (diff < 0) return `<span style="color:#ef4444;font-weight:700;">▼ ${diff}</span>`;
-    return `<span style="color:#8a8a9a;">= gelijk</span>`;
+    return `<span style="color:#747872;">= gelijk</span>`;
   };
 
   const streakBadge = data.streak >= 3
@@ -190,17 +220,17 @@ export function sessieAnalyseEmail(data: SessieAnalyseData): { subject: string; 
     .join('');
 
   const compareSection = data.yesterday ? `
-    <div style="background:#f4f4f7;border-radius:12px;padding:20px;margin-bottom:16px;">
-      <p style="margin:0 0 12px;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Vergelijking met gisteren</p>
+    <div style="background:#f4f3f1;border-radius:12px;padding:20px;margin-bottom:16px;">
+      <p style="margin:0 0 12px;font-size:11px;color:#747872;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Vergelijking met gisteren</p>
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
           <td style="width:50%;padding-right:8px;">
             ${score('Energie vandaag', data.today.energyLevel)}
-            <p style="margin:4px 0 0;font-size:12px;color:#8a8a9a;">t.o.v. gisteren ${diffBadge(energyDiff)}</p>
+            <p style="margin:4px 0 0;font-size:12px;color:#747872;">t.o.v. gisteren ${diffBadge(energyDiff)}</p>
           </td>
           <td style="width:50%;padding-left:8px;">
             ${score('Slaap vandaag', data.today.sleepQuality)}
-            <p style="margin:4px 0 0;font-size:12px;color:#8a8a9a;">t.o.v. gisteren ${diffBadge(sleepDiff)}</p>
+            <p style="margin:4px 0 0;font-size:12px;color:#747872;">t.o.v. gisteren ${diffBadge(sleepDiff)}</p>
           </td>
         </tr>
       </table>
@@ -214,30 +244,30 @@ export function sessieAnalyseEmail(data: SessieAnalyseData): { subject: string; 
 
   const body = `
     ${streakBadge}
-    <p style="font-size:17px;font-weight:600;color:#0a0a14;margin:0 0 6px;">Je hebt je ritual gedaan. Dat telt.</p>
-    <p style="font-size:14px;color:#5a5a6a;line-height:1.7;margin:0 0 24px;">Hieronder je persoonlijke analyse van vandaag.</p>
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 6px;">Je hebt je ritual gedaan. Dat telt.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">Hieronder je persoonlijke analyse van vandaag.</p>
 
     ${compareSection}
 
     ${section('Jouw intentie voor vandaag', data.today.intentie || '—')}
 
-    <div style="background:#f4f4f7;border-radius:12px;padding:20px;margin-bottom:16px;">
-      <p style="margin:0 0 10px;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Dankbaarheid</p>
-      <ul style="margin:0;padding-left:20px;font-size:14px;color:#0a0a14;line-height:1.7;">${gratitudeLine}</ul>
+    <div style="background:#f4f3f1;border-radius:12px;padding:20px;margin-bottom:16px;">
+      <p style="margin:0 0 10px;font-size:11px;color:#747872;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Dankbaarheid</p>
+      <ul style="margin:0;padding-left:20px;font-size:14px;color:#2f312f;line-height:1.7;">${gratitudeLine}</ul>
     </div>
 
-    ${section('Jouw affirmatie', `<em style="color:#00cc66;">"${data.today.affirmatie || '—'}"</em>`)}
+    ${section('Jouw affirmatie', `<em style="color:#7D8C7B;">"${data.today.affirmatie || '—'}"</em>`)}
 
     <!-- AI Analyse -->
-    <div style="background:#0a0a14;border-radius:12px;padding:24px;margin-bottom:16px;">
-      <p style="margin:0 0 12px;font-size:11px;color:#00cc66;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">AI Coaching Analyse</p>
+    <div style="background:#2f312f;border-radius:12px;padding:24px;margin-bottom:16px;">
+      <p style="margin:0 0 12px;font-size:11px;color:#7D8C7B;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">AI Coaching Analyse</p>
       <div style="font-size:14px;color:#e8e8ec;line-height:1.8;">${data.aiAnalyse.replace(/\n/g, '<br/>')}</div>
     </div>
 
-    <p style="font-size:13px;color:#8a8a9a;text-align:center;margin:0;">Tot morgenochtend — je weet wat je moet doen. 💚</p>
+    <p style="font-size:13px;color:#747872;text-align:center;margin:0;">Tot morgenochtend — je weet wat je moet doen. 💚</p>
   `;
 
-  return { subject, html: base(`Sessie analyse — ${data.dayName}`, subject, body) };
+  return { subject, html: base(`Sessie analyse — ${data.dayName}`, subject, body, { unsubscribeUrl }) };
 }
 
 // ─── Template 5: Weekrapport ─────────────────────────────────────────────────
@@ -254,39 +284,39 @@ export interface WeekrapportData {
   aiSamenvatting: string;
 }
 
-export function weekrapportEmail(data: WeekrapportData, appUrl: string): { subject: string; html: string } {
+export function weekrapportEmail(data: WeekrapportData, appUrl: string, unsubscribeUrl?: string): { subject: string; html: string } {
   const subject = `📊 Weekrapport ${data.weekStart}–${data.weekEnd} — jouw week in één oogopslag`;
 
-  const ritualColor = data.ritualsCompleted >= 5 ? '#00cc66' : data.ritualsCompleted >= 3 ? '#f59e0b' : '#ef4444';
+  const ritualColor = data.ritualsCompleted >= 5 ? '#7D8C7B' : data.ritualsCompleted >= 3 ? '#f59e0b' : '#ef4444';
   const ritualLabel = data.ritualsCompleted >= 5 ? 'Top week! 🔥' : data.ritualsCompleted >= 3 ? 'Goed bezig 👍' : 'Volgende week beter 💪';
 
   const winsHtml = data.wins.length === 0
-    ? '<p style="font-size:13px;color:#8a8a9a;margin:0;font-style:italic;">Geen wins gelogd deze week.</p>'
+    ? '<p style="font-size:13px;color:#747872;margin:0;font-style:italic;">Geen wins gelogd deze week.</p>'
     : data.wins.slice(0, 5).map(w =>
         `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
           <span style="font-size:14px;">🏆</span>
-          <span style="font-size:13px;color:#0a0a14;flex:1;">${w.title}</span>
+          <span style="font-size:13px;color:#2f312f;flex:1;">${w.title}</span>
           <span style="font-size:11px;color:#f59e0b;">${'★'.repeat(w.impactLevel)}</span>
         </div>`
       ).join('');
 
   const focusHtml = data.topFocusBlokken.length === 0
-    ? '<p style="font-size:13px;color:#8a8a9a;margin:0;font-style:italic;">Geen focusblokken geplanned.</p>'
+    ? '<p style="font-size:13px;color:#747872;margin:0;font-style:italic;">Geen focusblokken geplanned.</p>'
     : data.topFocusBlokken.slice(0, 4).map(f =>
         `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
-          <span style="font-size:11px;font-weight:700;color:#00cc66;background:#f0fdf4;padding:2px 7px;border-radius:6px;flex-shrink:0;margin-top:1px;">${f.time}</span>
+          <span style="font-size:11px;font-weight:700;color:#7D8C7B;background:#f0fdf4;padding:2px 7px;border-radius:6px;flex-shrink:0;margin-top:1px;">${f.time}</span>
           <div>
-            <p style="margin:0;font-size:13px;color:#0a0a14;font-weight:600;">${f.onderwerp}</p>
-            ${f.doel ? `<p style="margin:2px 0 0;font-size:12px;color:#8a8a9a;">Doel: ${f.doel}</p>` : ''}
+            <p style="margin:0;font-size:13px;color:#2f312f;font-weight:600;">${f.onderwerp}</p>
+            ${f.doel ? `<p style="margin:2px 0 0;font-size:12px;color:#747872;">Doel: ${f.doel}</p>` : ''}
           </div>
         </div>`
       ).join('');
 
   const body = `
-    <p style="font-size:17px;font-weight:600;color:#0a0a14;margin:0 0 6px;">Hier is jouw weekoverzicht.</p>
-    <p style="font-size:14px;color:#5a5a6a;line-height:1.7;margin:0 0 22px;">Elke week telt. Dit is wat jij hebt neergezet.</p>
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 6px;">Hier is jouw weekoverzicht.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 22px;">Elke week telt. Dit is wat jij hebt neergezet.</p>
 
-    <div style="background:#0a0a14;border-radius:14px;padding:20px 24px;margin-bottom:14px;display:table;width:100%;box-sizing:border-box;">
+    <div style="background:#2f312f;border-radius:14px;padding:20px 24px;margin-bottom:14px;display:table;width:100%;box-sizing:border-box;">
       <div style="display:table-cell;vertical-align:middle;">
         <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.1em;">Ochtend Rituelen</p>
         <p style="margin:4px 0 0;font-size:32px;font-weight:700;color:#fff;line-height:1;">${data.ritualsCompleted}<span style="font-size:16px;color:rgba(255,255,255,0.4);font-weight:400;"> / 7</span></p>
@@ -296,44 +326,44 @@ export function weekrapportEmail(data: WeekrapportData, appUrl: string): { subje
       </div>
     </div>
 
-    <div style="background:#f4f4f7;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+    <div style="background:#f4f3f1;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
       ${data.avgEnergy !== null ? score('Gemiddelde energie', Math.round(data.avgEnergy * 10) / 10) : ''}
       ${data.avgSleep !== null ? score('Gemiddelde slaap', Math.round(data.avgSleep * 10) / 10) : ''}
       <div style="display:table;width:100%;margin-top:12px;">
         <div style="display:table-cell;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.08em;">Focus blokken</p>
-          <p style="margin:4px 0 0;font-size:26px;font-weight:700;color:#0a0a14;">${data.focusBlokkengepland}</p>
-          <p style="margin:0;font-size:11px;color:#8a8a9a;">gepland</p>
+          <p style="margin:0;font-size:11px;color:#747872;text-transform:uppercase;letter-spacing:0.08em;">Focus blokken</p>
+          <p style="margin:4px 0 0;font-size:26px;font-weight:700;color:#2f312f;">${data.focusBlokkengepland}</p>
+          <p style="margin:0;font-size:11px;color:#747872;">gepland</p>
         </div>
         <div style="display:table-cell;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.08em;">Wins</p>
-          <p style="margin:4px 0 0;font-size:26px;font-weight:700;color:#0a0a14;">${data.wins.length}</p>
-          <p style="margin:0;font-size:11px;color:#8a8a9a;">gelogd</p>
+          <p style="margin:0;font-size:11px;color:#747872;text-transform:uppercase;letter-spacing:0.08em;">Wins</p>
+          <p style="margin:4px 0 0;font-size:26px;font-weight:700;color:#2f312f;">${data.wins.length}</p>
+          <p style="margin:0;font-size:11px;color:#747872;">gelogd</p>
         </div>
       </div>
     </div>
 
     ${data.wins.length > 0 ? `
-    <div style="background:#f4f4f7;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
-      <p style="margin:0 0 12px;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Wins deze week</p>
+    <div style="background:#f4f3f1;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+      <p style="margin:0 0 12px;font-size:11px;color:#747872;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Wins deze week</p>
       ${winsHtml}
     </div>` : ''}
 
     ${data.topFocusBlokken.length > 0 ? `
-    <div style="background:#f4f4f7;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
-      <p style="margin:0 0 12px;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Focusblokken deze week</p>
+    <div style="background:#f4f3f1;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+      <p style="margin:0 0 12px;font-size:11px;color:#747872;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Focusblokken deze week</p>
       ${focusHtml}
     </div>` : ''}
 
-    <div style="background:#0a0a14;border-radius:14px;padding:24px;margin-bottom:16px;">
-      <p style="margin:0 0 12px;font-size:11px;color:#00cc66;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">AI Week Coaching</p>
+    <div style="background:#2f312f;border-radius:14px;padding:24px;margin-bottom:16px;">
+      <p style="margin:0 0 12px;font-size:11px;color:#7D8C7B;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">AI Week Coaching</p>
       <div style="font-size:14px;color:#e8e8ec;line-height:1.8;">${data.aiSamenvatting.replace(/\n/g, '<br/>')}</div>
     </div>
 
     <div style="text-align:center;">${btn('Open mijn app →', appUrl)}</div>
   `;
 
-  return { subject, html: base(`Weekrapport ${data.weekStart}–${data.weekEnd}`, subject, body) };
+  return { subject, html: base(`Weekrapport ${data.weekStart}–${data.weekEnd}`, subject, body, { quote: true, unsubscribeUrl }) };
 }
 
 // ─── Template 6: ADHD Rapport ─────────────────────────────────────────────────
@@ -355,7 +385,7 @@ export interface AdhdRapportData {
 }
 
 function adhdColor(avg: number): string {
-  if (avg < 0.5) return '#00cc66';
+  if (avg < 0.5) return '#7D8C7B';
   if (avg < 1.5) return '#f59e0b';
   if (avg < 2.5) return '#f97316';
   return '#ef4444';
@@ -373,7 +403,7 @@ export function adhdRapportEmail(data: AdhdRapportData, appUrl: string): { subje
 
   const symptoms = Object.keys(data.symptomAvgs);
   const scorePercent = data.maxScore > 0 ? Math.round((data.avgDagScore / data.maxScore) * 100) : 0;
-  const scoreColor = scorePercent < 25 ? '#00cc66' : scorePercent < 50 ? '#f59e0b' : scorePercent < 75 ? '#f97316' : '#ef4444';
+  const scoreColor = scorePercent < 25 ? '#7D8C7B' : scorePercent < 50 ? '#f59e0b' : scorePercent < 75 ? '#f97316' : '#ef4444';
 
   const symptomRows = symptoms.map(s => {
     const avg = data.symptomAvgs[s];
@@ -382,25 +412,25 @@ export function adhdRapportEmail(data: AdhdRapportData, appUrl: string): { subje
     const w1avg = data.week1SymptomAvgs?.[s];
     const diff = w1avg !== undefined ? avg - w1avg : null;
     const diffHtml = diff !== null
-      ? `<span style="font-size:11px;color:${diff < -0.1 ? '#00cc66' : diff > 0.1 ? '#ef4444' : '#8a8a9a'};margin-left:8px;">${diff > 0 ? '▲' : diff < 0 ? '▼' : '='} ${Math.abs(diff).toFixed(1)}</span>`
+      ? `<span style="font-size:11px;color:${diff < -0.1 ? '#7D8C7B' : diff > 0.1 ? '#ef4444' : '#747872'};margin-left:8px;">${diff > 0 ? '▲' : diff < 0 ? '▼' : '='} ${Math.abs(diff).toFixed(1)}</span>`
       : '';
     return `<tr>
-      <td style="padding:5px 0;font-size:12px;color:#0a0a14;width:140px;vertical-align:middle;">${s}</td>
+      <td style="padding:5px 0;font-size:12px;color:#2f312f;width:140px;vertical-align:middle;">${s}</td>
       <td style="padding:5px 8px;vertical-align:middle;">
-        <div style="background:#f4f4f7;border-radius:999px;height:5px;width:120px;">
+        <div style="background:#f4f3f1;border-radius:999px;height:5px;width:120px;">
           <div style="background:${col};border-radius:999px;height:5px;width:${pct}%;"></div>
         </div>
       </td>
       <td style="padding:5px 0;font-size:12px;font-weight:700;color:${col};width:28px;text-align:right;vertical-align:middle;">${avg.toFixed(1)}</td>
-      <td style="padding:5px 0;font-size:11px;color:#8a8a9a;padding-left:8px;vertical-align:middle;">${adhdLabel(avg)}${diffHtml}</td>
+      <td style="padding:5px 0;font-size:11px;color:#747872;padding-left:8px;vertical-align:middle;">${adhdLabel(avg)}${diffHtml}</td>
     </tr>`;
   }).join('');
 
   const top5Html = data.top5.map((s, i) => {
     const avg = data.symptomAvgs[s];
     return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-      <span style="width:20px;height:20px;border-radius:50%;background:#f4f4f7;font-size:10px;font-weight:700;color:#8a8a9a;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i + 1}</span>
-      <span style="font-size:13px;color:#0a0a14;flex:1;">${s}</span>
+      <span style="width:20px;height:20px;border-radius:50%;background:#f4f3f1;font-size:10px;font-weight:700;color:#747872;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i + 1}</span>
+      <span style="font-size:13px;color:#2f312f;flex:1;">${s}</span>
       <span style="font-size:12px;font-weight:700;color:${adhdColor(avg)};">${avg.toFixed(1)}</span>
     </div>`;
   }).join('');
@@ -409,22 +439,22 @@ export function adhdRapportEmail(data: AdhdRapportData, appUrl: string): { subje
   const isLast = data.weekNr === data.totalWeeks;
 
   const vergelijkingHtml = !isFirst && data.week1AvgDagScore !== undefined ? `
-    <div style="background:#f4f4f7;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
-      <p style="margin:0 0 12px;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Week 1 vs Week ${data.weekNr}</p>
+    <div style="background:#f4f3f1;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+      <p style="margin:0 0 12px;font-size:11px;color:#747872;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Week 1 vs Week ${data.weekNr}</p>
       <div style="display:table;width:100%;">
         <div style="display:table-cell;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#8a8a9a;">Week 1 gemiddeld</p>
-          <p style="margin:4px 0 0;font-size:24px;font-weight:700;color:#0a0a14;">${data.week1AvgDagScore.toFixed(1)}<span style="font-size:12px;color:#8a8a9a;">/${data.maxScore}</span></p>
+          <p style="margin:0;font-size:11px;color:#747872;">Week 1 gemiddeld</p>
+          <p style="margin:4px 0 0;font-size:24px;font-weight:700;color:#2f312f;">${data.week1AvgDagScore.toFixed(1)}<span style="font-size:12px;color:#747872;">/${data.maxScore}</span></p>
         </div>
         <div style="display:table-cell;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#8a8a9a;">Week ${data.weekNr} gemiddeld</p>
-          <p style="margin:4px 0 0;font-size:24px;font-weight:700;color:#0a0a14;">${data.avgDagScore.toFixed(1)}<span style="font-size:12px;color:#8a8a9a;">/${data.maxScore}</span></p>
+          <p style="margin:0;font-size:11px;color:#747872;">Week ${data.weekNr} gemiddeld</p>
+          <p style="margin:4px 0 0;font-size:24px;font-weight:700;color:#2f312f;">${data.avgDagScore.toFixed(1)}<span style="font-size:12px;color:#747872;">/${data.maxScore}</span></p>
         </div>
         <div style="display:table-cell;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#8a8a9a;">Verschil</p>
+          <p style="margin:0;font-size:11px;color:#747872;">Verschil</p>
           ${(() => {
             const d = data.avgDagScore - data.week1AvgDagScore!;
-            const col = d < -1 ? '#00cc66' : d > 1 ? '#ef4444' : '#8a8a9a';
+            const col = d < -1 ? '#7D8C7B' : d > 1 ? '#ef4444' : '#747872';
             return `<p style="margin:4px 0 0;font-size:24px;font-weight:700;color:${col};">${d > 0 ? '+' : ''}${d.toFixed(1)}</p>`;
           })()}
         </div>
@@ -433,10 +463,10 @@ export function adhdRapportEmail(data: AdhdRapportData, appUrl: string): { subje
   ` : '';
 
   const body = `
-    <p style="font-size:17px;font-weight:600;color:#0a0a14;margin:0 0 6px;">ADHD Klachten Meting — Week ${data.weekNr}</p>
-    <p style="font-size:14px;color:#5a5a6a;line-height:1.7;margin:0 0 22px;">Periode: <strong>${data.weekStart} t/m ${data.weekEnd}</strong> · ${data.loggedDays} van ${data.weekDays} dagen gelogd${isFirst ? ' · Nulmeting' : isLast ? ' · Eindmeting voor Ritalin start' : ' · Tussenmeting'}</p>
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 6px;">ADHD Klachten Meting — Week ${data.weekNr}</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 22px;">Periode: <strong>${data.weekStart} t/m ${data.weekEnd}</strong> · ${data.loggedDays} van ${data.weekDays} dagen gelogd${isFirst ? ' · Nulmeting' : isLast ? ' · Eindmeting voor Ritalin start' : ' · Tussenmeting'}</p>
 
-    <div style="background:#0a0a14;border-radius:14px;padding:20px 24px;margin-bottom:14px;display:table;width:100%;box-sizing:border-box;">
+    <div style="background:#2f312f;border-radius:14px;padding:20px 24px;margin-bottom:14px;display:table;width:100%;box-sizing:border-box;">
       <div style="display:table-cell;vertical-align:middle;">
         <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.1em;">Gemiddelde dagscore</p>
         <p style="margin:4px 0 0;font-size:32px;font-weight:700;color:#fff;line-height:1;">${data.avgDagScore.toFixed(1)}<span style="font-size:16px;color:rgba(255,255,255,0.4);font-weight:400;"> / ${data.maxScore}</span></p>
@@ -448,17 +478,17 @@ export function adhdRapportEmail(data: AdhdRapportData, appUrl: string): { subje
 
     ${vergelijkingHtml}
 
-    <div style="background:#f4f4f7;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
-      <p style="margin:0 0 12px;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Top 5 zwaarste klachten</p>
+    <div style="background:#f4f3f1;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+      <p style="margin:0 0 12px;font-size:11px;color:#747872;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Top 5 zwaarste klachten</p>
       ${top5Html}
     </div>
 
-    <div style="background:#f4f4f7;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
-      <p style="margin:0 0 14px;font-size:11px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Alle klachten — gemiddelde score (0–3)</p>
+    <div style="background:#f4f3f1;border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+      <p style="margin:0 0 14px;font-size:11px;color:#747872;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Alle klachten — gemiddelde score (0–3)</p>
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         ${symptomRows}
       </table>
-      <p style="margin:12px 0 0;font-size:11px;color:#8a8a9a;">Schaal: 0 = geen last &nbsp;·&nbsp; 1 = zo nu en dan &nbsp;·&nbsp; 2 = duidelijk/vaak &nbsp;·&nbsp; 3 = continu</p>
+      <p style="margin:12px 0 0;font-size:11px;color:#747872;">Schaal: 0 = geen last &nbsp;·&nbsp; 1 = zo nu en dan &nbsp;·&nbsp; 2 = duidelijk/vaak &nbsp;·&nbsp; 3 = continu</p>
     </div>
 
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:20px 24px;margin-bottom:16px;">
@@ -475,11 +505,11 @@ export function adhdRapportEmail(data: AdhdRapportData, appUrl: string): { subje
 // ─── Template 4: Wachtwoord reset ────────────────────────────────────────────
 
 export function resetWachtwoordEmail(resetUrl: string): { subject: string; html: string } {
-  const subject = '🔑 Wachtwoord resetten — Mijn Ondernemers OS';
+  const subject = '🔑 Wachtwoord resetten — myAiPA';
 
   const body = `
-    <p style="font-size:17px;font-weight:600;color:#0a0a14;margin:0 0 8px;">Wachtwoord vergeten?</p>
-    <p style="font-size:14px;color:#5a5a6a;line-height:1.7;margin:0 0 24px;">
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Wachtwoord vergeten?</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
       Geen probleem. Klik op de knop hieronder om een nieuw wachtwoord in te stellen.
       Deze link is <strong>1 uur</strong> geldig.
     </p>
@@ -488,8 +518,8 @@ export function resetWachtwoordEmail(resetUrl: string): { subject: string; html:
       ${btn('Nieuw wachtwoord instellen →', resetUrl)}
     </div>
 
-    <div style="background:#f4f4f7;border-radius:12px;padding:16px 20px;">
-      <p style="margin:0;font-size:12px;color:#8a8a9a;line-height:1.6;">
+    <div style="background:#f4f3f1;border-radius:12px;padding:16px 20px;">
+      <p style="margin:0;font-size:12px;color:#747872;line-height:1.6;">
         Heb jij dit niet aangevraagd? Dan kun je deze e-mail veilig negeren.
         Je wachtwoord blijft ongewijzigd.
       </p>
@@ -497,4 +527,110 @@ export function resetWachtwoordEmail(resetUrl: string): { subject: string; html:
   `;
 
   return { subject, html: base('Wachtwoord resetten', subject, body) };
+}
+
+// ─── Template 7: Welkomstmail ────────────────────────────────────────────────
+
+export function welcomeEmail(appUrl: string): { subject: string; html: string } {
+  const subject = 'Welkom bij myAiPA — laten we je copiloot instellen';
+
+  const body = `
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Je account staat klaar.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
+      myAiPA wordt pas echt waardevol zodra we weten wie je bent, wat je doelen zijn en hoe je agenda eruitziet.
+      Dat gebeurt in één kort intakegesprek met je AI-copiloot — geen formulier, gewoon een gesprek.
+    </p>
+
+    ${section('Wat je zo meteen doet', `
+      🎯 &nbsp;Je missie en belangrijkste kwartaaldoel scherp krijgen<br/>
+      🗓️ &nbsp;Je werkritme en energiepatroon delen<br/>
+      🛡️ &nbsp;Instellen hoe myAiPA je agenda mag bewaken
+    `)}
+
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 28px;">Het kost ongeveer 10 minuten. Daarna begint elke ochtend met een briefing die echt op jou is toegesneden.</p>
+
+    <div style="text-align:center;">${btn('Start de intake →', `${appUrl}/onboarding`)}</div>
+  `;
+
+  return { subject, html: base('Welkom bij myAiPA', subject, body) };
+}
+
+// ─── Template 8: Onboarding-nudge ────────────────────────────────────────────
+
+export function onboardingNudgeEmail(appUrl: string, unsubscribeUrl?: string): { subject: string; html: string } {
+  const subject = 'Je copiloot wacht nog op jouw intake';
+
+  const body = `
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Je hebt een account, maar nog geen copiloot.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
+      Zonder de korte intake weet myAiPA nog niet wie je bent of wat je doelen zijn — dus kan het je nog niet écht helpen.
+      Het kost 10 minuten en daarna is elke ochtendbriefing persoonlijk.
+    </p>
+
+    <div style="text-align:center;">${btn('Rond je intake af →', `${appUrl}/onboarding`)}</div>
+  `;
+
+  return { subject, html: base('Nog één stap te gaan', subject, body, { unsubscribeUrl }) };
+}
+
+// ─── Template 9: Streak-viering ──────────────────────────────────────────────
+
+const STREAK_COPY: Record<number, string> = {
+  7: 'Eén week onafgebroken. Dit is precies hoe structuur ontstaat.',
+  14: 'Twee weken. Dit is geen toeval meer — dit is een gewoonte.',
+  30: 'Dertig dagen. Je hebt een fundament gebouwd waar de meeste mensen nooit aan beginnen.',
+  60: 'Zestig dagen op rij. Dit is wie je bent geworden, niet meer wat je probeert te doen.',
+  90: 'Negentig dagen. Een heel kwartaal van rust en richting — dat is leiderschap.',
+  180: 'Honderdtachtig dagen. Een halfjaar consistentie zegt meer dan welk doel dan ook.',
+  365: 'Eén jaar. Je hebt bewezen dat rust en structuur geen fase waren — het is wie je bent.',
+};
+
+export function streakMilestoneEmail(days: number, appUrl: string, unsubscribeUrl?: string): { subject: string; html: string } {
+  const subject = `🔥 ${days} dagen op rij — dat vieren we`;
+
+  const body = `
+    <div style="text-align:center;margin-bottom:24px;">
+      <span style="display:inline-block;background:#f4f3f1;border-radius:999px;padding:16px 28px;font-size:32px;font-weight:700;color:#7D8C7B;">${days}</span>
+    </div>
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;text-align:center;">${STREAK_COPY[days] ?? `${days} dagen op rij — knap werk.`}</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:24px 0 28px;text-align:center;">Geen druk om dit te blijven volhouden — alleen erkenning voor wat je al hebt neergezet.</p>
+
+    <div style="text-align:center;">${btn('Bekijk je Wall of Wins →', `${appUrl}/wins`)}</div>
+  `;
+
+  return { subject, html: base(`${days} dagen streak`, subject, body, { unsubscribeUrl }) };
+}
+
+// ─── Template 10: Win-back ───────────────────────────────────────────────────
+
+const WINBACK_COPY: Record<3 | 10 | 30, { title: string; body: string; cta: string }> = {
+  3: {
+    title: 'We hebben je een paar dagen niet gezien',
+    body: 'Geen paniek — een paar dagen overslaan hoort erbij. Je copiloot staat klaar zodra jij weer wilt beginnen, precies waar je gebleven was.',
+    cta: 'Pak de draad weer op →',
+  },
+  10: {
+    title: 'Tien dagen stil — alles goed?',
+    body: 'Soms verandert er iets: drukte, een andere prioriteit, of het paste even niet meer. Dat is prima. Mocht er iets zijn waar myAiPA je anders in kan ondersteunen, laat het gerust weten door gewoon weer in te loggen.',
+    cta: 'Open myAiPA →',
+  },
+  30: {
+    title: 'Een maand geleden — nog steeds welkom',
+    body: 'Je account staat er nog, met alles wat je hebt opgebouwd. Als het moment weer daar is, begin je niet opnieuw — je gaat verder waar je was.',
+    cta: 'Kom terug →',
+  },
+};
+
+export function winbackEmail(stage: 3 | 10 | 30, appUrl: string, unsubscribeUrl?: string): { subject: string; html: string } {
+  const copy = WINBACK_COPY[stage];
+  const subject = copy.title;
+
+  const body = `
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">${copy.title}</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 28px;">${copy.body}</p>
+
+    <div style="text-align:center;">${btn(copy.cta, appUrl)}</div>
+  `;
+
+  return { subject, html: base(copy.title, subject, body, { unsubscribeUrl }) };
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -9,6 +9,26 @@ import {
   BookHeart, Compass, HeartHandshake, Brain, GraduationCap, Settings,
   ChevronRight,
 } from 'lucide-react';
+
+// Demo-guard: ACA, ADHD en Cursussen alleen zichtbaar voor demo-account (v.munster@weareimpact.nl)
+const DEMO_ACCOUNT_EMAIL = 'v.munster@weareimpact.nl';
+
+function useDemoAccess(): boolean {
+  const [canAccess, setCanAccess] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        setCanAccess(user?.email === DEMO_ACCOUNT_EMAIL);
+      }
+    } catch {
+      setCanAccess(false);
+    }
+  }, []);
+  return canAccess;
+}
 
 const TABS = [
   { href: '/dashboard', icon: CalendarCheck, label: 'Vandaag' },
@@ -22,6 +42,7 @@ interface MenuItem {
   icon: typeof CalendarCheck;
   label: string;
   description: string;
+  demoOnly?: boolean;
 }
 
 interface MenuGroup {
@@ -49,17 +70,19 @@ const DAILY_GROUPS: MenuGroup[] = [
   },
 ];
 
-/** Onderste helft van het menu: minder frequente verdieping + systeem. */
-const SECONDARY_GROUPS: MenuGroup[] = [
+/** Onderste helft van het menu: minder frequente verdieping + systeem.
+ *  ACA Herstelpad, ADHD Klachten en Cursussen zijn demo-restricted (alleen voor v.munster@weareimpact.nl). */
+const ALL_SECONDARY_GROUPS: MenuGroup[] = [
   {
     title: 'Verdieping',
     items: [
       { href: '/identity',        icon: Fingerprint,    label: 'Identiteit',      description: 'Claim wie je bent' },
       { href: '/dagboek',         icon: BookHeart,      label: 'Dagboek',         description: 'Hoe voel je je?' },
       { href: '/controle-cirkel', icon: Compass,        label: 'Controle Cirkel', description: 'Energie-oefening' },
-      { href: '/aca',             icon: HeartHandshake, label: 'ACA Herstelpad',  description: '7 weken naar de Liefdevolle Ouder' },
-      { href: '/adhd',            icon: Brain,          label: 'ADHD Klachten',   description: 'Meting voor medicatiestart' },
-      { href: '/courses',         icon: GraduationCap,  label: 'Cursussen',       description: 'Unleash Your Power' },
+      // Demo-only: alleen zichtbaar voor v.munster@weareimpact.nl
+      { href: '/aca',             icon: HeartHandshake, label: 'ACA Herstelpad',  description: '7 weken naar de Liefdevolle Ouder', demoOnly: true },
+      { href: '/adhd',            icon: Brain,          label: 'ADHD Klachten',   description: 'Meting voor medicatiestart', demoOnly: true },
+      { href: '/courses',         icon: GraduationCap,  label: 'Cursussen',       description: 'Unleash Your Power', demoOnly: true },
     ],
   },
   {
@@ -70,7 +93,14 @@ const SECONDARY_GROUPS: MenuGroup[] = [
   },
 ];
 
-const MENU_GROUPS: MenuGroup[] = [...DAILY_GROUPS, ...SECONDARY_GROUPS];
+/** Filtered groepen: demo-only items worden verborgen tenzij de gebruiker het demo-account is. */
+function getFilteredGroups(canAccessDemo: boolean): MenuGroup[] {
+  const filteredSecondary = ALL_SECONDARY_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !item.demoOnly || canAccessDemo),
+  }));
+  return [...DAILY_GROUPS, ...filteredSecondary];
+}
 
 interface BottomNavProps {
   fab?: {
@@ -82,6 +112,8 @@ interface BottomNavProps {
 export function BottomNav({ fab }: BottomNavProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const canAccessDemo = useDemoAccess();
+  const MENU_GROUPS = getFilteredGroups(canAccessDemo);
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + '/');
@@ -95,7 +127,6 @@ export function BottomNav({ fab }: BottomNavProps) {
         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
       >
         <div className="relative flex items-center justify-around max-w-lg mx-auto px-1 pt-2 pb-1">
-
           {TABS.slice(0, 2).map((item) => {
             const active = isActive(item.href);
             return (
@@ -212,41 +243,7 @@ export function BottomNav({ fab }: BottomNavProps) {
             </div>
 
             <div className="px-5 py-2">
-              {DAILY_GROUPS.map((group) => (
-                <section key={group.title} className="py-3.5">
-                  <h3 className="text-[10px] font-bold text-ink-soft tracking-[0.15em] uppercase mb-2 px-1">
-                    {group.title}
-                  </h3>
-                  <div className="rounded-card border border-line bg-surface-card overflow-hidden">
-                    {group.items.map((item, i) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3.5 hover:bg-surface-sunken transition-colors ${
-                          i > 0 ? 'border-t border-line' : ''
-                        }`}
-                      >
-                        <div className="w-9 h-9 rounded-[10px] bg-primary-muted flex items-center justify-center flex-shrink-0">
-                          <item.icon size={16} className="text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-semibold text-ink">{item.label}</p>
-                          <p className="text-[11px] text-ink-soft truncate">{item.description}</p>
-                        </div>
-                        <ChevronRight size={16} className="text-ink-soft flex-shrink-0" />
-                      </Link>
-                    ))}
-                  </div>
-                </section>
-              ))}
-
-              <div className="my-1 border-t border-line" />
-              <p className="text-[9px] font-bold text-ink-soft/70 tracking-[0.15em] uppercase px-1 pt-3.5">
-                Minder vaak
-              </p>
-
-              {SECONDARY_GROUPS.map((group) => (
+              {MENU_GROUPS.map((group) => (
                 <section key={group.title} className="py-3.5">
                   <h3 className="text-[10px] font-bold text-ink-soft tracking-[0.15em] uppercase mb-2 px-1">
                     {group.title}

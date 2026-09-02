@@ -12,9 +12,9 @@ interface RitualGuardProps {
  * made the app feel like a maze of forced screens instead of one home base.
  *
  * Now a pass-through: the dashboard itself surfaces "nog te doen" rituals as
- * an inline, dismissable card (see getNextRequiredRitual() in
- * weekflow.service.ts, used directly in dashboard/page.tsx) so the user can
- * see their day and choose when to act, instead of being forced there.
+ * an inline, dismissable card (see useRitualStatus().nextRitual, backed by
+ * /api/ritual-status) so the user can see their day and choose when to act,
+ * instead of being forced there.
  */
 export function RitualGuard({ children }: RitualGuardProps) {
   return <>{children}</>;

@@ -3,6 +3,9 @@ import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { sql } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-context';
 import { weekrapportEmail, WeekrapportData } from '@/lib/email-templates';
+import { getRecipients, recordEmailSent, unsubscribeUrl } from '@/lib/email-recipients';
+
+const EMAIL_TYPE = 'weekly_report';
 
 async function openRouterChat(prompt: string): Promise<string> {
   try {
@@ -11,7 +14,7 @@ async function openRouterChat(prompt: string): Promise<string> {
       headers: {
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://mijn-ondernemers-os.vercel.app',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://reis.weareimpact.nl',
       },
       body: JSON.stringify({
         model: 'anthropic/claude-haiku-4-5',
@@ -27,8 +30,8 @@ async function openRouterChat(prompt: string): Promise<string> {
   }
 }
 
-async function buildAndSend(userId: number, toEmail: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mijn-ondernemers-os.vercel.app';
+async function buildAndSend(userId: number, toEmail: string, unsubUrl?: string) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://reis.weareimpact.nl';
 
   const now = new Date();
   const weekEnd = new Date(now);
@@ -129,7 +132,7 @@ Schrijf in de jij-vorm, warm en direct. Geen bullet points — gewone paragrafen
     aiSamenvatting,
   };
 
-  const { subject, html } = weekrapportEmail(emailData, appUrl);
+  const { subject, html } = weekrapportEmail(emailData, appUrl, unsubUrl);
 
   const { error } = await getResend().emails.send({
     from: FROM_EMAIL,
@@ -141,24 +144,30 @@ Schrijf in de jij-vorm, warm en direct. Geen bullet points — gewone paragrafen
   if (error) throw new Error(JSON.stringify(error));
 }
 
-// GET — triggered by Vercel cron (every Sunday 07:00 UTC)
+// GET — triggered by Vercel cron (every Sunday 07:00 UTC), multi-tenant fan-out
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const email = process.env.NOTIFICATION_EMAIL!;
-  const users = await sql`SELECT id FROM users WHERE email = ${email} LIMIT 1`;
-  if (users.length === 0) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  const recipients = await getRecipients('weekly_report', EMAIL_TYPE);
+  let sent = 0;
+  const failures: string[] = [];
 
-  try {
-    await buildAndSend(users[0].id as number, email);
-    return NextResponse.json({ ok: true });
-  } catch (err: any) {
-    console.error('Weekrapport error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  for (const recipient of recipients) {
+    const unsubUrl = recipient.unsubscribeToken ? unsubscribeUrl(recipient.unsubscribeToken, 'weekly_report') : undefined;
+    try {
+      await buildAndSend(recipient.userId, recipient.email, unsubUrl);
+      await recordEmailSent(recipient.userId, EMAIL_TYPE);
+      sent++;
+    } catch (err) {
+      console.error(`weekrapport: send failed for user ${recipient.userId}:`, err);
+      failures.push(recipient.email);
+    }
   }
+
+  return NextResponse.json({ ok: true, sent, failed: failures.length, recipients: recipients.length });
 }
 
 // POST — manual trigger via JWT auth (for testing from settings)

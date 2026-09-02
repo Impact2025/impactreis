@@ -23,6 +23,13 @@ export function getResend(): Resend {
   return client;
 }
 
-/** Default sender, overridable via RESEND_FROM_EMAIL. */
+/**
+ * Default sender, overridable via RESEND_FROM_EMAIL.
+ *
+ * `onboarding@resend.dev` is Resend's sandbox address — it only delivers to the account's own
+ * verified e-mail, not to arbitrary customer inboxes. Production MUST set RESEND_FROM_EMAIL to
+ * an address on a domain verified in Resend, or customer-facing mail (welcome, motivatie,
+ * reminders, weekrapport, winback, ...) will silently fail to deliver.
+ */
 export const FROM_EMAIL =
-  process.env.RESEND_FROM_EMAIL || 'Mijn Ondernemers OS <onboarding@resend.dev>';
+  process.env.RESEND_FROM_EMAIL || 'myAiPA <onboarding@resend.dev>';

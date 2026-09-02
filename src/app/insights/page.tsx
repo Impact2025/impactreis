@@ -217,7 +217,7 @@ export default function InsightsPage() {
             </div>
             <div className="rounded-[16px] border border-line bg-surface-card p-5">
               <p className="text-[12px] font-medium text-ink-soft mb-4">Slaap</p>
-              <TrendChart data={data.trends.sleep} color="#2f312f" height={100} />
+              <TrendChart data={data.trends.sleep} color="#3c4a39" height={100} />
             </div>
           </div>
         </section>

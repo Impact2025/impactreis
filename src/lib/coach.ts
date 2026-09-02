@@ -354,18 +354,128 @@ ${messages.length > 0 ? 'Beantwoord nu op het laatste bericht van Vincent.' : 'S
 
 /** Legt een observatie vast als coach_lesson: dedupe op pattern_key, confidence groeit met bewijs
  *  (Laplace-gladgestreken, zelfde formule als iris_lessons) i.p.v. bij elke run een nieuwe rij.
- *  organizationId alleen nodig voor de INSERT-tak — coach_lessons.organization_id is NOT NULL. */
-export async function rememberLesson(userId: string, organizationId: number | null, patternKey: string, technique: Technique, insight: string) {
-  const existing = await sql`SELECT id, times_confirmed FROM coach_lessons WHERE user_id = ${userId} AND pattern_key = ${patternKey} LIMIT 1`;
+ *  organizationId alleen nodig voor de INSERT-tak — coach_lessons.organization_id is NOT NULL.
+ *  Geeft de lesson-id terug zodat de aanroeper er een falsifieerbare predictie aan kan koppelen
+ *  (zie maybeCreatePrediction). */
+export async function rememberLesson(
+  userId: string,
+  organizationId: number | null,
+  patternKey: string,
+  technique: Technique,
+  insight: string
+): Promise<{ id: number; timesConfirmed: number; timesDisproven: number }> {
+  const existing = await sql`SELECT id, times_confirmed, times_disproven FROM coach_lessons WHERE user_id = ${userId} AND pattern_key = ${patternKey} LIMIT 1`;
   if (existing.length > 0) {
     const confirmed = (existing[0].times_confirmed as number) + 1;
-    const confidence = (confirmed + 1) / (confirmed + 2); // Laplace smoothing
+    const disproven = existing[0].times_disproven as number;
+    const confidence = (confirmed + 1) / (confirmed + disproven + 2); // Laplace smoothing
     await sql`UPDATE coach_lessons SET insight = ${insight}, technique = ${technique},
       times_confirmed = ${confirmed}, confidence = ${confidence}, updated_at = NOW()
       WHERE id = ${existing[0].id}`;
-  } else {
-    await sql`INSERT INTO coach_lessons (user_id, pattern_key, technique, insight, confidence, times_confirmed, source, organization_id)
-      VALUES (${userId}, ${patternKey}, ${technique}, ${insight}, 0.5, 1, 'coach_analyse', ${organizationId})`;
+    return { id: existing[0].id as number, timesConfirmed: confirmed, timesDisproven: disproven };
+  }
+  const inserted = await sql`INSERT INTO coach_lessons (user_id, pattern_key, technique, insight, confidence, times_confirmed, source, organization_id)
+    VALUES (${userId}, ${patternKey}, ${technique}, ${insight}, 0.5, 1, 'coach_analyse', ${organizationId})
+    RETURNING id`;
+  return { id: inserted[0].id as number, timesConfirmed: 1, timesDisproven: 0 };
+}
+
+/** Metric die een predictie toetst, per techniek — gekozen zodat elke techniek een metric raakt
+ *  die de gekozen aanpak direct zou moeten beïnvloeden (energie-technieken -> energieniveau,
+ *  ritme-technieken -> streak). */
+const PREDICTION_METRIC: Record<Technique, 'energy_level' | 'streak'> = {
+  cgt: 'energy_level',
+  mi: 'energy_level',
+  systemisch: 'energy_level',
+  grow: 'streak',
+  oplossingsgericht: 'streak',
+  strengths: 'streak',
+  act: 'streak',
+};
+
+export const METRIC_LABELS: Record<'energy_level' | 'streak', string> = {
+  energy_level: 'energieniveau',
+  streak: 'streak',
+};
+
+const PREDICTION_HORIZON_DAYS = 7;
+
+/** Legt na een coach-analyse een concrete, toetsbare voorspelling vast — de falsifieerbare
+ *  tegenhanger van rememberLesson(). Slaat over als er al een onopgeloste predictie voor deze
+ *  les loopt, zodat elke ochtendanalyse niet opnieuw dezelfde weddenschap aangaat. */
+export async function maybeCreatePrediction(
+  userId: string,
+  organizationId: number | null,
+  lessonId: number,
+  ctx: CoachContext,
+  technique: Technique
+) {
+  const metric = PREDICTION_METRIC[technique];
+  const baseline = metric === 'energy_level' ? ctx.today.energyLevel : ctx.streak;
+  if (baseline == null) return;
+
+  const pending = await sql`SELECT id FROM coach_predictions WHERE lesson_id = ${lessonId} AND outcome IS NULL LIMIT 1`;
+  if (pending.length > 0) return;
+
+  const dueDate = new Date(Date.now() + PREDICTION_HORIZON_DAYS * 86400000).toISOString().split('T')[0];
+  const statement = metric === 'energy_level'
+    ? `Als deze aanpak werkt, verwacht ik dat je energieniveau over ${PREDICTION_HORIZON_DAYS} dagen hoger ligt dan vandaag (nu ${baseline}/10).`
+    : `Als deze aanpak werkt, verwacht ik dat je streak over ${PREDICTION_HORIZON_DAYS} dagen minstens even hoog of hoger is dan nu (nu ${baseline} dag${baseline === 1 ? '' : 'en'}).`;
+
+  await sql`
+    INSERT INTO coach_predictions (organization_id, user_id, lesson_id, statement, metric, baseline, direction, horizon_days, due_date)
+    VALUES (${organizationId}, ${userId}, ${lessonId}, ${statement}, ${metric}, ${baseline}, 'up', ${PREDICTION_HORIZON_DAYS}, ${dueDate})
+  `;
+}
+
+/** Verwerkt de uitkomst van een getoetste predictie terug in de bijbehorende les: dit is het
+ *  weerleggingsmechanisme dat rememberLesson() alleen niet kan bieden (die kan een les alleen
+ *  bevestigen). Bij netto meer weerleggingen dan bevestigingen wordt de les gepensioneerd
+ *  (active=false) — hij verschijnt dan niet meer in de coachprompt of /api/coach/lessons. */
+async function applyPredictionOutcome(lessonId: number | null, outcome: 'correct' | 'incorrect' | 'unclear') {
+  if (lessonId == null || outcome === 'unclear') return;
+
+  const rows = await sql`SELECT times_confirmed, times_disproven FROM coach_lessons WHERE id = ${lessonId} LIMIT 1`;
+  if (rows.length === 0) return;
+
+  let confirmed = rows[0].times_confirmed as number;
+  let disproven = rows[0].times_disproven as number;
+  if (outcome === 'correct') confirmed += 1; else disproven += 1;
+  const confidence = (confirmed + 1) / (confirmed + disproven + 2);
+  const active = disproven <= confirmed;
+
+  await sql`UPDATE coach_lessons SET times_confirmed = ${confirmed}, times_disproven = ${disproven},
+    confidence = ${confidence}, active = ${active}, updated_at = NOW() WHERE id = ${lessonId}`;
+}
+
+/** Toetst elke voorspelling waarvan de due_date is verstreken: haalt de actuele metric-waarde op,
+ *  vergelijkt met de baseline, en stroomt het resultaat terug naar de gekoppelde les. Aangeroepen
+ *  als eerste stap van runCoachAnalysis() — geen aparte cron nodig, de dagelijkse ochtendflow is
+ *  al frequent genoeg om predicties binnen een dag na hun due_date te toetsen. */
+export async function resolveDuePredictions(userId: string, organizationId: number | null) {
+  const due = await sql`
+    SELECT id, lesson_id, metric, baseline FROM coach_predictions
+    WHERE user_id = ${userId} AND outcome IS NULL AND due_date <= CURRENT_DATE
+  `;
+  if (due.length === 0) return;
+
+  const [morningRows, allMorningDates] = await Promise.all([
+    sql`SELECT data FROM daily_logs WHERE user_id = ${userId} AND type = 'morning' ORDER BY date_string DESC LIMIT 1`,
+    sql`SELECT date_string FROM daily_logs WHERE user_id = ${userId} AND type = 'morning' ORDER BY date_string DESC LIMIT 30`,
+  ]);
+  const currentEnergy = morningRows.length > 0 ? parseData(morningRows[0].data)?.energyLevel : null;
+  const currentStreak = getCurrentStreak((allMorningDates as { date_string: string }[]).map((r) => r.date_string));
+
+  for (const prediction of due as { id: number; lesson_id: number | null; metric: 'energy_level' | 'streak'; baseline: number }[]) {
+    const currentValue = prediction.metric === 'energy_level' ? currentEnergy : currentStreak;
+    const outcome: 'correct' | 'incorrect' | 'unclear' =
+      currentValue == null ? 'unclear'
+      : currentValue > prediction.baseline ? 'correct'
+      : currentValue < prediction.baseline ? 'incorrect'
+      : 'unclear';
+
+    await sql`UPDATE coach_predictions SET outcome = ${outcome}, resolved_at = NOW() WHERE id = ${prediction.id}`;
+    await applyPredictionOutcome(prediction.lesson_id, outcome);
   }
 }
 
@@ -475,6 +585,7 @@ export type CoachAnalysisResult =
  *  LLM-oordeel erbovenop — zelfde volgorde als Iris' briefing. Legt de observatie vast als
  *  coach_lesson en werkt user_context bij. */
 export async function runCoachAnalysis(userId: string, organizationId: number | null): Promise<CoachAnalysisResult> {
+  await resolveDuePredictions(userId, organizationId);
   const ctx = await loadCoachContext(userId);
 
   if (!ctx.today.energyLevel) {
@@ -503,7 +614,8 @@ export async function runCoachAnalysis(userId: string, organizationId: number | 
   }
 
   const patternKey = `${technique}:${slugifyPattern(reason)}`;
-  await rememberLesson(userId, organizationId, patternKey, technique, reason);
+  const lesson = await rememberLesson(userId, organizationId, patternKey, technique, reason);
+  await maybeCreatePrediction(userId, organizationId, lesson.id, ctx, technique);
   await updateUserContext(userId, organizationId, ctx);
 
   return {

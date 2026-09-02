@@ -88,6 +88,17 @@ export const goals = pgTable('goals', {
   pk: uniqueIndex('goals_pk').on(t.userId, t.id),
 }));
 
+// Identiteits-oefening ("Ik ben iemand die...") — singleton per user, zelfde vorm als
+// userContext: twee jsonb-arrays die altijd in hun geheel gelezen/geschreven worden, dus geen
+// aparte item-tabel nodig. Vervangt de vroegere localStorage-only opslag in identity/page.tsx.
+export const identityProfiles = pgTable('identity_profiles', {
+  userId: text('user_id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
+  statements: jsonb('statements').notNull().default('[]'),
+  proofs: jsonb('proofs').notNull().default('[]'),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
 export const weeklyGoals = pgTable('weekly_goals', {
   id: serial('id').primaryKey(),
   organizationId: integer('organization_id').references(() => organizations.id).notNull(),
@@ -243,6 +254,36 @@ export const onboardingProfiles = pgTable('onboarding_profiles', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+// --- E-mail-levenscyclus ---
+//
+// Eén rij per user (lazy aangemaakt bij registratie, backfilled voor bestaande users door de
+// migratie). unsubscribeToken is één token per user voor alle categorieën — one-click
+// afmelden hoeft niet ingelogd te zijn, vandaar een ongokbaar random token i.p.v. de user id.
+export const emailPreferences = pgTable('email_preferences', {
+  userId: integer('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  unsubscribeToken: text('unsubscribe_token').notNull().unique(),
+  morningMotivation: boolean('morning_motivation').notNull().default(true),
+  morningReminder: boolean('morning_reminder').notNull().default(true),
+  weeklyReport: boolean('weekly_report').notNull().default(true),
+  streakCelebration: boolean('streak_celebration').notNull().default(true),
+  onboardingNudge: boolean('onboarding_nudge').notNull().default(true),
+  winback: boolean('winback').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Verzendlog: dedup ("al vandaag verstuurd?"), winback-stadia ("stadium 10 al ooit verstuurd?")
+// en toekomstige analytics — zie src/lib/email-recipients.ts.
+export const emailSends = pgTable('email_sends', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  emailType: text('email_type').notNull(),
+  sentAt: timestamp('sent_at').notNull().defaultNow(),
+  meta: jsonb('meta'),
+}, (t) => ({
+  userTypeIdx: index('idx_email_sends_user_type').on(t.userId, t.emailType, t.sentAt),
+}));
 
 // --- Auth.js adaptertabellen ---
 //

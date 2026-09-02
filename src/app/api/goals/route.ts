@@ -5,10 +5,8 @@ import { getAuthContext } from '@/lib/auth-context';
 import { randomUUID } from 'node:crypto';
 
 // De echte `goals`-tabel heeft user_id/id/data(jsonb)/updated_at/organization_id — niet de
-// bhag/yearly_goals/monthly_goals uit schema.sql, en ook niet de type/title/period/completed
-// die deze route voorheen aannam (die kolommen bestaan niet, dus elke aanroep faalde met een
-// SQL-fout). Enige echte aanroeper is de PWA-share-target (src/app/share/page.tsx, "Doel").
-// Zie MULTI_TENANT_MIGRATION.md.
+// bhag/yearly_goals/monthly_goals uit schema.sql. `data` bevat het RPM-model (Result, Purpose,
+// Massive Action) dat de goals-pagina (src/app/goals/page.tsx) gebruikt. Zie MULTI_TENANT_MIGRATION.md.
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,10 +42,24 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, type } = createGoalSchema.parse(body);
+    const parsed = createGoalSchema.parse(body);
 
     const id = randomUUID();
-    const data = { title, description: description || null, type: type || 'other', completed: false };
+    const data = {
+      title: parsed.title,
+      description: parsed.description || '',
+      why: parsed.why || '',
+      painIfNot: parsed.painIfNot || '',
+      pleasureIfDone: parsed.pleasureIfDone || '',
+      nextActions: parsed.nextActions || [],
+      deadline: parsed.deadline || null,
+      category: parsed.category || 'business',
+      completed: false,
+      progress: 0,
+      isRock: parsed.isRock ?? false,
+      quarter: parsed.quarter ?? null,
+      createdAt: new Date().toISOString(),
+    };
 
     const result = await sql`
       INSERT INTO goals (user_id, id, data, organization_id, updated_at)

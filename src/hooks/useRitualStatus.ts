@@ -1,141 +1,121 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import {
-  getDayType,
-  isAfter5PM,
-  getCurrentWeekNumber,
-  getToday,
-} from '@/lib/weekflow.service';
-import { canStillDoWeeklyStart } from '@/lib/ritual-recovery.service';
+import { queryKeys } from '@/lib/query-client';
+import { getDayType, isAfter5PM } from '@/lib/weekflow.service';
+import type { MissedRitual, RecoveryAction, RitualStatusPayload } from '@/lib/ritual-status.service';
+
+export interface NextRitual {
+  path: string;
+  title: string;
+  isRequired: boolean;
+  isAvailable: boolean;
+  reason?: string;
+}
 
 export interface RitualStatusData {
-  morning: {
-    isComplete: boolean;
-    isAvailable: boolean;
-    isRequired: boolean;
-  };
-  evening: {
-    isComplete: boolean;
-    isAvailable: boolean;
-    isRequired: boolean;
-  };
-  weeklyStart: {
-    isComplete: boolean;
-    isAvailable: boolean;
-    isRequired: boolean;
-  };
-  weeklyReview: {
-    isComplete: boolean;
-    isAvailable: boolean;
-    isRequired: boolean;
-  };
+  morning: { isComplete: boolean; isAvailable: boolean; isRequired: boolean };
+  evening: { isComplete: boolean; isAvailable: boolean; isRequired: boolean };
+  weeklyStart: { isComplete: boolean; isAvailable: boolean; isRequired: boolean; canStillComplete: boolean };
+  weeklyReview: { isComplete: boolean; isAvailable: boolean; isRequired: boolean };
+  streak: RitualStatusPayload['streak'];
+  missedRituals: MissedRitual[];
+  suggestedAction: RecoveryAction | null;
+  welcomeMessage: RitualStatusPayload['welcomeMessage'];
+  daysAwayFromApp: number;
+  nextRitual: NextRitual | null;
   isLoading: boolean;
 }
 
-const defaultStatus: RitualStatusData = {
-  morning: { isComplete: false, isAvailable: true, isRequired: true },
-  evening: { isComplete: false, isAvailable: false, isRequired: true },
-  weeklyStart: { isComplete: false, isAvailable: false, isRequired: false },
-  weeklyReview: { isComplete: false, isAvailable: false, isRequired: false },
-  isLoading: true,
+const emptyStreak: RitualStatusPayload['streak'] = {
+  currentStreak: 0,
+  longestStreak: 0,
+  lastCompletedDate: null,
+  totalDaysCompleted: 0,
+  isAtRisk: false,
+  speedOfReturn: null,
 };
 
+const defaultWelcome: RitualStatusPayload['welcomeMessage'] = {
+  greeting: 'Hallo!',
+  subtitle: 'Maak er een productieve dag van.',
+  type: 'normal',
+};
+
+function computeNextRitual(status: RitualStatusPayload): NextRitual | null {
+  const dayType = getDayType();
+  const after5PM = isAfter5PM();
+  const isWeekday = dayType === 'weekday' || dayType === 'monday';
+
+  if (dayType === 'monday' && !status.weeklyStart.isComplete) {
+    return { path: '/weekly-start', title: 'Week Start', isRequired: true, isAvailable: true, reason: 'Start je nieuwe week met intentie' };
+  }
+  if (isWeekday) {
+    if (!status.today.morningDone) {
+      return { path: '/morning', title: 'Ochtend Ritueel', isRequired: true, isAvailable: true, reason: 'Begin je dag met focus en intentie' };
+    }
+    if (!status.today.eveningDone) {
+      return after5PM
+        ? { path: '/evening', title: 'Avond Ritueel', isRequired: true, isAvailable: true, reason: 'Sluit je dag af met reflectie' }
+        : { path: '/evening', title: 'Avond Ritueel', isRequired: true, isAvailable: false, reason: 'Beschikbaar na 17:00' };
+    }
+  }
+  if (dayType === 'weekend' && !status.weeklyReview.isComplete) {
+    return { path: '/weekly-review', title: 'Week Review', isRequired: true, isAvailable: true, reason: 'Sluit je week af met reflectie' };
+  }
+  return null;
+}
+
 export function useRitualStatus(): RitualStatusData {
-  const [status, setStatus] = useState<RitualStatusData>(defaultStatus);
+  const { data, isLoading } = useQuery({
+    queryKey: queryKeys.ritualStatus,
+    queryFn: () => api.ritualStatus.get(),
+    staleTime: 1000 * 30,
+  });
 
-  useEffect(() => {
-    const fetchStatus = async () => {
-      const dayType = getDayType();
-      const after5PM = isAfter5PM();
-      const today = getToday();
-      const weekNumber = getCurrentWeekNumber();
-      const year = new Date().getFullYear();
-      const weekKey = `${year}-W${weekNumber}`;
+  const dayType = getDayType();
+  const after5PM = isAfter5PM();
+  const isWeekday = dayType === 'weekday' || dayType === 'monday';
+  const isWeekend = dayType === 'weekend';
+  const isMonday = dayType === 'monday';
 
-      const isWeekday = dayType === 'weekday' || dayType === 'monday';
-      const isWeekend = dayType === 'weekend';
-      const weekStartAvailable = canStillDoWeeklyStart();
-
-      try {
-        // Fetch all ritual statuses from database in parallel
-        const [morningLogs, eveningLogs, weeklyReviews] = await Promise.all([
-          api.logs.getByTypeAndDate('morning', today).catch(() => []),
-          api.logs.getByTypeAndDate('evening', today).catch(() => []),
-          api.weeklyReviews.getByWeekNumber(weekNumber).catch(() => []),
-        ]);
-
-        const morningComplete = morningLogs.length > 0;
-        const eveningComplete = eveningLogs.length > 0;
-
-        // Weekly start is saved to weekly_reviews with type='weekly-start' in the data field
-        const weeklyStartComplete = Array.isArray(weeklyReviews) && weeklyReviews.some((r: { data: unknown }) => {
-          try {
-            const d = typeof r.data === 'string' ? JSON.parse(r.data) : r.data as Record<string, unknown>;
-            return (d as Record<string, unknown>)?.type === 'weekly-start';
-          } catch { return false; }
-        });
-
-        // Weekly review is saved to weekly_reviews with type='weekly-review' in the data field
-        const weeklyReviewComplete = Array.isArray(weeklyReviews) && weeklyReviews.some((r: { data: unknown }) => {
-          try {
-            const d = typeof r.data === 'string' ? JSON.parse(r.data) : r.data as Record<string, unknown>;
-            return (d as Record<string, unknown>)?.type === 'weekly-review';
-          } catch { return false; }
-        });
-
-        // Sync to localStorage for offline support
-        if (morningComplete) {
-          const data = morningLogs[0].data;
-          localStorage.setItem(`morningRitual_${today}`, JSON.stringify(typeof data === 'string' ? JSON.parse(data) : data));
-        }
-        if (eveningComplete) {
-          const data = eveningLogs[0].data;
-          localStorage.setItem(`eveningRitual_${today}`, JSON.stringify(typeof data === 'string' ? JSON.parse(data) : data));
-        }
-        if (weeklyStartComplete) {
-          localStorage.setItem(`weeklyStart_${year}_${weekNumber}`, 'true');
-        }
-        if (weeklyReviewComplete) {
-          localStorage.setItem(`weeklyReview_${year}_${weekNumber}`, 'true');
-        }
-
-        setStatus({
-          morning: {
-            isComplete: morningComplete,
-            isAvailable: isWeekday,
-            isRequired: isWeekday,
-          },
-          evening: {
-            isComplete: eveningComplete,
-            isAvailable: isWeekday && after5PM,
-            isRequired: isWeekday && after5PM,
-          },
-          weeklyStart: {
-            isComplete: weeklyStartComplete,
-            isAvailable: weekStartAvailable,
-            isRequired: weekStartAvailable && !weeklyStartComplete,
-          },
-          weeklyReview: {
-            isComplete: weeklyReviewComplete,
-            isAvailable: isWeekend,
-            isRequired: isWeekend,
-          },
-          isLoading: false,
-        });
-      } catch (error) {
-        console.error('Failed to fetch ritual status:', error);
-        // Fall back to localStorage-based status
-        setStatus({
-          ...defaultStatus,
-          isLoading: false,
-        });
-      }
+  if (!data) {
+    return {
+      morning: { isComplete: false, isAvailable: isWeekday, isRequired: isWeekday },
+      evening: { isComplete: false, isAvailable: isWeekday && after5PM, isRequired: isWeekday && after5PM },
+      weeklyStart: { isComplete: false, isAvailable: isMonday, isRequired: isMonday, canStillComplete: false },
+      weeklyReview: { isComplete: false, isAvailable: isWeekend, isRequired: isWeekend },
+      streak: emptyStreak,
+      missedRituals: [],
+      suggestedAction: null,
+      welcomeMessage: defaultWelcome,
+      daysAwayFromApp: 0,
+      nextRitual: null,
+      isLoading,
     };
+  }
 
-    fetchStatus();
-  }, []);
-
-  return status;
+  return {
+    morning: { isComplete: data.today.morningDone, isAvailable: isWeekday, isRequired: isWeekday },
+    evening: {
+      isComplete: data.today.eveningDone,
+      isAvailable: isWeekday && after5PM,
+      isRequired: isWeekday && after5PM,
+    },
+    weeklyStart: {
+      isComplete: data.weeklyStart.isComplete,
+      isAvailable: data.weeklyStart.canStillComplete,
+      isRequired: data.weeklyStart.canStillComplete && !data.weeklyStart.isComplete,
+      canStillComplete: data.weeklyStart.canStillComplete,
+    },
+    weeklyReview: { isComplete: data.weeklyReview.isComplete, isAvailable: isWeekend, isRequired: isWeekend },
+    streak: data.streak,
+    missedRituals: data.missedRituals,
+    suggestedAction: data.suggestedAction,
+    welcomeMessage: data.welcomeMessage,
+    daysAwayFromApp: data.daysAwayFromApp,
+    nextRitual: computeNextRitual(data),
+    isLoading: false,
+  };
 }

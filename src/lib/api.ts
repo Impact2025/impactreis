@@ -195,7 +195,7 @@ class ApiClient {
       return { ...data, id: tempId };
     },
 
-    update: async (id: number, data: any) => {
+    update: async (id: string | number, data: any) => {
       // Update in IndexedDB
       await offlineDB.saveGoal(id, { ...data, id }, false);
 
@@ -217,7 +217,7 @@ class ApiClient {
       return { ...data, id };
     },
 
-    delete: async (id: number) => {
+    delete: async (id: string | number) => {
       // Delete from IndexedDB
       await offlineDB.delete(STORES.GOALS, id);
 
@@ -348,6 +348,17 @@ class ApiClient {
     },
   };
 
+  // Weekly Goals (Rock-checkins — wekelijkse toetsing van kwartaalprioriteiten)
+  weeklyGoals = {
+    getByWeekNumber: (weekNumber: number) =>
+      this.request<any>(`/weekly-goals?weekNumber=${weekNumber}`),
+    create: (data: { weekNumber: number; goals: any[] }) =>
+      this.request<any>('/weekly-goals', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  };
+
   // Weekly Reviews
   weeklyReviews = {
     create: (data: any) => this.request('/weekly-reviews', {
@@ -470,6 +481,22 @@ class ApiClient {
       this.request<any>('/assessments', {
         method: 'POST',
         body: JSON.stringify({ assessmentType, results }),
+      }),
+  };
+
+  // Ritual status (server-berekende streak/herstel-status, zie ritual-status.service.ts)
+  ritualStatus = {
+    get: () => this.request<import('./ritual-status.service').RitualStatusPayload>('/ritual-status'),
+  };
+
+  // Identity (geen offline-laag — laagfrequente, niet-tijdskritische feature)
+  identity = {
+    getProfile: () => this.request<{ statements: any[]; proofs: any[]; updatedAt?: string }>('/identity'),
+
+    updateProfile: (data: { statements: any[]; proofs: any[] }) =>
+      this.request<{ statements: any[]; proofs: any[]; updatedAt?: string }>('/identity', {
+        method: 'PUT',
+        body: JSON.stringify(data),
       }),
   };
 

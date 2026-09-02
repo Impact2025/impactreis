@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Shield, ArrowLeft, Plus, Check, X, Flame } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
+import { api } from '@/lib/api';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
 interface IdentityStatement {
@@ -48,29 +49,20 @@ export default function IdentityPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const currentUser = AuthService.isAuthenticated() ? { email: 'user@example.com' } : null;
-        if (!currentUser) { router.push('/auth/login'); return; }
-        const savedIdentities = localStorage.getItem('identities');
-        const savedProofs = localStorage.getItem('identityProofs');
-        if (savedIdentities) setIdentities(JSON.parse(savedIdentities));
-        if (savedProofs) setProofs(JSON.parse(savedProofs));
-      } catch (err) {
-        router.push('/auth/login');
-      } finally {
-        setLoading(false);
-      }
+        if (!AuthService.getUser()) { router.push('/auth/login'); return; }
+        const profile = await api.identity.getProfile();
+        setIdentities(profile.statements ?? []);
+        setProofs(profile.proofs ?? []);
+      } catch { /* nog geen profiel of offline — laat de lege staat zien */ }
+      finally { setLoading(false); }
     };
     checkAuth();
   }, [router]);
 
-  const saveIdentities = (updated: IdentityStatement[]) => {
-    setIdentities(updated);
-    localStorage.setItem('identities', JSON.stringify(updated));
-  };
-
-  const saveProofs = (updated: IdentityProof[]) => {
-    setProofs(updated);
-    localStorage.setItem('identityProofs', JSON.stringify(updated));
+  const persist = async (nextIdentities: IdentityStatement[], nextProofs: IdentityProof[]) => {
+    setIdentities(nextIdentities);
+    setProofs(nextProofs);
+    await api.identity.updateProfile({ statements: nextIdentities, proofs: nextProofs });
   };
 
   const addIdentity = (statement: string) => {
@@ -82,18 +74,17 @@ export default function IdentityPage() {
       proofCount: 0,
       streak: 0,
     };
-    saveIdentities([...identities, newIdentity]);
+    persist([...identities, newIdentity], proofs);
     setNewStatement('');
     setShowAddForm(false);
   };
 
   const toggleIdentity = (id: string) => {
-    saveIdentities(identities.map(i => i.id === id ? { ...i, isActive: !i.isActive } : i));
+    persist(identities.map(i => i.id === id ? { ...i, isActive: !i.isActive } : i), proofs);
   };
 
   const deleteIdentity = (id: string) => {
-    saveIdentities(identities.filter(i => i.id !== id));
-    saveProofs(proofs.filter(p => p.identityId !== id));
+    persist(identities.filter(i => i.id !== id), proofs.filter(p => p.identityId !== id));
   };
 
   const addProof = () => {
@@ -104,9 +95,8 @@ export default function IdentityPage() {
       proof: newProof.trim(),
       date: new Date().toISOString(),
     };
-    saveProofs([...proofs, proof]);
     const today = new Date().toDateString();
-    const updated = identities.map(i => {
+    const updatedIdentities = identities.map(i => {
       if (i.id === selectedIdentity) {
         const lastProofDay = i.lastProofDate ? new Date(i.lastProofDate).toDateString() : null;
         const yesterday = new Date(Date.now() - 86400000).toDateString();
@@ -115,7 +105,7 @@ export default function IdentityPage() {
       }
       return i;
     });
-    saveIdentities(updated);
+    persist(updatedIdentities, [...proofs, proof]);
     setNewProof('');
     setSelectedIdentity(null);
   };

@@ -1,21 +1,14 @@
 /**
- * Week Flow Service
+ * Week Flow Service — pure datum/tijd-helpers, geen localStorage.
  *
- * Manages the automatic weekflow navigation logic:
- * - Monday-Friday: Morning ritual → Evening ritual (after 17:00)
- * - Saturday-Sunday: Weekly review
- * - Monday: Weekly start
+ * De completion-checks (isMorningRitualComplete e.d.) en alles wat daarvan afhing
+ * (ritual-recovery.service.ts, streak.service.ts) zijn vervangen door het server-side
+ * ritual-status.service.ts + de useRitualStatus() hook, die de database (daily_logs /
+ * weekly_reviews) als bron van waarheid gebruiken in plaats van localStorage — nodig voor
+ * cross-device continuïteit. Deze pure helpers blijven client-side bruikbaar.
  */
 
 export type DayType = 'weekday' | 'weekend' | 'monday';
-
-export interface NextRitual {
-  path: string;
-  title: string;
-  isRequired: boolean;
-  isAvailable: boolean;
-  reason?: string;
-}
 
 /**
  * Get current day type
@@ -84,195 +77,20 @@ export function getWeekEnd(): Date {
 }
 
 /**
- * Check if morning ritual is completed for given date
- * @param date Optional date in YYYY-MM-DD format (defaults to today)
+ * Get date string (YYYY-MM-DD) for X days before today
  */
-export function isMorningRitualComplete(date?: string): boolean {
-  if (typeof window === 'undefined') return false;
-
-  const targetDate = date || getToday();
-  const key = `morningRitual_${targetDate}`;
-  const data = localStorage.getItem(key);
-
-  return data !== null;
+export function getDateDaysAgo(daysAgo: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+  return date.toISOString().split('T')[0];
 }
 
 /**
- * Check if evening ritual is completed for given date
- * @param date Optional date in YYYY-MM-DD format (defaults to today)
+ * Get the current quarter as "YYYY-Qn" (bv. "2026-Q3") — gebruikt om Rocks (EOS-kwartaal-
+ * prioriteiten) aan een periode te koppelen.
  */
-export function isEveningRitualComplete(date?: string): boolean {
-  if (typeof window === 'undefined') return false;
-
-  const targetDate = date || getToday();
-  const key = `eveningRitual_${targetDate}`;
-  const data = localStorage.getItem(key);
-
-  return data !== null;
-}
-
-/**
- * Check if weekly review is completed for given week
- * @param weekNumber Optional week number (defaults to current week)
- */
-export function isWeeklyReviewComplete(weekNumber?: number): boolean {
-  if (typeof window === 'undefined') return false;
-
-  const targetWeek = weekNumber || getCurrentWeekNumber();
-  const year = new Date().getFullYear();
-
-  // Check localStorage for weekly review
-  // Format: weeklyReview_YYYY_WW
-  const key = `weeklyReview_${year}_${targetWeek}`;
-  const data = localStorage.getItem(key);
-
-  return data !== null;
-}
-
-/**
- * Check if weekly start is completed for given week
- * @param weekNumber Optional week number (defaults to current week)
- */
-export function isWeeklyStartComplete(weekNumber?: number): boolean {
-  if (typeof window === 'undefined') return false;
-
-  const targetWeek = weekNumber || getCurrentWeekNumber();
-  const year = new Date().getFullYear();
-
-  // Check localStorage for weekly start
-  // Format: weeklyStart_YYYY_WW
-  const key = `weeklyStart_${year}_${targetWeek}`;
-  const data = localStorage.getItem(key);
-
-  return data !== null;
-}
-
-/**
- * Get the next required ritual based on current day/time and completion status
- */
-export function getNextRequiredRitual(): NextRitual | null {
-  const dayType = getDayType();
-  const after5PM = isAfter5PM();
-
-  // Monday: Check weekly start first
-  if (dayType === 'monday') {
-    if (!isWeeklyStartComplete()) {
-      return {
-        path: '/weekly-start',
-        title: 'Week Start',
-        isRequired: true,
-        isAvailable: true,
-        reason: 'Start je nieuwe week met intentie',
-      };
-    }
-  }
-
-  // Weekdays (including Monday after weekly start): Morning → Evening flow
-  if (dayType === 'weekday' || dayType === 'monday') {
-    // Morning ritual required first
-    if (!isMorningRitualComplete()) {
-      return {
-        path: '/morning',
-        title: 'Ochtend Ritueel',
-        isRequired: true,
-        isAvailable: true,
-        reason: 'Begin je dag met focus en intentie',
-      };
-    }
-
-    // Evening ritual after 5 PM (if morning is done)
-    if (after5PM && !isEveningRitualComplete()) {
-      return {
-        path: '/evening',
-        title: 'Avond Ritueel',
-        isRequired: true,
-        isAvailable: true,
-        reason: 'Sluit je dag af met reflectie',
-      };
-    }
-
-    // Evening not yet available (before 5 PM)
-    if (!after5PM && !isEveningRitualComplete()) {
-      return {
-        path: '/evening',
-        title: 'Avond Ritueel',
-        isRequired: true,
-        isAvailable: false,
-        reason: 'Beschikbaar na 17:00',
-      };
-    }
-  }
-
-  // Weekend: Weekly review
-  if (dayType === 'weekend') {
-    if (!isWeeklyReviewComplete()) {
-      return {
-        path: '/weekly-review',
-        title: 'Week Review',
-        isRequired: true,
-        isAvailable: true,
-        reason: 'Sluit je week af met reflectie',
-      };
-    }
-  }
-
-  // All rituals completed
-  return null;
-}
-
-/**
- * Get all ritual statuses for dashboard display
- */
-export interface RitualStatus {
-  morning: {
-    isComplete: boolean;
-    isAvailable: boolean;
-    isRequired: boolean;
-  };
-  evening: {
-    isComplete: boolean;
-    isAvailable: boolean;
-    isRequired: boolean;
-  };
-  weeklyReview: {
-    isComplete: boolean;
-    isAvailable: boolean;
-    isRequired: boolean;
-  };
-  weeklyStart: {
-    isComplete: boolean;
-    isAvailable: boolean;
-    isRequired: boolean;
-  };
-}
-
-export function getAllRitualStatuses(): RitualStatus {
-  const dayType = getDayType();
-  const after5PM = isAfter5PM();
-  const isWeekday = dayType === 'weekday' || dayType === 'monday';
-  const isWeekend = dayType === 'weekend';
-  const isMonday = dayType === 'monday';
-
-  return {
-    morning: {
-      isComplete: isMorningRitualComplete(),
-      isAvailable: isWeekday,
-      isRequired: isWeekday,
-    },
-    evening: {
-      isComplete: isEveningRitualComplete(),
-      isAvailable: isWeekday && after5PM,
-      isRequired: isWeekday && after5PM,
-    },
-    weeklyReview: {
-      isComplete: isWeeklyReviewComplete(),
-      isAvailable: isWeekend,
-      isRequired: isWeekend,
-    },
-    weeklyStart: {
-      isComplete: isWeeklyStartComplete(),
-      isAvailable: isMonday,
-      isRequired: isMonday,
-    },
-  };
+export function getCurrentQuarter(): string {
+  const now = new Date();
+  const quarter = Math.floor(now.getMonth() / 3) + 1;
+  return `${now.getFullYear()}-Q${quarter}`;
 }

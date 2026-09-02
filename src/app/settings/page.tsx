@@ -15,8 +15,26 @@ import {
   cancelAllNotifications,
   type NotificationPreferences,
 } from '@/lib/notifications.service';
-import { getStreakData } from '@/lib/streak.service';
+import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { BottomNav } from '@/components/ui/bottom-nav';
+
+interface EmailPreferences {
+  morningMotivation: boolean;
+  morningReminder: boolean;
+  weeklyReport: boolean;
+  streakCelebration: boolean;
+  onboardingNudge: boolean;
+  winback: boolean;
+}
+
+const EMAIL_PREF_LABELS: { key: keyof EmailPreferences; title: string; desc: string }[] = [
+  { key: 'morningMotivation', title: 'Ochtend-motivatie', desc: 'Dagelijkse priming-mail in de vroege ochtend' },
+  { key: 'morningReminder', title: 'Ochtend-herinnering', desc: 'Nudge als je ritueel later op de dag nog niet gedaan is' },
+  { key: 'weeklyReport', title: 'Weekrapport', desc: 'Wekelijkse samenvatting van rituelen, energie en wins' },
+  { key: 'streakCelebration', title: 'Streak-vieringen', desc: 'Mail bij elke streak-mijlpaal (7, 14, 30 dagen, ...)' },
+  { key: 'onboardingNudge', title: 'Onboarding-herinnering', desc: 'Eenmalige herinnering als je intake nog niet af is' },
+  { key: 'winback', title: 'Terugkom-mails', desc: 'Als je een tijdje inactief bent geweest' },
+];
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -32,9 +50,11 @@ export default function SettingsPage() {
     createBeforeConsumeTime: '06:30',
     createBeforeConsumeEnabled: true,
   });
-  const [streakData, setStreakData] = useState({ currentStreak: 0, longestStreak: 0, totalDaysCompleted: 0 });
+  const { streak: streakData } = useRitualStatus();
   const [emailSending, setEmailSending] = useState<'weekrapport' | 'adhd' | null>(null);
   const [emailResult, setEmailResult] = useState<{ type: string; ok: boolean } | null>(null);
+  const [emailPrefs, setEmailPrefs] = useState<EmailPreferences | null>(null);
+  const [emailPrefsSaving, setEmailPrefsSaving] = useState<keyof EmailPreferences | null>(null);
   const [isPWAInstalled, setIsPWAInstalled] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
@@ -52,7 +72,14 @@ export default function SettingsPage() {
     setNotifSupported(isNotificationSupported());
     setNotifPermission(getPermissionStatus());
     setPreferences(getPreferences());
-    setStreakData(getStreakData());
+
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetch('/api/settings/email-preferences', { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => { if (data) setEmailPrefs(data); })
+        .catch(() => {});
+    }
 
     if (window.matchMedia('(display-mode: standalone)').matches) setIsPWAInstalled(true);
 
@@ -103,6 +130,25 @@ export default function SettingsPage() {
       setEmailResult({ type, ok: false });
     } finally {
       setEmailSending(null);
+    }
+  };
+
+  const handleToggleEmailPref = async (key: keyof EmailPreferences) => {
+    if (!emailPrefs) return;
+    const nextValue = !emailPrefs[key];
+    setEmailPrefs({ ...emailPrefs, [key]: nextValue });
+    setEmailPrefsSaving(key);
+    try {
+      const token = localStorage.getItem('token');
+      await fetch('/api/settings/email-preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ [key]: nextValue }),
+      });
+    } catch {
+      setEmailPrefs(prev => prev ? { ...prev, [key]: !nextValue } : prev);
+    } finally {
+      setEmailPrefsSaving(null);
     }
   };
 
@@ -302,6 +348,38 @@ export default function SettingsPage() {
                   ? `✓ ${emailResult.type === 'weekrapport' ? 'Weekrapport' : 'ADHD rapport'} verstuurd naar je inbox`
                   : `✗ Versturen mislukt — check Vercel logs`}
               </div>
+            )}
+          </div>
+        </section>
+
+        {/* E-mailvoorkeuren */}
+        <section>
+          <h2 className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-3">
+            E-mailvoorkeuren
+          </h2>
+          <div className="rounded-[16px] border border-line bg-white divide-y divide-line overflow-hidden">
+            {!emailPrefs ? (
+              <div className="px-5 py-4 text-[13px] text-ink-soft">Voorkeuren laden...</div>
+            ) : (
+              EMAIL_PREF_LABELS.map(({ key, title, desc }) => (
+                <div key={key} className="px-5 py-4 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[14px] text-ink">{title}</p>
+                    <p className="text-[12px] text-ink-soft mt-0.5">{desc}</p>
+                  </div>
+                  <button
+                    onClick={() => handleToggleEmailPref(key)}
+                    disabled={emailPrefsSaving === key}
+                    className={`relative w-11 h-6 rounded-full transition-colors shrink-0 disabled:opacity-60 ${
+                      emailPrefs[key] ? 'bg-primary' : 'bg-line'
+                    }`}
+                  >
+                    <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                      emailPrefs[key] ? 'translate-x-5' : ''
+                    }`} />
+                  </button>
+                </div>
+              ))
             )}
           </div>
         </section>

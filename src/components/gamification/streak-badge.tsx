@@ -1,57 +1,37 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Flame, Trophy, AlertTriangle, Zap, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
-import {
-  getStreakData,
-  getStreakMilestone,
-  wasStreakBroken,
-  recordStreakBreak,
-  getSpeedOfReturn,
-  type StreakData,
-} from '@/lib/streak.service';
+import { useRitualStatus } from '@/hooks/useRitualStatus';
 
 interface StreakBadgeProps {
   compact?: boolean;
   showMilestone?: boolean;
 }
 
-export function StreakBadge({ compact = false, showMilestone = true }: StreakBadgeProps) {
-  const [streakData, setStreakData] = useState<StreakData | null>(null);
-  const [isClient, setIsClient] = useState(false);
-  const [streakWasBroken, setStreakWasBroken] = useState(false);
-  const [speedOfReturn, setSpeedOfReturn] = useState<'lightning' | 'fast' | 'steady' | null>(null);
-
-  useEffect(() => {
-    setIsClient(true);
-    const data = getStreakData();
-    setStreakData(data);
-
-    const broken = wasStreakBroken();
-    setStreakWasBroken(broken);
-
-    // If today's streak is 0 but there was a previous streak, record the break
-    if (data.currentStreak === 0 && broken) {
-      recordStreakBreak();
+function getStreakMilestone(streak: number): { milestone: number; progress: number } | null {
+  const milestones = [7, 14, 30, 60, 90, 180, 365];
+  for (const milestone of milestones) {
+    if (streak < milestone) {
+      return { milestone, progress: Math.round((streak / milestone) * 100) };
     }
-
-    setSpeedOfReturn(getSpeedOfReturn());
-  }, []);
-
-  if (!isClient || !streakData) {
-    return null;
   }
+  return null;
+}
 
-  const { currentStreak, longestStreak, isAtRisk } = streakData;
+export function StreakBadge({ compact = false, showMilestone = true }: StreakBadgeProps) {
+  const { streak, isLoading } = useRitualStatus();
+
+  if (isLoading) return null;
+
+  const { currentStreak, longestStreak, isAtRisk, lastCompletedDate, speedOfReturn } = streak;
   const milestone = getStreakMilestone(currentStreak);
   const isRecord = currentStreak > 0 && currentStreak === longestStreak;
+  const isComeback = currentStreak === 0 && lastCompletedDate !== null;
 
   // No streak yet — compassionate reset UI
   if (currentStreak === 0) {
     if (compact) return null;
-
-    const isComeback = streakWasBroken;
 
     return (
       <div className="flex flex-col gap-3 p-4 bg-surface-sunken rounded-lg border border-line">
@@ -211,21 +191,14 @@ export function StreakBadge({ compact = false, showMilestone = true }: StreakBad
  * Mini streak display for use in lists/cards
  */
 export function StreakMini() {
-  const [streak, setStreak] = useState(0);
-  const [isClient, setIsClient] = useState(false);
+  const { streak, isLoading } = useRitualStatus();
 
-  useEffect(() => {
-    setIsClient(true);
-    const data = getStreakData();
-    setStreak(data.currentStreak);
-  }, []);
-
-  if (!isClient || streak === 0) return null;
+  if (isLoading || streak.currentStreak === 0) return null;
 
   return (
     <div className="inline-flex items-center gap-1 text-tertiary">
       <Flame size={14} />
-      <span className="text-sm font-medium">{streak}</span>
+      <span className="text-sm font-medium">{streak.currentStreak}</span>
     </div>
   );
 }

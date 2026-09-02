@@ -20,11 +20,26 @@ import {
   Sunrise,
   Moon,
   Timer,
+  Mountain,
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
-import { isWeeklyReviewComplete } from '@/lib/weekflow.service';
+import { getCurrentQuarter } from '@/lib/weekflow.service';
 import { BottomNav } from '@/components/ui/bottom-nav';
+
+type RockStatus = 'on-track' | 'at-risk' | 'done';
+
+interface Rock {
+  id: string;
+  title: string;
+  progress: number;
+}
+
+const ROCK_STATUS_LABELS: Record<RockStatus, string> = {
+  'on-track': 'Op koers',
+  'at-risk': 'Loopt risico',
+  'done': 'Klaar',
+};
 
 interface WeeklyReviewData {
   wins: string[];
@@ -108,12 +123,20 @@ export default function WeeklyReviewPage() {
   });
 
   const [weekSummary, setWeekSummary] = useState<Awaited<ReturnType<typeof api.weeklySummary.get>> | null>(null);
+  const [isAlreadyComplete, setIsAlreadyComplete] = useState(false);
+  const [rocks, setRocks] = useState<Rock[]>([]);
+  const [rockStatuses, setRockStatuses] = useState<Record<string, RockStatus>>({});
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const currentUser = AuthService.getUser();
         if (!currentUser) { router.push('/auth/login'); return; }
+        api.weeklyReviews.getByWeekNumber(weekInfo.weekNumber)
+          .then((reviews: any[]) => {
+            setIsAlreadyComplete(reviews.some((r) => r?.data?.type === 'weekly-review'));
+          })
+          .catch(() => {});
         setLoading(false);
       } catch (err) {
         router.push('/auth/login');
@@ -144,6 +167,18 @@ export default function WeeklyReviewPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    // Actieve Rocks van dit kwartaal ophalen zodat de week-review teruggrijpt op de
+    // kwartaalprioriteiten i.p.v. alleen losse vrije-tekst wins te verzamelen.
+    const currentQuarter = getCurrentQuarter();
+    api.goals.getAll()
+      .then((allGoals: any[]) => {
+        const activeRocks = allGoals.filter((g) => g.isRock && g.quarter === currentQuarter && !g.completed);
+        setRocks(activeRocks.map((g) => ({ id: g.id, title: g.title, progress: g.progress ?? 0 })));
+      })
+      .catch(() => {});
+  }, []);
+
   const handleAddWin = () => {
     if (newWin.trim()) {
       setFormData({ ...formData, wins: [...formData.wins, newWin.trim()] });
@@ -159,13 +194,30 @@ export default function WeeklyReviewPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.weeklyReviews.create(formData);
-      const year = new Date().getFullYear();
-      const key = `weeklyReview_${year}_${weekInfo.weekNumber}`;
-      localStorage.setItem(key, JSON.stringify({
-        completedAt: new Date().toISOString(),
-        weekNumber: weekInfo.weekNumber
-      }));
+      await api.weeklyReviews.create({
+        type: 'weekly-review',
+        weekNumber: weekInfo.weekNumber,
+        data: formData,
+      });
+
+      if (rocks.length > 0) {
+        const rockCheckins = rocks.map((rock) => ({
+          goalId: rock.id,
+          title: rock.title,
+          status: rockStatuses[rock.id] ?? 'on-track',
+        }));
+        await api.weeklyGoals.create({ weekNumber: weekInfo.weekNumber, goals: rockCheckins });
+
+        await Promise.all(rocks.map((rock) => {
+          const status = rockStatuses[rock.id] ?? 'on-track';
+          const nextProgress = status === 'done' ? 100
+            : status === 'on-track' ? Math.min(90, rock.progress + 15)
+            : rock.progress; // at-risk: ongewijzigd
+          if (nextProgress === rock.progress) return Promise.resolve();
+          return api.goals.update(rock.id, { progress: nextProgress, completed: status === 'done' });
+        }));
+      }
+
       setShowCelebration(true);
       setTimeout(() => { router.push('/dashboard'); }, 3000);
     } catch (error) {
@@ -197,8 +249,6 @@ export default function WeeklyReviewPage() {
       </div>
     );
   }
-
-  const isAlreadyComplete = isWeeklyReviewComplete();
 
   return (
     <div className="min-h-screen bg-surface-card pb-28">
@@ -265,6 +315,44 @@ export default function WeeklyReviewPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Rocks van dit kwartaal — hoe staat het ervoor? */}
+          {rocks.length > 0 && (
+            <div className="rounded-[16px] border border-line p-5">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-8 h-8 rounded-[10px] bg-tertiary-soft flex items-center justify-center">
+                  <Mountain size={15} className="text-tertiary" />
+                </div>
+                <div>
+                  <h3 className="text-[14px] font-semibold text-ink">Rocks van dit kwartaal</h3>
+                  <p className="text-[11px] text-ink-soft">Hoe staat het ervoor?</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {rocks.map((rock) => (
+                  <div key={rock.id}>
+                    <p className="text-[13px] font-medium text-ink mb-2">{rock.title}</p>
+                    <div className="flex gap-2">
+                      {(['on-track', 'at-risk', 'done'] as RockStatus[]).map((status) => (
+                        <button
+                          key={status}
+                          type="button"
+                          onClick={() => setRockStatuses((prev) => ({ ...prev, [rock.id]: status }))}
+                          className={`flex-1 py-2 rounded-[10px] text-[12px] font-semibold transition-colors ${
+                            (rockStatuses[rock.id] ?? 'on-track') === status
+                              ? 'bg-surface-inverse text-white'
+                              : 'bg-surface-sunken text-ink-soft hover:bg-line'
+                          }`}
+                        >
+                          {ROCK_STATUS_LABELS[status]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Biggest Wins */}
           <div className="rounded-[16px] border border-line p-5">
             <div className="flex items-center gap-2.5 mb-4">

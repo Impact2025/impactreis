@@ -5,11 +5,15 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Target, Plus, CheckCircle, Circle, ArrowLeft, Calendar,
-  Flame, Zap, ChevronDown, ChevronUp, Trash2, X
+  Flame, Zap, ChevronDown, ChevronUp, Trash2, X, Mountain
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
+import { api } from '@/lib/api';
+import { getCurrentQuarter } from '@/lib/weekflow.service';
 import { Celebration } from '@/components/robbins/celebration';
 import { BottomNav } from '@/components/ui/bottom-nav';
+
+const MAX_ACTIVE_ROCKS = 7;
 
 interface Goal {
   id: string;
@@ -24,6 +28,8 @@ interface Goal {
   deadline?: string;
   progress: number;
   category: 'business' | 'health' | 'relationships' | 'personal';
+  isRock?: boolean;
+  quarter?: string | null;
 }
 
 const categoryConfig = {
@@ -39,6 +45,7 @@ export default function GoalsPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [expandedGoal, setExpandedGoal] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [rockLimitMessage, setRockLimitMessage] = useState<string | null>(null);
   const [celebrationMessage, setCelebrationMessage] = useState('');
   const [newGoal, setNewGoal] = useState<Partial<Goal>>({
     title: '', description: '', why: '', painIfNot: '', pleasureIfDone: '',
@@ -49,61 +56,69 @@ export default function GoalsPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const currentUser = AuthService.isAuthenticated() ? { email: 'user@example.com' } : null;
-        if (!currentUser) { router.push('/auth/login'); return; }
-        const savedGoals = localStorage.getItem('goals');
-        if (savedGoals) setGoals(JSON.parse(savedGoals));
-      } catch { router.push('/auth/login'); }
+        if (!AuthService.getUser()) { router.push('/auth/login'); return; }
+        const savedGoals = await api.goals.getAll();
+        setGoals(savedGoals as Goal[]);
+      } catch { /* geen doelen of offline — laat de lege staat zien */ }
       finally { setLoading(false); }
     };
     checkAuth();
   }, [router]);
 
-  const saveGoals = (updated: Goal[]) => {
-    setGoals(updated);
-    localStorage.setItem('goals', JSON.stringify(updated));
-  };
-
-  const handleAddGoal = () => {
+  const handleAddGoal = async () => {
     if (!newGoal.title?.trim()) return;
-    const goal: Goal = {
-      id: Date.now().toString(),
+    const created = await api.goals.create({
       title: newGoal.title,
       description: newGoal.description || '',
       why: newGoal.why || '',
       painIfNot: newGoal.painIfNot || '',
       pleasureIfDone: newGoal.pleasureIfDone || '',
       nextActions: (newGoal.nextActions || []).filter(a => a.trim()),
-      completed: false,
-      createdAt: new Date().toISOString(),
       deadline: newGoal.deadline || undefined,
-      progress: 0,
-      category: (newGoal.category as Goal['category']) || 'business',
-    };
-    saveGoals([...goals, goal]);
+      category: newGoal.category || 'business',
+    });
+    setGoals(prev => [...prev, created as Goal]);
     setNewGoal({ title: '', description: '', why: '', painIfNot: '', pleasureIfDone: '', nextActions: [''], deadline: '', category: 'business' });
     setShowAddForm(false);
   };
 
-  const toggleGoal = (id: string) => {
+  const toggleGoal = async (id: string) => {
     const goal = goals.find(g => g.id === id);
-    if (goal && !goal.completed) {
+    if (!goal) return;
+    if (!goal.completed) {
       setCelebrationMessage(`"${goal.title}" bereikt!`);
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 3000);
     }
-    saveGoals(goals.map(g =>
-      g.id === id ? { ...g, completed: !g.completed, progress: g.completed ? 0 : 100 } : g
-    ));
+    const updated = await api.goals.update(id, { completed: !goal.completed, progress: goal.completed ? 0 : 100 });
+    setGoals(prev => prev.map(g => g.id === id ? { ...g, ...updated } : g));
   };
 
-  const updateProgress = (id: string, progress: number) => {
-    saveGoals(goals.map(g =>
-      g.id === id ? { ...g, progress: Math.max(0, Math.min(100, progress)) } : g
-    ));
+  const updateProgress = async (id: string, progress: number) => {
+    const clamped = Math.max(0, Math.min(100, progress));
+    setGoals(prev => prev.map(g => g.id === id ? { ...g, progress: clamped } : g));
+    await api.goals.update(id, { progress: clamped });
   };
 
-  const deleteGoal = (id: string) => saveGoals(goals.filter(g => g.id !== id));
+  const deleteGoal = async (id: string) => {
+    setGoals(prev => prev.filter(g => g.id !== id));
+    await api.goals.delete(id);
+  };
+
+  const currentQuarter = getCurrentQuarter();
+  const activeRocks = goals.filter(g => g.isRock && g.quarter === currentQuarter && !g.completed);
+
+  const toggleRock = async (id: string) => {
+    const goal = goals.find(g => g.id === id);
+    if (!goal) return;
+    if (!goal.isRock && activeRocks.length >= MAX_ACTIVE_ROCKS) {
+      setRockLimitMessage(`Je hebt al ${MAX_ACTIVE_ROCKS} Rocks dit kwartaal — rond je een minder belangrijke af of laat er eerst een los.`);
+      setTimeout(() => setRockLimitMessage(null), 4000);
+      return;
+    }
+    const updated = await api.goals.update(id, { isRock: !goal.isRock, quarter: currentQuarter });
+    setGoals(prev => prev.map(g => g.id === id ? { ...g, ...updated } : g));
+  };
 
   const updateNextAction = (index: number, value: string) => {
     const actions = [...(newGoal.nextActions || [''])];
@@ -179,6 +194,37 @@ export default function GoalsPage() {
             <p className="text-[11px] text-ink-soft font-medium mt-0.5">Gemiddeld</p>
           </div>
         </div>
+
+        {/* Rocks dit kwartaal */}
+        {activeRocks.length > 0 && (
+          <div className="mb-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Mountain size={15} className="text-tertiary" />
+              <h2 className="text-[13px] font-bold text-ink uppercase tracking-wide">
+                Rocks — {currentQuarter} ({activeRocks.length}/{MAX_ACTIVE_ROCKS})
+              </h2>
+            </div>
+            <div className="space-y-2.5">
+              {activeRocks.map((rock) => (
+                <div key={rock.id} className="bg-tertiary-soft rounded-[14px] p-4 border border-tertiary/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[14px] font-semibold text-ink flex-1 pr-3">{rock.title}</p>
+                    <span className="text-[13px] font-bold text-tertiary tabular-nums shrink-0">{rock.progress}%</span>
+                  </div>
+                  <div className="h-1.5 bg-white/50 rounded-full overflow-hidden">
+                    <div className="h-full bg-tertiary rounded-full transition-all duration-300" style={{ width: `${Math.max(2, rock.progress)}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {rockLimitMessage && (
+          <div className="rounded-[14px] bg-red-50 border border-red-100 px-4 py-3 mb-5">
+            <p className="text-[12px] text-red-600">{rockLimitMessage}</p>
+          </div>
+        )}
 
         {/* Add Form */}
         {showAddForm && (
@@ -377,12 +423,23 @@ export default function GoalsPage() {
                         >
                           {cfg.label}
                         </span>
-                        <button
-                          onClick={() => deleteGoal(goal.id)}
-                          className="w-7 h-7 flex items-center justify-center rounded-full text-ink-soft hover:text-red-500 transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => toggleRock(goal.id)}
+                            title={goal.isRock ? 'Rock verwijderen' : 'Markeer als Rock'}
+                            className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors ${
+                              goal.isRock ? 'text-tertiary bg-tertiary-soft' : 'text-ink-soft hover:text-tertiary'
+                            }`}
+                          >
+                            <Mountain size={14} />
+                          </button>
+                          <button
+                            onClick={() => deleteGoal(goal.id)}
+                            className="w-7 h-7 flex items-center justify-center rounded-full text-ink-soft hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
 
                       <h3 className={`text-[15px] font-semibold leading-snug ${

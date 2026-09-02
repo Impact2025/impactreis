@@ -17,9 +17,9 @@
   --muted: #444842;
   --muted-light: #f4f3f1;
 
-  /* Dark fills — warm charcoal-sage, not black */
-  --dark: #2f312f;
-  --dark-card: #2f312f;
+  /* Dark fills — deep sage, not black/charcoal */
+  --dark: #3c4a39;
+  --dark-card: #3c4a39;
   --dark-fg: #f2f1ee;
 
   --card: #f4f3f1;
@@ -28,18 +28,20 @@
   --outline: #747872;
 
   /* Primary — Sage: growth, goals, progress */
-  --green: #516050;
-  --green-dark: #3c4a3c;
-  --green-light: #d7e7d3;
-  --green-muted: #f7fff2;
+  --green: #7D8C7B;
+  --green-dark: #4d5b4c;
+  --green-light: #d9e2d8;
+  --green-muted: #eef2ed;
 
   /* Secondary — Slate: calm, reflection, evening */
-  --accent: #53606c;
-  --accent-soft: #d4e1ef;
+  --accent: #5A6773;
+  --accent-dark: #3c454d;
+  --accent-soft: #dde3e8;
 
   /* Tertiary — Terracotta: warmth, energy, wins */
-  --tertiary: #884b3b;
-  --tertiary-soft: #ffdbd1;
+  --tertiary: #D68C78;
+  --tertiary-dark: #a85c48;
+  --tertiary-soft: #f7e2db;
 
   /* Error */
   --error: #ba1a1a;
@@ -71,8 +73,10 @@
   --color-primary-muted: var(--green-muted);
 
   --color-accent: var(--accent);
+  --color-accent-dark: var(--accent-dark);
   --color-accent-soft: var(--accent-soft);
   --color-tertiary: var(--tertiary);
+  --color-tertiary-dark: var(--tertiary-dark);
   --color-tertiary-soft: var(--tertiary-soft);
 
   --color-error: var(--error);

@@ -12,10 +12,10 @@ import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { Win } from '@/types';
 import { RitualGuard } from '@/components/weekflow/ritual-guard';
-import { getDayType, isEveningRitualComplete, getNextRequiredRitual, getToday } from '@/lib/weekflow.service';
+import { canAccessDemoFeatures } from '@/lib/demo-guard';
+import { getDayType, getToday, getCurrentQuarter } from '@/lib/weekflow.service';
 import { initializeNotifications } from '@/lib/notifications.service';
 import { buildRecoveryProposalUrl } from '@/lib/calendar-proposal';
-import { canStillDoWeeklyStart } from '@/lib/ritual-recovery.service';
 import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
@@ -25,6 +25,8 @@ interface Goal {
   category: string;
   progress: number;
   status: string;
+  isRock?: boolean;
+  quarter?: string | null;
 }
 
 interface CalendarEvent {
@@ -40,7 +42,7 @@ export default function DashboardPage() {
   const [loading, setLoading]       = useState(true);
   const [goals, setGoals]           = useState<Goal[]>([]);
   const [recentWins, setRecentWins] = useState<Win[]>([]);
-  const [stats, setStats]           = useState({ activeGoals: 0, weeklyProgress: 0, streak: 12 });
+  const [stats, setStats]           = useState({ activeGoals: 0, weeklyProgress: 0 });
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [calendarConfigured, setCalendarConfigured] = useState(false);
   const [leverageGoal, setLeverageGoal] = useState<string | null>(null);
@@ -48,11 +50,12 @@ export default function DashboardPage() {
   const [signalDismissed, setSignalDismissed] = useState(false);
   const [proposals, setProposals] = useState<any[]>([]);
   const [resolvingProposalId, setResolvingProposalId] = useState<string | number | null>(null);
+  const [canAccessDemo, setCanAccessDemo] = useState(false);
   const router                      = useRouter();
 
   const ritualStatuses = useRitualStatus();
   const dayType        = getDayType();
-  const nextRitual      = getNextRequiredRitual();
+  const nextRitual      = ritualStatuses.nextRitual;
 
   const categoryLabel: Record<string, string> = {
     business:      'BUSINESS',
@@ -92,12 +95,14 @@ export default function DashboardPage() {
       }
 
       const allGoals    = goalsRes.status === 'fulfilled' ? goalsRes.value : [];
-      const activeGoals = allGoals.filter((g: any) => g.status === 'active');
+      // RPM-doelen hebben geen `status`-veld (dat was een rest van het oude, nooit toegepaste
+      // schema) — "actief" betekent hier gewoon "nog niet afgerond".
+      const activeGoals = allGoals.filter((g: any) => !g.completed);
       const weeklyProg  = focusRes.status === 'fulfilled'
         ? Math.min(100, (focusRes.value as any[]).length * 10) : 0;
 
       setGoals(activeGoals.slice(0, 4));
-      setStats({ activeGoals: activeGoals.length, weeklyProgress: weeklyProg, streak: 12 });
+      setStats({ activeGoals: activeGoals.length, weeklyProgress: weeklyProg });
 
       if (winsRes.status === 'fulfilled') {
         setRecentWins(
@@ -132,16 +137,20 @@ export default function DashboardPage() {
 
   const firstName  = user?.email?.split('@')[0] ?? 'Ondernemer';
   const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
-  const focusGoal  = goals[0];
+  // Golden Egg: een actieve Rock van dit kwartaal weegt zwaarder dan "toevallig laatst bewerkt" —
+  // dat is precies het punt van Rocks (EOS-kwartaalprioriteiten). Valt terug op het oude gedrag
+  // zolang er nog geen Rocks zijn gemarkeerd.
+  const currentQuarter = getCurrentQuarter();
+  const focusGoal  = goals.find(g => g.isRock && g.quarter === currentQuarter) ?? goals[0];
 
   const yesterday = (() => {
     const d = new Date();
     d.setDate(d.getDate() - 1);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   })();
-  const yesterdayDay = new Date(yesterday + 'T12:00:00').getDay();
-  const missedEveningYesterday =
-    yesterdayDay >= 1 && yesterdayDay <= 5 && !isEveningRitualComplete(yesterday);
+  const missedEveningYesterday = ritualStatuses.missedRituals.some(
+    (m) => m.type === 'evening' && m.daysAgo === 1
+  );
 
   const today = getToday();
   const dismissSignalKey = proactiveSignal ? `proactiveSignalDismissed_${today}_${proactiveSignal.patternKey}` : null;
@@ -399,7 +408,7 @@ export default function DashboardPage() {
                 </p>
               </Link>
 
-              {canStillDoWeeklyStart() && !ritualStatuses.weeklyStart.isComplete && (
+              {ritualStatuses.weeklyStart.canStillComplete && !ritualStatuses.weeklyStart.isComplete && (
                 <Link
                   href="/weekly-start"
                   className="flex-none w-[168px] snap-start rounded-card border border-line bg-surface-card p-4 shadow-organic"
@@ -623,7 +632,7 @@ export default function DashboardPage() {
               </div>
               <div className="rounded-[14px] bg-tertiary-soft border border-[#ffb5a1] px-3 py-4">
                 <p className="text-[9px] font-bold text-tertiary uppercase tracking-[0.12em] mb-1.5">Streak</p>
-                <p className="text-[26px] font-bold text-ink leading-none">{stats.streak}</p>
+                <p className="text-[26px] font-bold text-ink leading-none">{ritualStatuses.streak.currentStreak}</p>
                 <p className="text-[9px] text-tertiary mt-1">dagen</p>
               </div>
               <div className="rounded-[14px] bg-surface-sunken px-3 py-4">

@@ -102,6 +102,11 @@ async function buildAndSend(userId: number, toEmail: string, weekNr: number) {
 }
 
 // GET — triggered by Vercel cron (eind van elke meetweek)
+//
+// Bewust NIET multi-tenant, in tegenstelling tot de andere cron-mails: dit is Vincents eigen
+// medicatie-trackingfeature (de mail verwijst letterlijk naar "voor je psychiater" en "vóór
+// Ritalin start"), geen generiek myAiPA-productonderdeel. Blijft daarom gekoppeld aan
+// NOTIFICATION_EMAIL — dit is geen bug, niet "fixen" naar een fan-out zoals de andere routes.
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {

@@ -23,4 +23,5 @@ export const queryKeys = {
   weeklyReviews: (week?: string) => ['weekly-reviews', week],
   focusSessions: (params?: { date?: string; limit?: number }) =>
     ['focus-sessions', params],
+  ritualStatus: ['ritual-status'] as const,
 };

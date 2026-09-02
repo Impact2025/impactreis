@@ -163,7 +163,7 @@ export default function SalesPage() {
             </Link>
             <Link
               href="/auth/register"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface-inverse text-white text-[13px] font-semibold hover:bg-surface-inverse transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface-inverse text-white text-[13px] font-semibold hover:bg-accent-dark transition-colors"
             >
               Gratis kennismaking
               <ArrowRight size={13} />
@@ -173,17 +173,20 @@ export default function SalesPage() {
       </nav>
 
       {/* ══ HERO ════════════════════════════════════════════════ */}
-      <section className="max-w-5xl mx-auto px-6 pt-20 pb-24 text-center">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-line mb-8">
+      <section className="relative overflow-hidden">
+        <div className="pointer-events-none absolute -top-32 -right-32 w-[480px] h-[480px] rounded-full bg-primary-light/60 blur-3xl" />
+        <div className="pointer-events-none absolute -top-10 -left-40 w-[380px] h-[380px] rounded-full bg-tertiary-soft/70 blur-3xl" />
+      <div className="relative max-w-5xl mx-auto px-6 pt-20 pb-24 text-center">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary-light bg-primary-muted mb-8">
           <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
-          <span className="text-[11px] font-semibold text-ink-soft tracking-wide">
+          <span className="text-[11px] font-semibold text-primary-dark tracking-wide">
             Voor ondernemers, directeuren en impactmakers die niet langer geleefd willen worden door hun agenda
           </span>
         </div>
 
         <h1 className="text-[52px] sm:text-[72px] font-bold leading-[1.0] tracking-[-0.03em] mb-6">
           Stop met<br />
-          <span className="text-on-surface-inverse/50">overleven.</span><br />
+          <span className="text-ink-soft line-through decoration-tertiary decoration-4">overleven.</span><br />
           Leid je bedrijf met<br />
           <span className="text-primary">rust en focus.</span>
         </h1>
@@ -195,7 +198,7 @@ export default function SalesPage() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             href="/auth/register"
-            className="group inline-flex items-center gap-2 px-8 py-4 rounded-full bg-primary text-white font-bold text-[15px] shadow-[0_4px_24px_rgba(81,96,80,0.35)] hover:bg-primary active:scale-[0.98] transition-all"
+            className="group inline-flex items-center gap-2 px-8 py-4 rounded-full bg-primary text-white font-bold text-[15px] shadow-[0_4px_24px_rgba(81,96,80,0.35)] hover:bg-primary-dark active:scale-[0.98] transition-all"
           >
             Boek een gratis kennismaking (20 min)
             <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
@@ -208,6 +211,7 @@ export default function SalesPage() {
             <ChevronDown size={15} />
           </a>
         </div>
+      </div>
       </section>
 
       {/* ══ SOCIAL PROOF STRIP ══════════════════════════════════ */}
@@ -238,20 +242,34 @@ export default function SalesPage() {
               n: '01',
               title: 'Brandjes blussen in plaats van bouwen',
               desc: 'Je begint de dag met grote ambities, maar om 10:00 uur regeert je inbox. Je werkt hard in je bedrijf, maar komt niet toe aan strategisch bouwen áán je toekomst.',
+              tone: 'primary',
             },
             {
               n: '02',
               title: "De 'Altijd Aan' vermoeidheid",
               desc: 'Talloze open tabbladen in je hoofd, piekeren over deadlines in het weekend en een overvolle agenda met afspraken waar je eigenlijk ‘nee’ tegen had moeten zeggen.',
+              tone: 'accent',
             },
             {
               n: '03',
               title: 'De app-jungle zonder overzicht',
               desc: 'Je schakelt tussen Notion, Todoist, een papieren notitieboek en een meditatie-app. Losse tools die meer tijd kosten om bij te houden dan ze daadwerkelijk opleveren.',
+              tone: 'tertiary',
             },
-          ].map(({ n, title, desc }) => (
-            <div key={n} className="rounded-[20px] border border-line p-7">
-              <span className="text-[12px] font-bold text-line tracking-widest tabular-nums">{n}</span>
+          ].map(({ n, title, desc, tone }) => (
+            <div
+              key={n}
+              className={`rounded-[20px] border-2 p-7 bg-white ${
+                tone === 'primary' ? 'border-primary-light' : tone === 'accent' ? 'border-accent-soft' : 'border-tertiary-soft'
+              }`}
+            >
+              <span
+                className={`text-[13px] font-bold tracking-widest tabular-nums ${
+                  tone === 'primary' ? 'text-primary' : tone === 'accent' ? 'text-accent' : 'text-tertiary'
+                }`}
+              >
+                {n}
+              </span>
               <h3 className="text-[17px] font-bold text-ink mt-4 mb-2.5 leading-snug">{title}</h3>
               <p className="text-[13px] text-ink-soft leading-relaxed">{desc}</p>
             </div>
@@ -326,8 +344,8 @@ export default function SalesPage() {
                 <h3 className={`text-[20px] font-bold leading-tight mb-1 ${dark ? 'text-white' : 'text-ink'}`}>
                   {title}
                 </h3>
-                <p className={`text-[11px] font-bold uppercase tracking-widest mb-4 ${warm ? 'text-tertiary' : 'text-primary'}`}>{sub}</p>
-                <p className={`text-[13px] leading-relaxed ${dark ? 'text-ink-soft' : 'text-ink-soft'}`}>
+                <p className={`text-[11px] font-bold uppercase tracking-widest mb-4 ${dark ? 'text-primary-light' : warm ? 'text-tertiary' : 'text-primary'}`}>{sub}</p>
+                <p className={`text-[13px] leading-relaxed ${dark ? 'text-on-surface-inverse/75' : 'text-ink-soft'}`}>
                   {desc}
                 </p>
               </div>
@@ -377,19 +395,19 @@ export default function SalesPage() {
             &ldquo;Ik bouwde myAiPA omdat ik het zelf nodig had.&rdquo;
           </blockquote>
 
-          <p className="text-[15px] text-ink-soft leading-relaxed mb-10 max-w-2xl">
+          <p className="text-[15px] text-on-surface-inverse/75 leading-relaxed mb-10 max-w-2xl">
             Als sociaal ondernemer en directeur bij meerdere organisaties verdronk ik in de operationele ruis van zeven losse apps. Ik wilde één rustig systeem dat mijn agenda bewaakt, mijn doelen scherp houdt en me helpt ontspannen.
             <br /><br />
             Vandaag is myAiPA mijn eerste handeling in de ochtend en mijn laatste in de avond. Het heeft mijn focus, energie en tijdwinst fundamenteel veranderd. Diezelfde rust en slagkracht gun ik jou.
           </p>
 
           <div className="flex items-center gap-4">
-            <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center overflow-hidden border border-[#2a2a34]">
+            <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center overflow-hidden border border-primary-light">
               <Logo size={30} />
             </div>
             <div>
               <p className="text-[14px] font-bold text-white">Vincent van Munster</p>
-              <p className="text-[12px] text-on-surface-inverse/50 mt-0.5">Oprichter myAiPA · Sociaal ondernemer</p>
+              <p className="text-[12px] text-on-surface-inverse/70 mt-0.5">Oprichter myAiPA · Sociaal ondernemer</p>
             </div>
           </div>
         </div>
@@ -463,7 +481,7 @@ export default function SalesPage() {
             </div>
             <Link
               href="/auth/register"
-              className="block text-center py-3.5 rounded-[14px] bg-primary text-white font-bold text-[14px] shadow-[0_4px_16px_rgba(81,96,80,0.3)] hover:bg-primary transition-colors"
+              className="block text-center py-3.5 rounded-[14px] bg-primary text-white font-bold text-[14px] shadow-[0_4px_16px_rgba(81,96,80,0.3)] hover:bg-primary-dark transition-colors"
             >
               Boek jouw traject
             </Link>
@@ -551,21 +569,21 @@ export default function SalesPage() {
           <h2 className="text-[36px] sm:text-[48px] font-bold text-white leading-[1.1] tracking-tight mb-4">
             Start vandaag met jouw persoonlijke copiloot
           </h2>
-          <p className="text-[15px] text-ink-soft max-w-md mx-auto mb-10 leading-relaxed">
+          <p className="text-[15px] text-on-surface-inverse/75 max-w-md mx-auto mb-10 leading-relaxed">
             Plan een vrijblijvend adviesgesprek van 20 minuten om te ontdekken wat myAiPA voor jouw werkdag doet.
           </p>
 
           <Link
             href="/auth/register"
-            className="group inline-flex items-center gap-2 px-8 py-4 rounded-full bg-primary text-white font-bold text-[15px] shadow-[0_4px_24px_rgba(81,96,80,0.35)] hover:bg-primary active:scale-[0.98] transition-all"
+            className="group inline-flex items-center gap-2 px-8 py-4 rounded-full bg-primary text-white font-bold text-[15px] shadow-[0_4px_24px_rgba(81,96,80,0.35)] hover:bg-primary-dark active:scale-[0.98] transition-all"
           >
             Boek jouw gratis kennismaking
             <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
           </Link>
 
-          <p className="text-[12px] text-on-surface-inverse/50 mt-6">
+          <p className="text-[12px] text-on-surface-inverse/70 mt-6">
             Of neem direct contact op:{' '}
-            <a href="mailto:v.munster@weareimpact.nl" className="text-ink-soft hover:text-white transition-colors underline underline-offset-2">
+            <a href="mailto:v.munster@weareimpact.nl" className="text-primary-light hover:text-white transition-colors underline underline-offset-2">
               v.munster@weareimpact.nl
             </a>
             {' '}· 06-14470977

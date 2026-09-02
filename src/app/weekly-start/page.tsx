@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Calendar, Target, Book, AlertCircle, Trophy,
-  Rocket, CheckCircle, Plus, X
+  Rocket, CheckCircle, Plus, X, Mountain
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
-import { isWeeklyStartComplete } from '@/lib/weekflow.service';
+import { getCurrentQuarter } from '@/lib/weekflow.service';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
 interface WeeklyStartData {
@@ -49,6 +49,8 @@ export default function WeeklyStartPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [carryForward, setCarryForward] = useState<string | null>(null);
+  const [isAlreadyComplete, setIsAlreadyComplete] = useState(false);
+  const [activeRockTitles, setActiveRockTitles] = useState<string[]>([]);
 
   const today = new Date();
   const currentWeek = getWeekNumber(today);
@@ -89,8 +91,16 @@ export default function WeeklyStartPage() {
       try {
         const currentUser = AuthService.isAuthenticated() ? { email: 'user@example.com' } : null;
         if (!currentUser) { router.push('/auth/login'); return; }
-        const savedData = localStorage.getItem(`weeklyStart_${currentYear}_${currentWeek}`);
-        if (savedData) setFormData(JSON.parse(savedData));
+
+        api.weeklyReviews.getByWeekNumber(currentWeek)
+          .then((reviews: any[]) => {
+            const existing = reviews.find((r) => r?.data?.type === 'weekly-start');
+            if (existing?.data?.data) {
+              setFormData(existing.data.data);
+              setIsAlreadyComplete(true);
+            }
+          })
+          .catch(() => {});
 
         // Vorige week se "wat neem je mee" (weekly-review) als suggestie tonen, i.p.v. de week
         // blanco te starten los van wat er net is afgesloten.
@@ -107,13 +117,22 @@ export default function WeeklyStartPage() {
       }
     };
     checkAuth();
+
+    const currentQuarter = getCurrentQuarter();
+    api.goals.getAll()
+      .then((allGoals: any[]) => {
+        const titles = allGoals
+          .filter((g) => g.isRock && g.quarter === currentQuarter && !g.completed)
+          .map((g) => g.title);
+        setActiveRockTitles(titles);
+      })
+      .catch(() => {});
   }, [router, currentYear, currentWeek]);
 
   const handleSave = async () => {
     setSaving(true);
     setSaved(false);
     try {
-      localStorage.setItem(`weeklyStart_${currentYear}_${currentWeek}`, JSON.stringify(formData));
       try {
         await api.weeklyReviews.create({
           type: 'weekly-start',
@@ -162,8 +181,6 @@ export default function WeeklyStartPage() {
     );
   }
 
-  const isAlreadyComplete = isWeeklyStartComplete();
-
   return (
     <div className="min-h-screen bg-surface-card pb-28">
       {/* Header */}
@@ -193,6 +210,21 @@ export default function WeeklyStartPage() {
               <p className="text-[13px] font-semibold text-ink">Week start al voltooid</p>
               <p className="text-[12px] text-ink-soft">Je kunt het opnieuw doen om te overschrijven</p>
             </div>
+          </div>
+        )}
+
+        {/* Kwartaal-Rocks, ter herinnering — geen invoer, puur context */}
+        {activeRockTitles.length > 0 && (
+          <div className="rounded-[16px] border border-tertiary/20 bg-tertiary-soft p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Mountain size={13} className="text-tertiary" />
+              <p className="text-[12px] font-semibold text-ink uppercase tracking-wide">Dit kwartaal focus je op</p>
+            </div>
+            <ul className="space-y-0.5">
+              {activeRockTitles.map((title, i) => (
+                <li key={i} className="text-[13px] text-ink">• {title}</li>
+              ))}
+            </ul>
           </div>
         )}
 

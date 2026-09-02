@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Sparkles, RefreshCw, Compass, Send } from 'lucide-react';
+import { ArrowLeft, Sparkles, RefreshCw, Compass, Send, TrendingUp, Check, X, HelpCircle } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
@@ -23,6 +23,14 @@ interface Lesson {
   times_confirmed: number;
 }
 
+interface Prediction {
+  id: number;
+  statement: string;
+  metricLabel: string;
+  due_date: string;
+  outcome: 'correct' | 'incorrect' | 'unclear' | null;
+}
+
 interface CoachMessage {
   id: string;
   role: 'coach' | 'user';
@@ -37,6 +45,7 @@ export default function CoachPage() {
   const [result, setResult] = useState<AnalyseResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [messages, setMessages] = useState<CoachMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [sending, setSending] = useState(false);
@@ -55,6 +64,20 @@ export default function CoachPage() {
     }
   };
 
+  const fetchPredictions = async () => {
+    try {
+      const res = await fetch('/api/coach/predictions', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPredictions(data.predictions ?? []);
+      }
+    } catch {
+      // stil, aanvullend blok
+    }
+  };
+
   const askReflection = async () => {
     setAsking(true);
     setError(null);
@@ -70,6 +93,7 @@ export default function CoachPage() {
       }
       setResult(data);
       fetchLessons();
+      fetchPredictions();
       // Add coach's first message to the conversation
       setMessages([{ id: 'coach-1', role: 'coach', content: data.analysis, ts: Date.now() }]);
     } catch {
@@ -118,7 +142,7 @@ export default function CoachPage() {
 
   useEffect(() => {
     if (!AuthService.isAuthenticated()) { router.push('/auth/login'); return; }
-    fetchLessons().finally(() => setLoading(false));
+    Promise.all([fetchLessons(), fetchPredictions()]).finally(() => setLoading(false));
   }, [router]);
 
   if (loading) {
@@ -208,6 +232,42 @@ export default function CoachPage() {
               </button>
             </div>
             <p className="text-[11px] text-ink-soft mt-3 pt-3 border-t border-surface-sunken">{result.reason}</p>
+          </div>
+        )}
+
+        {predictions.length > 0 && (
+          <div>
+            <p className="text-[11px] font-medium text-ink-soft uppercase tracking-wider mb-2.5 px-1">Voorspellingen van de coach</p>
+            <div className="space-y-2">
+              {predictions.map((p) => {
+                const daysLeft = Math.ceil((new Date(p.due_date).getTime() - Date.now()) / 86400000);
+                return (
+                  <div key={p.id} className="rounded-[14px] border border-line p-4">
+                    <div className="flex items-start gap-2.5">
+                      {p.outcome === 'correct' ? (
+                        <Check size={15} className="text-primary shrink-0 mt-0.5" />
+                      ) : p.outcome === 'incorrect' ? (
+                        <X size={15} className="text-red-500 shrink-0 mt-0.5" />
+                      ) : p.outcome === 'unclear' ? (
+                        <HelpCircle size={15} className="text-ink-soft shrink-0 mt-0.5" />
+                      ) : (
+                        <TrendingUp size={15} className="text-tertiary shrink-0 mt-0.5" />
+                      )}
+                      <div className="flex-1">
+                        <p className="text-[13px] text-ink leading-relaxed">{p.statement}</p>
+                        <p className="text-[10px] text-ink-soft mt-1.5">
+                          {p.outcome === 'correct' ? 'Klopte'
+                            : p.outcome === 'incorrect' ? 'Weerlegd'
+                            : p.outcome === 'unclear' ? 'Onduidelijk'
+                            : daysLeft > 0 ? `Uitkomst over ${daysLeft} dag${daysLeft === 1 ? '' : 'en'}` : 'Wordt binnenkort getoetst'}
+                          {' · '}{p.metricLabel}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

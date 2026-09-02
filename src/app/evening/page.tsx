@@ -7,7 +7,7 @@ import { Moon, Lightbulb, TrendingDown, Calendar, Heart, ArrowLeft, CheckCircle,
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { TimeGateScreen } from '@/components/weekflow/time-gate-screen';
-import { isAfter5PM, isEveningRitualComplete, getToday } from '@/lib/weekflow.service';
+import { isAfter5PM, getToday } from '@/lib/weekflow.service';
 import { buildRecoveryProposalUrl } from '@/lib/calendar-proposal';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
@@ -59,6 +59,7 @@ function EveningContent() {
   const [recoveryHabit, setRecoveryHabit] = useState<string | null>(null);
   const [morningIntentie, setMorningIntentie] = useState<string | null>(null);
   const [focusSummary, setFocusSummary] = useState<{ completed: number; total: number; minutes: number } | null>(null);
+  const [isAlreadyComplete, setIsAlreadyComplete] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -94,10 +95,14 @@ function EveningContent() {
           router.push('/auth/login');
           return;
         }
-        const savedRitual = localStorage.getItem(`eveningRitual_${targetDate}`);
-        if (savedRitual) {
-          setFormData((prev) => ({ ...prev, ...JSON.parse(savedRitual) }));
-        }
+        api.logs.getByTypeAndDate('evening', targetDate).then((logs: any[]) => {
+          if (logs?.[0]) {
+            const raw = logs[0].data;
+            const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            if (parsed) setFormData((prev) => ({ ...prev, ...parsed }));
+            setIsAlreadyComplete(true);
+          }
+        }).catch(() => {});
         const savedAdhd = localStorage.getItem(`adhdLog_${targetDate}`);
         if (savedAdhd) {
           try { setAdhdScores(JSON.parse(savedAdhd)); } catch { /* ignore */ }
@@ -150,7 +155,6 @@ function EveningContent() {
     e.preventDefault();
     setSaving(true);
     try {
-      localStorage.setItem(`eveningRitual_${targetDate}`, JSON.stringify(formData));
       localStorage.setItem(`adhdLog_${targetDate}`, JSON.stringify(adhdScores));
       await api.logs.create({
         type: 'evening',
@@ -221,8 +225,6 @@ function EveningContent() {
       </div>
     );
   }
-
-  const isAlreadyComplete = isEveningRitualComplete(targetDate);
 
   return (
     <div className="min-h-screen bg-surface-card pb-28">

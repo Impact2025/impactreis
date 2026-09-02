@@ -1,15 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { CalendarDays, Sunrise, RefreshCw, ArrowRight } from 'lucide-react';
-import {
-  getRecoveryStatus,
-  getWelcomeMessage,
-  shouldShowRecoveryModal,
-  type RecoveryStatus,
-} from '@/lib/ritual-recovery.service';
-import { getStreakData, getStreakMessage } from '@/lib/streak.service';
+import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { StreakBadge } from '@/components/gamification/streak-badge';
 
 interface SmartWelcomeProps {
@@ -17,18 +11,10 @@ interface SmartWelcomeProps {
 }
 
 export function SmartWelcome({ userName }: SmartWelcomeProps) {
-  const [recoveryStatus, setRecoveryStatus] = useState<RecoveryStatus | null>(null);
-  const [showRecoveryPrompt, setShowRecoveryPrompt] = useState(false);
-  const [isClient, setIsClient] = useState(false);
+  const { isLoading, streak, weeklyStart, suggestedAction, welcomeMessage, daysAwayFromApp } = useRitualStatus();
+  const [dismissed, setDismissed] = useState(false);
 
-  useEffect(() => {
-    setIsClient(true);
-    const status = getRecoveryStatus();
-    setRecoveryStatus(status);
-    setShowRecoveryPrompt(shouldShowRecoveryModal());
-  }, []);
-
-  if (!isClient || !recoveryStatus) {
+  if (isLoading) {
     return (
       <div className="mb-8 animate-pulse">
         <div className="h-8 bg-surface-sunken  rounded w-48 mb-2" />
@@ -37,10 +23,13 @@ export function SmartWelcome({ userName }: SmartWelcomeProps) {
     );
   }
 
-  const welcome = getWelcomeMessage();
-  const streakData = getStreakData();
-  const streakMessage = getStreakMessage();
-  const { suggestedAction, weeklyStartStatus, daysAwayFromApp } = recoveryStatus;
+  const showRecoveryPrompt = daysAwayFromApp >= 3 && !dismissed;
+  const streakMessage =
+    streak.currentStreak === 0
+      ? { message: 'Start vandaag je nieuwe streak!', type: 'neutral' as const }
+      : streak.isAtRisk
+        ? { message: `${streak.currentStreak} dagen streak - maak vandaag af om hem te behouden!`, type: 'warning' as const }
+        : { message: `${streak.currentStreak} dagen streak - keep going!`, type: 'success' as const };
 
   // If user was away for a while, show recovery banner
   if (daysAwayFromApp >= 3 && showRecoveryPrompt) {
@@ -70,14 +59,14 @@ export function SmartWelcome({ userName }: SmartWelcomeProps) {
                   </Link>
                 )}
                 <button
-                  onClick={() => setShowRecoveryPrompt(false)}
+                  onClick={() => setDismissed(true)}
                   className="px-4 py-2 text-white/80 hover:text-white transition-colors"
                 >
                   Later
                 </button>
               </div>
             </div>
-            {streakData.currentStreak > 0 && (
+            {streak.currentStreak > 0 && (
               <StreakBadge compact />
             )}
           </div>
@@ -88,20 +77,20 @@ export function SmartWelcome({ userName }: SmartWelcomeProps) {
 
   // Weekly start prompt (Tuesday/Wednesday)
   if (
-    !weeklyStartStatus.isComplete &&
-    weeklyStartStatus.canStillComplete &&
-    weeklyStartStatus.dayOfWeek >= 2
+    !weeklyStart.isComplete &&
+    weeklyStart.canStillComplete &&
+    new Date().getDay() >= 2
   ) {
-    const isLastChance = weeklyStartStatus.dayOfWeek === 3;
+    const isLastChance = new Date().getDay() === 3;
 
     return (
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-2xl font-bold text-ink ">
-              {welcome.greeting}
+              {welcomeMessage.greeting}
             </h2>
-            {streakData.currentStreak > 0 && (
+            {streak.currentStreak > 0 && (
               <p className={`text-sm ${streakMessage.type === 'warning' ? 'text-tertiary ' : 'text-ink-soft'}`}>
                 {streakMessage.message}
               </p>
@@ -159,12 +148,12 @@ export function SmartWelcome({ userName }: SmartWelcomeProps) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-ink  mb-1">
-            {welcome.greeting} {userName ? userName : ''}
+            {welcomeMessage.greeting} {userName ? userName : ''}
           </h2>
           <p className="text-ink-soft ">
-            {welcome.subtitle}
+            {welcomeMessage.subtitle}
           </p>
-          {streakData.currentStreak > 0 && streakMessage.type !== 'neutral' && (
+          {streak.currentStreak > 0 && streakMessage.type !== 'neutral' && (
             <p className={`text-sm mt-1 ${streakMessage.type === 'warning'
               ? 'text-tertiary '
               : 'text-primary '

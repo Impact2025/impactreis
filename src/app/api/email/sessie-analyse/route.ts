@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { sql } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-context';
-import { sessieAnalyseEmail, SessieAnalyseData } from '@/lib/email-templates';
+import { sessieAnalyseEmail, streakMilestoneEmail, SessieAnalyseData } from '@/lib/email-templates';
+import { ensurePreferences, wasEmailSent, recordEmailSent, unsubscribeUrl } from '@/lib/email-recipients';
+
+const STREAK_MILESTONES = [7, 14, 30, 60, 90, 180, 365];
 
 async function openRouterChat(prompt: string): Promise<string> {
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -149,7 +152,10 @@ Schrijf in de jij-vorm, warm en direct. Geen bullet points — gewone paragrafen
     aiAnalyse,
   };
 
-  const { subject, html } = sessieAnalyseEmail(emailData);
+  const unsubToken = await ensurePreferences(userId);
+  const unsubUrl = unsubscribeUrl(unsubToken, 'streak_celebration');
+
+  const { subject, html } = sessieAnalyseEmail(emailData, unsubscribeUrl(unsubToken, 'morning_motivation'));
 
   const { error } = await getResend().emails.send({
     from: FROM_EMAIL,
@@ -161,6 +167,28 @@ Schrijf in de jij-vorm, warm en direct. Geen bullet points — gewone paragrafen
   if (error) {
     console.error('Resend error:', error);
     return NextResponse.json({ error }, { status: 500 });
+  }
+
+  // Streak-viering: los van de sessie-analyse, alleen als de nieuwe streak precies een
+  // mijlpaal raakt en die mijlpaal nog niet eerder gevierd is voor deze user.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://reis.weareimpact.nl';
+  if (STREAK_MILESTONES.includes(streak)) {
+    const milestoneType = `streak_milestone_${streak}`;
+    const alreadyCelebrated = await wasEmailSent(userId, milestoneType);
+    if (!alreadyCelebrated) {
+      const { subject: msSubject, html: msHtml } = streakMilestoneEmail(streak, appUrl, unsubUrl);
+      const { error: msError } = await getResend().emails.send({
+        from: FROM_EMAIL,
+        to: userEmail,
+        subject: msSubject,
+        html: msHtml,
+      });
+      if (msError) {
+        console.error('Streak milestone email error:', msError);
+      } else {
+        await recordEmailSent(userId, milestoneType, { streak });
+      }
+    }
   }
 
   return NextResponse.json({ ok: true });

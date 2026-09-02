@@ -68,42 +68,29 @@ export default function MorningPage() {
       try {
         const currentUser = AuthService.isAuthenticated() ? { email: 'user@example.com' } : null;
         if (!currentUser) { router.push('/auth/login'); return; }
-        const saved = localStorage.getItem(`morningRitual_${todayStr}`);
-        if (saved) {
-          try {
-            const p = JSON.parse(saved);
-            setFormData({
-              intentie: typeof p.intentie === 'string' ? p.intentie : '',
-              affirmatie: typeof p.affirmatie === 'string' ? p.affirmatie : '',
-              dankbaarheid: Array.isArray(p.dankbaarheid)
-                ? p.dankbaarheid.map((d: unknown) => (typeof d === 'string' ? d : ''))
-                : ['', '', ''],
-              energyLevel: typeof p.energyLevel === 'number' ? p.energyLevel : 7,
-              sleepQuality: typeof p.sleepQuality === 'number' ? p.sleepQuality : 7,
-              sleepTime: typeof p.sleepTime === 'string' ? p.sleepTime : '23:00',
-              wakeTime: typeof p.wakeTime === 'string' ? p.wakeTime : '06:30',
-              focusBlok1: p.focusBlok1 && typeof p.focusBlok1 === 'object'
-                ? { onderwerp: p.focusBlok1.onderwerp || '', doel: p.focusBlok1.doel || '' }
-                : { onderwerp: '', doel: '' },
-              focusBlok2: p.focusBlok2 && typeof p.focusBlok2 === 'object'
-                ? { onderwerp: p.focusBlok2.onderwerp || '', doel: p.focusBlok2.doel || '' }
-                : { onderwerp: '', doel: '' },
-            });
-          } catch { /* corrupt localStorage, use defaults */ }
-        }
-        // Verify with API: if server has no morning log for today, the localStorage flag is stale
-        if (localStorage.getItem(`morningDone_${todayStr}`) === '1') {
-          try {
-            const logs = await api.logs.getByTypeAndDate('morning', todayStr);
-            if (Array.isArray(logs) && logs.length > 0) {
-              setAlVoltooid(true);
-            } else {
-              localStorage.removeItem(`morningDone_${todayStr}`);
-            }
-          } catch {
-            // API unavailable — trust localStorage as fallback
-            setAlVoltooid(true);
-          }
+
+        const logs = await api.logs.getByTypeAndDate('morning', todayStr).catch(() => []);
+        const raw = Array.isArray(logs) && logs[0] ? logs[0].data : null;
+        const p = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (p) {
+          setFormData({
+            intentie: typeof p.intentie === 'string' ? p.intentie : '',
+            affirmatie: typeof p.affirmatie === 'string' ? p.affirmatie : '',
+            dankbaarheid: Array.isArray(p.dankbaarheid)
+              ? p.dankbaarheid.map((d: unknown) => (typeof d === 'string' ? d : ''))
+              : ['', '', ''],
+            energyLevel: typeof p.energyLevel === 'number' ? p.energyLevel : 7,
+            sleepQuality: typeof p.sleepQuality === 'number' ? p.sleepQuality : 7,
+            sleepTime: typeof p.sleepTime === 'string' ? p.sleepTime : '23:00',
+            wakeTime: typeof p.wakeTime === 'string' ? p.wakeTime : '06:30',
+            focusBlok1: p.focusBlok1 && typeof p.focusBlok1 === 'object'
+              ? { onderwerp: p.focusBlok1.onderwerp || '', doel: p.focusBlok1.doel || '' }
+              : { onderwerp: '', doel: '' },
+            focusBlok2: p.focusBlok2 && typeof p.focusBlok2 === 'object'
+              ? { onderwerp: p.focusBlok2.onderwerp || '', doel: p.focusBlok2.doel || '' }
+              : { onderwerp: '', doel: '' },
+          });
+          setAlVoltooid(true);
         }
       } catch {
         router.push('/auth/login');
@@ -129,9 +116,6 @@ export default function MorningPage() {
   const handleComplete = async () => {
     setSaving(true);
     try {
-      localStorage.setItem(`morningRitual_${todayStr}`, JSON.stringify(formData));
-      localStorage.setItem(`morningDone_${todayStr}`, '1');
-
       try {
         await api.logs.create({
           type: 'morning',

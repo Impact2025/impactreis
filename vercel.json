@@ -13,6 +13,14 @@
       "schedule": "0 7 * * 0"
     },
     {
+      "path": "/api/email/onboarding-nudge",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/email/winback",
+      "schedule": "0 8 * * *"
+    },
+    {
       "path": "/api/email/adhd-rapport",
       "schedule": "0 18 7 6 *"
     },

@@ -3,6 +3,9 @@ import bcrypt from 'bcrypt';
 import { sql } from '@/lib/db';
 import { registerSchema } from '@/lib/schemas/auth.schema';
 import { generateToken } from '@/lib/auth';
+import { getResend, FROM_EMAIL } from '@/lib/resend';
+import { welcomeEmail } from '@/lib/email-templates';
+import { ensurePreferences } from '@/lib/email-recipients';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,6 +44,19 @@ export async function POST(request: NextRequest) {
     `;
 
     const user = result[0];
+
+    // Voorkeuren-rij + unsubscribe-token meteen aanmaken zodat de cron-mails en de
+    // welkomstmail hieronder er nooit tegenaan lopen dat die rij nog ontbreekt.
+    await ensurePreferences(user.id as number);
+
+    // Best-effort: een mislukte welkomstmail mag de registratie nooit laten falen.
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://reis.weareimpact.nl';
+      const { subject, html } = welcomeEmail(appUrl);
+      await getResend().emails.send({ from: FROM_EMAIL, to: user.email as string, subject, html });
+    } catch (err) {
+      console.error('Welcome email failed (registration continues):', err);
+    }
 
     // Generate JWT
     const token = generateToken(user.id, user.email);
