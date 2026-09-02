@@ -14,8 +14,12 @@ export async function GET(request: NextRequest) {
     .where(eq(onboardingProfiles.userId, authCtx.userId)).limit(1);
 
   if (rows.length === 0) {
-    return NextResponse.json({ completed: false, profile: null });
+    return NextResponse.json({ completed: false, profile: null, conversation: null });
   }
 
-  return NextResponse.json({ completed: rows[0].completed, profile: rows[0].profile });
+  return NextResponse.json({
+    completed: rows[0].completed,
+    profile: rows[0].profile,
+    conversation: rows[0].conversation,
+  });
 }

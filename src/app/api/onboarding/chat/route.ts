@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     },
     body: JSON.stringify({
       model: 'anthropic/claude-sonnet-5',
-      max_tokens: 1000,
+      max_tokens: 4096,
       stream: true,
       messages: [
         { role: 'system', content: ONBOARDING_SYSTEM_PROMPT },

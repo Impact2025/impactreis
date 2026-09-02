@@ -32,8 +32,18 @@ export default function OnboardingPage() {
   const [streaming, setStreaming] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
   const startedRef = useRef(false);
+
+  const saveProgress = (history: Message[]) => {
+    const token = AuthService.getToken();
+    fetch('/api/onboarding/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ messages: history }),
+    }).catch(() => {}); // best-effort — een mislukte tussentijdse save mag het gesprek niet blokkeren
+  };
 
   const scrollToBottom = () => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
 
@@ -83,6 +93,9 @@ export default function OnboardingPage() {
           body: JSON.stringify(profile),
         });
         if (saveRes.ok) setDone(true);
+      } else {
+        // Nog niet klaar — bewaar het gesprek zodat een refresh of afgebroken sessie kan hervatten.
+        saveProgress([...history, { role: 'assistant', content: assistantText }]);
       }
     } catch {
       setError('Er ging iets mis. Probeer het opnieuw.');
@@ -95,9 +108,35 @@ export default function OnboardingPage() {
     if (!AuthService.isAuthenticated()) { router.push('/auth/login'); return; }
     if (startedRef.current) return;
     startedRef.current = true;
-    // Onzichtbare aftrap: het systeemprompt regelt fase 1, dit triggert alleen de eerste beurt.
-    const bootstrap: Message[] = [{ role: 'user', content: 'Ik ben klaar om te beginnen.' }];
-    send(bootstrap);
+
+    (async () => {
+      const token = AuthService.getToken();
+      try {
+        const res = await fetch('/api/onboarding/profile', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.completed) {
+            setDone(true);
+            setRestoring(false);
+            return;
+          }
+          if (Array.isArray(data.conversation) && data.conversation.length > 0) {
+            // Gesprek al onderweg (refresh of afgebroken sessie) — hervat i.p.v. opnieuw te beginnen.
+            setMessages(data.conversation);
+            setRestoring(false);
+            return;
+          }
+        }
+      } catch {
+        // kon voortgang niet ophalen — val terug op een schone start
+      }
+      setRestoring(false);
+      // Onzichtbare aftrap: het systeemprompt regelt fase 1, dit triggert alleen de eerste beurt.
+      const bootstrap: Message[] = [{ role: 'user', content: 'Ik ben klaar om te beginnen.' }];
+      send(bootstrap);
+    })();
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -129,6 +168,9 @@ export default function OnboardingPage() {
       </div>
 
       <div className="flex-1 max-w-lg mx-auto w-full px-5 py-5 space-y-4 overflow-y-auto">
+        {restoring && messages.length === 0 && !done && (
+          <p className="text-[13px] text-ink-soft text-center">Even je gesprek ophalen…</p>
+        )}
         {messages.filter((m) => m.role !== 'user' || m.content !== 'Ik ben klaar om te beginnen.').map((m, i) => {
           if (m.role === 'user') {
             return (

@@ -238,7 +238,8 @@ export const onboardingProfiles = pgTable('onboarding_profiles', {
   organizationId: integer('organization_id').references(() => organizations.id).notNull(),
   userId: integer('user_id').references(() => users.id).notNull().unique(),
   completed: boolean('completed').notNull().default(false),
-  profile: jsonb('profile').notNull(), // UserOnboardingProfile, zie src/lib/onboarding.ts
+  profile: jsonb('profile'), // UserOnboardingProfile, zie src/lib/onboarding.ts — pas gevuld na fase 5
+  conversation: jsonb('conversation'), // ruwe messages-array, tussentijds bewaard zodat een refresh kan hervatten
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
