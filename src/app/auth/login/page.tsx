@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { signIn } from 'next-auth/react';
 import { AlertCircle, ArrowRight, Lock, Mail, Rocket } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
@@ -87,14 +88,12 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="text-center mb-10">
-          <div className="w-12 h-12 rounded-[14px] bg-surface-inverse flex items-center justify-center mx-auto mb-5 text-white text-[16px] font-bold">
-            OS
-          </div>
+          <Image src="/logo.png" alt="myAiPA" width={48} height={48} className="rounded-[14px] mx-auto mb-5" priority />
           <h1 className="text-[28px] font-bold text-ink tracking-tight">
             Welkom terug
           </h1>
           <p className="text-[13px] text-ink-soft mt-1.5">
-            Personal OS voor ondernemers die impact willen maken
+            Jouw Executive AI-Assistant & Mindset Copiloot
           </p>
         </div>
 

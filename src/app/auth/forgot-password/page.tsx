@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowLeft, Mail, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
@@ -59,9 +60,7 @@ export default function ForgotPasswordPage() {
         ) : (
           <>
             <div className="mb-8">
-              <div className="w-12 h-12 rounded-[14px] bg-surface-inverse flex items-center justify-center mb-5 text-white text-[16px] font-bold">
-                OS
-              </div>
+              <Image src="/logo.png" alt="myAiPA" width={48} height={48} className="rounded-[14px] mb-5" />
               <h1 className="text-[28px] font-bold text-ink tracking-tight">
                 Wachtwoord vergeten
               </h1>

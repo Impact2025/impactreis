@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowLeft, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 
 function ResetPasswordForm() {
@@ -23,7 +24,7 @@ function ResetPasswordForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirm) { setError('Wachtwoorden komen niet overeen'); return; }
-    if (password.length < 6) { setError('Minimaal 6 tekens'); return; }
+    if (password.length < 8) { setError('Minimaal 8 tekens'); return; }
 
     setLoading(true);
     setError('');
@@ -59,14 +60,12 @@ function ResetPasswordForm() {
   return (
     <>
       <div className="mb-8">
-        <div className="w-12 h-12 rounded-[14px] bg-surface-inverse flex items-center justify-center mb-5 text-white text-[16px] font-bold">
-          OS
-        </div>
+        <Image src="/logo.png" alt="myAiPA" width={48} height={48} className="rounded-[14px] mb-5" />
         <h1 className="text-[28px] font-bold text-ink tracking-tight">
           Nieuw wachtwoord
         </h1>
         <p className="text-[13px] text-ink-soft mt-1.5">
-          Kies een nieuw wachtwoord van minimaal 6 tekens.
+          Kies een nieuw wachtwoord van minimaal 8 tekens.
         </p>
       </div>
 
@@ -79,6 +78,7 @@ function ResetPasswordForm() {
             onChange={(e) => setPassword(e.target.value)}
             required
             autoFocus
+            minLength={8}
             disabled={!token}
             className="w-full px-4 pr-11 py-3.5 rounded-[14px] bg-surface-sunken border border-transparent text-[14px] text-ink placeholder-ink-soft outline-none focus:border-primary focus:bg-white transition-all disabled:opacity-50"
           />
