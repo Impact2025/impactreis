@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Send } from 'lucide-react';
+import Image from 'next/image';
+import { Send } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 
 interface Message {
@@ -34,7 +35,13 @@ export default function OnboardingPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const startedRef = useRef(false);
 
-  const scrollToBottom = () => bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = () => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+  // Scrol altijd mee zodra er nieuwe berichten bijkomen of het antwoord binnenstroomt,
+  // ook als het eerste chunk pas laat arriveert.
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, streaming]);
 
   const send = async (history: Message[]) => {
     setStreaming(true);
@@ -64,7 +71,6 @@ export default function OnboardingPage() {
           next[next.length - 1] = { role: 'assistant', content: assistantText };
           return next;
         });
-        scrollToBottom();
       }
 
       // Intake klaar zodra het model een geldig profiel-JSON-blok teruggeeft.
@@ -114,9 +120,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-white flex flex-col">
       <div className="sticky top-0 z-10 bg-white border-b border-line px-5 py-4">
         <div className="max-w-lg mx-auto flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-surface-inverse flex items-center justify-center">
-            <Sparkles size={16} className="text-primary" />
-          </div>
+          <Image src="/logo.png" alt="myAiPA logo" width={36} height={36} className="rounded-full" priority />
           <div>
             <p className="text-[14px] font-semibold text-ink">Aipa</p>
             <p className="text-[11px] text-ink-soft">Je Executive PA &amp; Impact Coach richt je werkruimte in</p>
