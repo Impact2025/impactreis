@@ -3,16 +3,18 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Sunrise, ArrowLeft, ArrowRight, CheckCircle, Heart, Target, Zap, Brain, CalendarClock } from 'lucide-react';
+import { Sunrise, ArrowLeft, ArrowRight, CheckCircle, Heart, Target, Zap, Brain, CalendarClock, Mountain, Coffee, Sun, GlassWater } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
-type Step = 'intentie' | 'focusblokken' | 'status' | 'dankbaarheid' | 'affirmatie' | 'done';
+type Step = 'dagtype' | 'intentie' | 'focusblokken' | 'status' | 'dankbaarheid' | 'affirmatie' | 'done';
+type DayType = 'focus' | 'buffer' | 'free';
 
-const STEPS: Step[] = ['intentie', 'focusblokken', 'status', 'dankbaarheid', 'affirmatie'];
+const STEPS: Step[] = ['dagtype', 'intentie', 'focusblokken', 'status', 'dankbaarheid', 'affirmatie'];
 
 const STEP_LABELS: Record<Step, string> = {
+  dagtype: 'Dagtype',
   intentie: 'Intentie',
   focusblokken: 'Focus Blokken',
   status: 'Status',
@@ -21,12 +23,26 @@ const STEP_LABELS: Record<Step, string> = {
   done: 'Klaar',
 };
 
+const DAY_TYPE_OPTIONS: { value: DayType; label: string; description: string }[] = [
+  { value: 'focus', label: 'Focus Day', description: 'Diep werk, 80/20-projecten — onwrikbare concentratie' },
+  { value: 'buffer', label: 'Buffer Day', description: 'Administratie, planning, voorbereiding' },
+  { value: 'free', label: 'Free Day', description: 'Volledige disconnectie — geen zakelijk contact' },
+];
+
 interface FocusBlok {
   onderwerp: string;
   doel: string;
 }
 
+interface PreWork {
+  daylight: boolean;
+  hydration: boolean;
+  caffeineDelay: boolean;
+}
+
 interface MorningData {
+  dayType: DayType | null;
+  preWork: PreWork;
   intentie: string;
   affirmatie: string;
   dankbaarheid: string[];
@@ -52,6 +68,8 @@ export default function MorningPage() {
   const todayStr = today.toISOString().split('T')[0];
 
   const [formData, setFormData] = useState<MorningData>({
+    dayType: null,
+    preWork: { daylight: false, hydration: false, caffeineDelay: false },
     intentie: '',
     affirmatie: '',
     dankbaarheid: ['', '', ''],
@@ -74,6 +92,14 @@ export default function MorningPage() {
         const p = typeof raw === 'string' ? JSON.parse(raw) : raw;
         if (p) {
           setFormData({
+            dayType: ['focus', 'buffer', 'free'].includes(p.dayType) ? p.dayType : null,
+            preWork: p.preWork && typeof p.preWork === 'object'
+              ? {
+                  daylight: !!p.preWork.daylight,
+                  hydration: !!p.preWork.hydration,
+                  caffeineDelay: !!p.preWork.caffeineDelay,
+                }
+              : { daylight: false, hydration: false, caffeineDelay: false },
             intentie: typeof p.intentie === 'string' ? p.intentie : '',
             affirmatie: typeof p.affirmatie === 'string' ? p.affirmatie : '',
             dankbaarheid: Array.isArray(p.dankbaarheid)
@@ -155,6 +181,7 @@ export default function MorningPage() {
   const isLastStep = step === 'affirmatie';
 
   const canGoNext = () => {
+    if (step === 'dagtype') return formData.dayType !== null;
     if (step === 'intentie') return (formData.intentie ?? '').trim().length > 0;
     if (step === 'focusblokken') return formData.focusBlok1.onderwerp.trim().length > 0 && formData.focusBlok2.onderwerp.trim().length > 0;
     if (step === 'dankbaarheid') return (formData.dankbaarheid ?? []).some((d) => (d ?? '').trim().length > 0);
@@ -206,6 +233,14 @@ export default function MorningPage() {
 
           {formData.intentie ? (
             <div className="rounded-[16px] border border-line p-5 space-y-4">
+              {formData.dayType && (
+                <div>
+                  <p className="text-[11px] text-ink-soft uppercase tracking-widest mb-1">Dagtype</p>
+                  <p className="text-[14px] font-semibold text-ink">
+                    {DAY_TYPE_OPTIONS.find((o) => o.value === formData.dayType)?.label}
+                  </p>
+                </div>
+              )}
               <div>
                 <p className="text-[11px] text-ink-soft uppercase tracking-widest mb-1">Intentie</p>
                 <p className="text-[14px] text-ink leading-relaxed">{formData.intentie}</p>
@@ -322,6 +357,69 @@ export default function MorningPage() {
       </div>
 
       <div className="max-w-lg mx-auto px-5 pt-5">
+
+        {/* Step: Dagtype */}
+        {step === 'dagtype' && (
+          <div className="space-y-4">
+            <div className="rounded-[16px] bg-surface-inverse p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Mountain size={18} className="text-tertiary" />
+                <span className="text-[11px] text-white/40 uppercase tracking-widest">
+                  {dayName}, {dateStr}
+                </span>
+              </div>
+              <p className="text-[17px] text-white font-semibold">Wat voor dag wordt het?</p>
+              <p className="text-[13px] text-white/50 mt-1">Kies bewust — dat voorkomt dat alles door elkaar loopt.</p>
+            </div>
+
+            <div className="space-y-2.5">
+              {DAY_TYPE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, dayType: opt.value })}
+                  className={`w-full text-left rounded-[16px] border p-4 transition-colors ${
+                    formData.dayType === opt.value
+                      ? 'border-primary bg-primary-muted'
+                      : 'border-line bg-surface-sunken'
+                  }`}
+                >
+                  <p className="text-[14px] font-semibold text-ink">{opt.label}</p>
+                  <p className="text-[12px] text-ink-soft mt-0.5">{opt.description}</p>
+                </button>
+              ))}
+            </div>
+
+            {formData.dayType && formData.dayType !== 'free' && (
+              <div className="rounded-[16px] border border-line p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sun size={16} className="text-tertiary" />
+                  <span className="text-[14px] font-semibold text-ink">Pre-work rituelen</span>
+                </div>
+                <div className="space-y-2.5">
+                  {([
+                    { key: 'daylight' as const, icon: Sun, label: 'Daglicht gehad (5-30 min)' },
+                    { key: 'hydration' as const, icon: GlassWater, label: 'Water met elektrolyten' },
+                    { key: 'caffeineDelay' as const, icon: Coffee, label: 'Cafeïne nog uitgesteld' },
+                  ]).map(({ key, icon: Icon, label }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, preWork: { ...formData.preWork, [key]: !formData.preWork[key] } })}
+                      className={`w-full flex items-center gap-3 rounded-[12px] px-4 py-3 transition-colors ${
+                        formData.preWork[key] ? 'bg-primary-muted' : 'bg-surface-sunken'
+                      }`}
+                    >
+                      <Icon size={15} className={formData.preWork[key] ? 'text-primary' : 'text-ink-soft'} />
+                      <span className="text-[13px] text-ink flex-1 text-left">{label}</span>
+                      {formData.preWork[key] && <CheckCircle size={15} className="text-primary" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Step: Intentie */}
         {step === 'intentie' && (

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Brain, Play, Pause, RotateCcw, ArrowLeft, Timer, Coffee,
-  CheckCircle, Clock, Zap, HelpCircle, Flame
+  CheckCircle, Clock, Zap, HelpCircle, Flame, Mountain
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -49,6 +49,7 @@ export default function FocusPage() {
   const [sessionGoal, setSessionGoal] = useState('');
   const [showGoalInput, setShowGoalInput] = useState(true);
   const [goalFromCoach, setGoalFromCoach] = useState(false);
+  const [dayType, setDayType] = useState<'focus' | 'buffer' | 'free' | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
@@ -82,6 +83,9 @@ export default function FocusPage() {
           if (intentie && typeof intentie === 'string' && intentie.trim()) {
             setSessionGoal(intentie.trim());
             setGoalFromCoach(true);
+          }
+          if (['focus', 'buffer', 'free'].includes(parsedData?.dayType)) {
+            setDayType(parsedData.dayType);
           }
         } catch {
           // geen ochtendritueel vandaag — gewoon een leeg invoerveld
@@ -313,6 +317,18 @@ export default function FocusPage() {
       )}
 
       <div className="max-w-lg mx-auto px-5">
+        {/* Dagtype-context — puur signalerend, geen blokkade */}
+        {(dayType === 'buffer' || dayType === 'free') && (
+          <div className="flex items-center gap-3 rounded-[14px] border border-tertiary/20 bg-tertiary-soft p-4 mt-5">
+            <Mountain size={16} className="text-tertiary flex-shrink-0" />
+            <p className="text-[12px] text-ink flex-1">
+              {dayType === 'buffer'
+                ? 'Buffer Day — administratie en planning passen hier beter dan diep werk.'
+                : 'Free Day — dit is geen dag om te werken. Toch beginnen kan, maar overweeg het.'}
+            </p>
+          </div>
+        )}
+
         {/* Stats Strip */}
         <div className="grid grid-cols-3 gap-3 py-5">
           <div className="bg-surface-sunken rounded-[14px] p-4 text-center">

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   Bell, Sunrise, Moon, CalendarDays, TrendingUp,
-  Play, ChevronRight, Zap, Fingerprint, Sparkles, BookHeart, AlertCircle, X,
+  Play, ChevronRight, Zap, Fingerprint, Sparkles, BookHeart, AlertCircle, X, Mountain,
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -51,6 +51,8 @@ export default function DashboardPage() {
   const [proposals, setProposals] = useState<any[]>([]);
   const [resolvingProposalId, setResolvingProposalId] = useState<string | number | null>(null);
   const [canAccessDemo, setCanAccessDemo] = useState(false);
+  const [todayDayType, setTodayDayType] = useState<'focus' | 'buffer' | 'free' | null>(null);
+  const [nsdrDismissed, setNsdrDismissed] = useState(false);
   const router                      = useRouter();
 
   const ritualStatuses = useRitualStatus();
@@ -67,7 +69,7 @@ export default function DashboardPage() {
 
   const fetchData = async (retry = 0) => {
     try {
-      const [goalsRes, focusRes, winsRes, calendarRes, onboardingRes, signalRes, proposalsRes] = await Promise.allSettled([
+      const [goalsRes, focusRes, winsRes, calendarRes, onboardingRes, signalRes, proposalsRes, morningLogRes] = await Promise.allSettled([
         api.goals.getAll(),
         api.focus.getAll(),
         api.wins.getAll(),
@@ -75,7 +77,14 @@ export default function DashboardPage() {
         api.onboarding.profile(),
         api.coach.proactiveSignal(),
         api.calendar.proposals.list(),
+        api.logs.getByTypeAndDate('morning', getToday()),
       ]);
+
+      if (morningLogRes.status === 'fulfilled' && Array.isArray(morningLogRes.value) && morningLogRes.value[0]) {
+        const raw = morningLogRes.value[0].data;
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (['focus', 'buffer', 'free'].includes(parsed?.dayType)) setTodayDayType(parsed.dayType);
+      }
 
       if (signalRes.status === 'fulfilled' && signalRes.value.signal) {
         setProactiveSignal(signalRes.value);
@@ -163,6 +172,18 @@ export default function DashboardPage() {
     setSignalDismissed(true);
   };
 
+  // NSDR-suggestie in de namiddag op een Focus Day (Non-Sleep Deep Rest, 20 min) — puur een
+  // client-side tijdcheck, geen cron/push nodig, zelfde dismiss-patroon als het proactieve signaal.
+  const nsdrDismissKey = `nsdrDismissed_${today}`;
+  const currentHour = new Date().getHours();
+  const showNsdr =
+    todayDayType === 'focus' && currentHour >= 14 && currentHour < 15 && !nsdrDismissed &&
+    (typeof window === 'undefined' || !localStorage.getItem(nsdrDismissKey));
+  const dismissNsdr = () => {
+    localStorage.setItem(nsdrDismissKey, 'true');
+    setNsdrDismissed(true);
+  };
+
   const resolveProposal = async (id: string | number, action: 'approve' | 'reject') => {
     setResolvingProposalId(id);
     try {
@@ -234,8 +255,21 @@ export default function DashboardPage() {
             )}
           </div>
 
+          {/* ══ FREE DAY — RUST, GEEN PRESTATIEDRUK ═════════════ */}
+          {todayDayType === 'free' && (
+            <div className="flex items-center gap-3 rounded-card border border-tertiary/20 bg-tertiary-soft p-4 mb-5">
+              <div className="w-9 h-9 rounded-[10px] bg-tertiary/15 flex items-center justify-center flex-shrink-0">
+                <Sunrise size={17} className="text-tertiary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold text-ink">Vrije dag — geniet ervan.</p>
+                <p className="text-[11px] text-ink-soft">Herstel is vandaag het doel, niet presteren.</p>
+              </div>
+            </div>
+          )}
+
           {/* ══ PROACTIEVE SIGNAALKAART (AIPA) ══════════════════ */}
-          {showProactiveSignal && proactiveSignal && (
+          {todayDayType !== 'free' && showProactiveSignal && proactiveSignal && (
             <div className="rounded-card border border-accent/25 bg-accent-soft p-4 mb-5">
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-[10px] bg-accent/15 flex items-center justify-center flex-shrink-0">
@@ -271,7 +305,7 @@ export default function DashboardPage() {
           )}
 
           {/* ══ NOG TE DOEN: RITUEEL ═════════════════════════════ */}
-          {nextRitual && nextRitual.isAvailable && (
+          {todayDayType !== 'free' && nextRitual && nextRitual.isAvailable && (
             <Link
               href={nextRitual.path}
               className="flex items-center gap-3 rounded-card border border-primary/25 bg-primary-muted p-4 mb-5 active:scale-[0.99] transition-transform"
@@ -475,6 +509,13 @@ export default function DashboardPage() {
               'Voorgesteld na een drukke dag met veel vergaderingen — even geen scherm, even geen taak.'
             );
 
+            // Maker-tijd-signaal: op een Focus Day is de ochtend het duurste onroerend goed op de
+            // kalender (zie het tijdsarchitectuur-onderzoek) — een vergadering vóór de middag botst
+            // daarmee, puur signalerend, geen automatische actie.
+            const hasMorningMeeting = todayDayType === 'focus' && timedEvents.some(
+              (ev) => ev.start && new Date(ev.start).getHours() < 12
+            );
+
             return (
             <div className="rounded-card border border-line bg-surface-card p-5 mb-6 shadow-organic">
               <div className="flex items-center justify-between mb-3.5">
@@ -502,6 +543,14 @@ export default function DashboardPage() {
                   </div>
                 ))}
               </div>
+              {hasMorningMeeting && (
+                <div className="mt-4 flex items-center gap-2.5 rounded-[12px] bg-tertiary-soft px-4 py-3">
+                  <Mountain size={14} className="text-tertiary flex-shrink-0" />
+                  <span className="text-[12px] font-medium text-ink flex-1">
+                    Vergadering(en) vóór de middag botsen met je Focus Day — de ochtend is je duurste onroerend goed
+                  </span>
+                </div>
+              )}
               {isDrukkeDag && (
                 <a
                   href={recoveryUrl}
@@ -519,6 +568,22 @@ export default function DashboardPage() {
             </div>
             );
           })()}
+
+          {/* ══ NSDR-SUGGESTIE (NAMIDDAG, FOCUS DAY) ═════════════ */}
+          {showNsdr && (
+            <div className="flex items-center gap-3 rounded-card border border-tertiary/20 bg-tertiary-soft p-4 mb-6">
+              <div className="w-9 h-9 rounded-[10px] bg-tertiary/15 flex items-center justify-center flex-shrink-0">
+                <Moon size={17} className="text-tertiary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold text-ink">Tijd voor 20 minuten NSDR</p>
+                <p className="text-[11px] text-ink-soft">Reset je focus vóór de rest van de middag.</p>
+              </div>
+              <button onClick={dismissNsdr} aria-label="Sluiten" className="text-ink-soft hover:text-ink flex-shrink-0">
+                <X size={15} />
+              </button>
+            </div>
+          )}
 
           {/* ══ VOORGESTELDE TIJDBLOKKEN ═════════════════════════ */}
           {proposals.length > 0 && (

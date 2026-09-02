@@ -60,7 +60,7 @@ export interface HoldingContext {
 }
 
 export interface CoachContext {
-  today: { energyLevel?: number; sleepQuality?: number; wakeTime?: string; intentie?: string };
+  today: { energyLevel?: number; sleepQuality?: number; wakeTime?: string; intentie?: string; dayType?: 'focus' | 'buffer' | 'free' };
   yesterday: { energyLevel?: number; sleepQuality?: number } | null;
   streak: number;
   last7Days: DailyLogRow[];
@@ -191,6 +191,13 @@ function getCurrentStreak(dateStrings: string[]): number {
 /** Deterministisch: welk signaal wijst op welke techniek. Geen LLM nodig om dit te kiezen —
  *  de keuze zelf moet uitlegbaar zijn, ook als de gateway plat ligt. */
 export function chooseTechnique(ctx: CoachContext): { technique: Technique; reason: string } {
+  // Vroegste, prioritaire regel: een Free Day is een strategische noodzaak voor fysiologisch
+  // herstel (zie het tijdsarchitectuur-onderzoek), geen "zwakke dag" — de coach mag hier nooit
+  // een doorduw-techniek kiezen, ongeacht energie- of streaksignalen.
+  if (ctx.today.dayType === 'free') {
+    return { technique: 'act', reason: 'Free Day — herstel is vandaag het doel, niet doorzetten.' };
+  }
+
   const energyDrop = ctx.yesterday?.energyLevel != null && ctx.today.energyLevel != null
     ? ctx.today.energyLevel - ctx.yesterday.energyLevel
     : 0;

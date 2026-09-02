@@ -72,6 +72,15 @@ describe('chooseTechnique', () => {
     const { technique } = chooseTechnique(baseContext());
     expect(technique).toBe('grow');
   });
+
+  it('kiest altijd act op een Free Day, ook als andere signalen een andere techniek zouden kiezen', () => {
+    // Lage energie + lopende streak zou zonder dayType 'oplossingsgericht' opleveren (zie de
+    // eerste test) — Free Day moet die regel overrulen, want herstel gaat voor.
+    const ctx = baseContext({ today: { energyLevel: 2, dayType: 'free' }, yesterday: { energyLevel: 5 }, streak: 4 });
+    const { technique, reason } = chooseTechnique(ctx);
+    expect(technique).toBe('act');
+    expect(reason).toContain('Free Day');
+  });
 });
 
 describe('detectProactiveSignal', () => {
