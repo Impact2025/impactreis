@@ -38,14 +38,14 @@ export async function GET(
     if (lessonId) {
       answers = await sql`
         SELECT ca.* FROM course_answers ca
-        WHERE ca.user_id = ${userId} AND ca.lesson_id = ${lessonId}
+        WHERE ca.user_id = ${userId} AND ca.organization_id = ${organizationId} AND ca.lesson_id = ${lessonId}
       `;
     } else {
       answers = await sql`
         SELECT ca.* FROM course_answers ca
         JOIN course_lessons cl ON ca.lesson_id = cl.id
         JOIN course_modules cm ON cl.module_id = cm.id
-        WHERE ca.user_id = ${userId} AND cm.course_id = ${course.id}
+        WHERE ca.user_id = ${userId} AND ca.organization_id = ${organizationId} AND cm.course_id = ${course.id}
         ORDER BY ca.answered_at DESC
       `;
     }
@@ -104,8 +104,8 @@ export async function POST(
     for (const [questionKey, answer] of Object.entries(answers)) {
       if (answer && typeof answer === 'string' && answer.trim()) {
         const [saved] = await sql`
-          INSERT INTO course_answers (user_id, lesson_id, question_key, answer)
-          VALUES (${userId}, ${lessonId}, ${questionKey}, ${answer})
+          INSERT INTO course_answers (user_id, lesson_id, question_key, answer, organization_id)
+          VALUES (${userId}, ${lessonId}, ${questionKey}, ${answer}, ${organizationId})
           ON CONFLICT (user_id, lesson_id, question_key)
           DO UPDATE SET answer = ${answer}, updated_at = NOW()
           RETURNING *

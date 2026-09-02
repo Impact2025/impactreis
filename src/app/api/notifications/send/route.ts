@@ -13,6 +13,7 @@ interface NotificationPayload {
   type?: 'morning-ritual' | 'evening-ritual' | 'weekly-review' | 'streak' | 'general';
   data?: Record<string, unknown>;
   userId?: number;
+  organizationId?: number;
 }
 
 // Generate with: npx web-push generate-vapid-keys
@@ -80,7 +81,12 @@ export async function POST(request: NextRequest) {
     }
 
     const subscriptions = payload.userId
-      ? await sql`SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ${payload.userId}`
+      ? payload.organizationId != null
+        ? await sql`SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ${payload.userId} AND organization_id = ${payload.organizationId}`
+        : await sql`SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ${payload.userId}`
+      // Geen userId meegegeven: broadcast naar alle subscriptions — zie de bekende beperking
+      // hieronder bij de GET-cron-tak, hetzelfde risico geldt hier zodra dit pad ooit zonder
+      // userId wordt aangeroepen met meerdere organisaties in de database.
       : await sql`SELECT endpoint, p256dh, auth FROM push_subscriptions`;
 
     if (subscriptions.length === 0) {
@@ -145,6 +151,11 @@ export async function GET(request: NextRequest) {
     };
 
     const notification = notifications[type];
+    // Bekende, bewust ongewijzigde beperking (zie migrations/manual/0008_courses_and_push_multitenant.sql):
+    // dit stuurt naar ALLE subscriptions in de database, ongeacht organisatie. Bij één organisatie
+    // onschadelijk; bij een tweede klant een cross-tenant lek. Fixen vereist een productbeslissing
+    // over per-user verzendlogica (bv. alleen sturen als het ritueel van die dag nog niet gedaan is),
+    // niet slechts een kolomfilter — bewust buiten scope gehouden bij de multi-tenant schema-opschoning.
     const subscriptions = await sql`SELECT endpoint, p256dh, auth FROM push_subscriptions`;
 
     if (subscriptions.length === 0) {

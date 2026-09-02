@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     if (practiceType) {
       practices = await sql`
         SELECT * FROM daily_practice_log
-        WHERE user_id = ${userId}
+        WHERE user_id = ${userId} AND organization_id = ${organizationId}
         AND practice_type = ${practiceType}
         AND date >= CURRENT_DATE - ${days}
         ORDER BY date DESC
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     } else {
       practices = await sql`
         SELECT * FROM daily_practice_log
-        WHERE user_id = ${userId}
+        WHERE user_id = ${userId} AND organization_id = ${organizationId}
         AND date >= CURRENT_DATE - ${days}
         ORDER BY date DESC
       `;
@@ -122,8 +122,8 @@ export async function POST(request: NextRequest) {
 
     // Upsert practice log
     const [practice] = await sql`
-      INSERT INTO daily_practice_log (user_id, practice_type, date, duration_minutes, notes)
-      VALUES (${userId}, ${practiceType}, ${practiceDate}, ${durationMinutes || null}, ${notes || null})
+      INSERT INTO daily_practice_log (user_id, practice_type, date, duration_minutes, notes, organization_id)
+      VALUES (${userId}, ${practiceType}, ${practiceDate}, ${durationMinutes || null}, ${notes || null}, ${organizationId})
       ON CONFLICT (user_id, practice_type, date)
       DO UPDATE SET
         duration_minutes = COALESCE(${durationMinutes}, daily_practice_log.duration_minutes),
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
     // Calculate new streak
     const practices = await sql`
       SELECT date FROM daily_practice_log
-      WHERE user_id = ${userId} AND practice_type = ${practiceType}
+      WHERE user_id = ${userId} AND organization_id = ${organizationId} AND practice_type = ${practiceType}
       ORDER BY date DESC
     `;
 
@@ -168,8 +168,8 @@ export async function POST(request: NextRequest) {
     for (const milestone of achievementMilestones) {
       if (streak >= milestone.streak && practiceType === 'priming') {
         await sql`
-          INSERT INTO course_achievements (user_id, achievement_key, course_id)
-          VALUES (${userId}, ${milestone.key}, 1)
+          INSERT INTO course_achievements (user_id, achievement_key, course_id, organization_id)
+          VALUES (${userId}, ${milestone.key}, 1, ${organizationId})
           ON CONFLICT (user_id, achievement_key) DO NOTHING
         `;
       }

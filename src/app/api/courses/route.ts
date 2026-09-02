@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         ce.completed_at as enrollment_completed_at,
         ce.last_activity_at
       FROM courses c
-      LEFT JOIN course_enrollments ce ON c.id = ce.course_id AND ce.user_id = ${userId}
+      LEFT JOIN course_enrollments ce ON c.id = ce.course_id AND ce.user_id = ${userId} AND ce.organization_id = ${organizationId}
       WHERE c.is_published = true
       ORDER BY c.created_at DESC
     `;
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
           FROM lesson_completions lc
           JOIN course_lessons cl ON lc.lesson_id = cl.id
           JOIN course_modules cm ON cl.module_id = cm.id
-          WHERE cm.course_id = ${course.id} AND lc.user_id = ${userId}
+          WHERE cm.course_id = ${course.id} AND lc.user_id = ${userId} AND lc.organization_id = ${organizationId}
         `;
 
         const completed = parseInt(completedCount?.completed || '0');
@@ -129,8 +129,8 @@ export async function POST(request: NextRequest) {
 
     // Create enrollment (upsert)
     const [enrollment] = await sql`
-      INSERT INTO course_enrollments (user_id, course_id, current_module_id, current_lesson_id, status)
-      VALUES (${userId}, ${courseId}, ${firstModule?.id || null}, ${firstLesson?.id || null}, 'active')
+      INSERT INTO course_enrollments (user_id, course_id, current_module_id, current_lesson_id, status, organization_id)
+      VALUES (${userId}, ${courseId}, ${firstModule?.id || null}, ${firstLesson?.id || null}, 'active', ${organizationId})
       ON CONFLICT (user_id, course_id)
       DO UPDATE SET
         status = 'active',

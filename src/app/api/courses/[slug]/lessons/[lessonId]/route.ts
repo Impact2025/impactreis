@@ -47,7 +47,7 @@ export async function GET(
     const answers = await sql`
       SELECT question_key, answer, updated_at
       FROM course_answers
-      WHERE user_id = ${userId} AND lesson_id = ${lessonId}
+      WHERE user_id = ${userId} AND organization_id = ${organizationId} AND lesson_id = ${lessonId}
     `;
 
     const answersMap: Record<string, string> = {};
@@ -58,7 +58,7 @@ export async function GET(
     // Check if lesson is completed
     const [completion] = await sql`
       SELECT * FROM lesson_completions
-      WHERE user_id = ${userId} AND lesson_id = ${lessonId}
+      WHERE user_id = ${userId} AND organization_id = ${organizationId} AND lesson_id = ${lessonId}
     `;
 
     // Get previous and next lesson
@@ -90,7 +90,7 @@ export async function GET(
       SET last_activity_at = NOW(),
           current_module_id = ${lesson.module_id},
           current_lesson_id = ${lesson.id}
-      WHERE user_id = ${userId} AND course_id = ${course.id}
+      WHERE user_id = ${userId} AND organization_id = ${organizationId} AND course_id = ${course.id}
     `;
 
     return NextResponse.json({
@@ -147,8 +147,8 @@ export async function POST(
 
     // Mark lesson complete (upsert)
     const [completion] = await sql`
-      INSERT INTO lesson_completions (user_id, lesson_id, time_spent_minutes)
-      VALUES (${userId}, ${lessonId}, ${timeSpentMinutes})
+      INSERT INTO lesson_completions (user_id, lesson_id, time_spent_minutes, organization_id)
+      VALUES (${userId}, ${lessonId}, ${timeSpentMinutes}, ${organizationId})
       ON CONFLICT (user_id, lesson_id)
       DO UPDATE SET time_spent_minutes = lesson_completions.time_spent_minutes + ${timeSpentMinutes}
       RETURNING *
@@ -161,7 +161,7 @@ export async function POST(
         COUNT(DISTINCT lc.lesson_id) as completed_lessons
       FROM course_lessons cl
       JOIN course_modules cm ON cl.module_id = cm.id
-      LEFT JOIN lesson_completions lc ON cl.id = lc.lesson_id AND lc.user_id = ${userId}
+      LEFT JOIN lesson_completions lc ON cl.id = lc.lesson_id AND lc.user_id = ${userId} AND lc.organization_id = ${organizationId}
       WHERE cm.course_id = ${lesson.course_id}
     `;
 
@@ -172,13 +172,13 @@ export async function POST(
       await sql`
         UPDATE course_enrollments
         SET status = 'completed', completed_at = NOW()
-        WHERE user_id = ${userId} AND course_id = ${lesson.course_id}
+        WHERE user_id = ${userId} AND organization_id = ${organizationId} AND course_id = ${lesson.course_id}
       `;
 
       // Award course completion achievement
       await sql`
-        INSERT INTO course_achievements (user_id, achievement_key, course_id)
-        VALUES (${userId}, 'course_complete', ${lesson.course_id})
+        INSERT INTO course_achievements (user_id, achievement_key, course_id, organization_id)
+        VALUES (${userId}, 'course_complete', ${lesson.course_id}, ${organizationId})
         ON CONFLICT (user_id, achievement_key) DO NOTHING
       `;
     }
@@ -203,7 +203,7 @@ export async function POST(
         SET current_lesson_id = ${nextLesson.id},
             current_module_id = ${nextLesson.module_id},
             last_activity_at = NOW()
-        WHERE user_id = ${userId} AND course_id = ${lesson.course_id}
+        WHERE user_id = ${userId} AND organization_id = ${organizationId} AND course_id = ${lesson.course_id}
       `;
     }
 

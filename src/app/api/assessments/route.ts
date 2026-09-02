@@ -24,13 +24,13 @@ export async function GET(request: NextRequest) {
     if (assessmentType) {
       assessments = await sql`
         SELECT * FROM user_assessments
-        WHERE user_id = ${userId} AND assessment_type = ${assessmentType}
+        WHERE user_id = ${userId} AND organization_id = ${organizationId} AND assessment_type = ${assessmentType}
         ORDER BY completed_at DESC
       `;
     } else {
       assessments = await sql`
         SELECT * FROM user_assessments
-        WHERE user_id = ${userId}
+        WHERE user_id = ${userId} AND organization_id = ${organizationId}
         ORDER BY completed_at DESC
       `;
     }
@@ -89,8 +89,8 @@ export async function POST(request: NextRequest) {
 
     // Insert new assessment (allow multiple over time for tracking progress)
     const [assessment] = await sql`
-      INSERT INTO user_assessments (user_id, assessment_type, results)
-      VALUES (${userId}, ${assessmentType}, ${JSON.stringify(results)})
+      INSERT INTO user_assessments (user_id, assessment_type, results, organization_id)
+      VALUES (${userId}, ${assessmentType}, ${JSON.stringify(results)}, ${organizationId})
       RETURNING *
     `;
 
@@ -104,8 +104,8 @@ export async function POST(request: NextRequest) {
 
     if (achievementMap[assessmentType]) {
       await sql`
-        INSERT INTO course_achievements (user_id, achievement_key, course_id)
-        VALUES (${userId}, ${achievementMap[assessmentType]}, 1)
+        INSERT INTO course_achievements (user_id, achievement_key, course_id, organization_id)
+        VALUES (${userId}, ${achievementMap[assessmentType]}, 1, ${organizationId})
         ON CONFLICT (user_id, achievement_key) DO NOTHING
       `;
     }

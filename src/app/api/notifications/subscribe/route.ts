@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     // per-user push targeting (notifications/send's payload.userId filter) could never work.
     const authCtx = await getAuthContext(request);
     const userId = authCtx?.userId ?? null;
+    const organizationId = authCtx?.organizationId ?? null;
 
     // Check if subscription already exists
     const existing = await sql`
@@ -44,18 +45,20 @@ export async function POST(request: NextRequest) {
           p256dh = ${subscription.keys.p256dh},
           auth = ${subscription.keys.auth},
           user_id = ${userId},
+          organization_id = ${organizationId},
           updated_at = NOW()
         WHERE endpoint = ${subscription.endpoint}
       `;
     } else {
       // Create new subscription
       await sql`
-        INSERT INTO push_subscriptions (endpoint, p256dh, auth, user_id)
+        INSERT INTO push_subscriptions (endpoint, p256dh, auth, user_id, organization_id)
         VALUES (
           ${subscription.endpoint},
           ${subscription.keys.p256dh},
           ${subscription.keys.auth},
-          ${userId}
+          ${userId},
+          ${organizationId}
         )
       `;
     }
@@ -73,6 +76,12 @@ export async function POST(request: NextRequest) {
 // DELETE - Unsubscribe from push notifications
 export async function DELETE(request: NextRequest) {
   try {
+    const authCtx = await getAuthContext(request);
+    const userId = authCtx?.userId ?? null;
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { endpoint } = await request.json() as { endpoint: string };
 
     if (!endpoint) {
@@ -84,7 +93,7 @@ export async function DELETE(request: NextRequest) {
 
     await sql`
       DELETE FROM push_subscriptions
-      WHERE endpoint = ${endpoint}
+      WHERE endpoint = ${endpoint} AND user_id = ${userId}
     `;
 
     return NextResponse.json({ success: true });

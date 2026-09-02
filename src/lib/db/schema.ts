@@ -17,6 +17,7 @@ import {
   uniqueIndex,
   index,
   primaryKey,
+  varchar,
 } from 'drizzle-orm/pg-core';
 
 export const organizations = pgTable('organizations', {
@@ -328,4 +329,208 @@ export const authVerificationTokens = pgTable('auth_verification_tokens', {
   expires: timestamp('expires', { mode: 'date' }).notNull(),
 }, (t) => ({
   pk: primaryKey({ columns: [t.identifier, t.token] }),
+}));
+
+// --- Courses & Workbooks (Tony Robbins Unleashed) ---
+//
+// Ooit aangemaakt via het losse schema.sql/run-schema.js, buiten dit canonieke Drizzle-schema en
+// zonder organization_id — zie migrations/manual/0008_courses_and_push_multitenant.sql. Bewuste
+// scheiding: de cursuscatalogus (courses/modules/lessons/exercises) is gedeelde content, geen
+// organisatie-eigendom; alleen de gebruikersvoortgang daaronder is organization-scoped.
+
+export const courses = pgTable('courses', {
+  id: serial('id').primaryKey(),
+  slug: text('slug').notNull().unique(),
+  title: text('title').notNull(),
+  subtitle: text('subtitle'),
+  description: text('description'),
+  imageUrl: text('image_url'),
+  totalModules: integer('total_modules').default(0),
+  totalLessons: integer('total_lessons').default(0),
+  estimatedWeeks: integer('estimated_weeks').default(12),
+  difficulty: text('difficulty').default('intermediate'),
+  isPublished: boolean('is_published').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const courseModules = pgTable('course_modules', {
+  id: serial('id').primaryKey(),
+  courseId: integer('course_id').references(() => courses.id, { onDelete: 'cascade' }),
+  slug: text('slug').notNull(),
+  title: text('title').notNull(),
+  subtitle: text('subtitle'),
+  description: text('description'),
+  weekStart: integer('week_start').default(1),
+  weekEnd: integer('week_end').default(2),
+  orderIndex: integer('order_index').notNull(),
+  icon: text('icon'),
+  color: text('color').default('blue'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  courseSlug: uniqueIndex('course_modules_course_slug').on(t.courseId, t.slug),
+  courseIdx: index('idx_course_modules_course').on(t.courseId),
+}));
+
+export const courseLessons = pgTable('course_lessons', {
+  id: serial('id').primaryKey(),
+  moduleId: integer('module_id').references(() => courseModules.id, { onDelete: 'cascade' }),
+  slug: text('slug').notNull(),
+  title: text('title').notNull(),
+  subtitle: text('subtitle'),
+  lessonType: text('lesson_type').default('theory'),
+  content: jsonb('content').notNull(),
+  videoUrl: text('video_url'),
+  audioUrl: text('audio_url'),
+  estimatedMinutes: integer('estimated_minutes').default(15),
+  orderIndex: integer('order_index').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  moduleSlug: uniqueIndex('course_lessons_module_slug').on(t.moduleId, t.slug),
+  moduleIdx: index('idx_course_lessons_module').on(t.moduleId),
+}));
+
+export const courseExercises = pgTable('course_exercises', {
+  id: serial('id').primaryKey(),
+  lessonId: integer('lesson_id').references(() => courseLessons.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  exerciseType: text('exercise_type').notNull(),
+  config: jsonb('config'),
+  orderIndex: integer('order_index').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const courseEnrollments = pgTable('course_enrollments', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id),
+  userId: text('user_id').notNull(),
+  courseId: integer('course_id').references(() => courses.id, { onDelete: 'cascade' }),
+  currentModuleId: integer('current_module_id').references(() => courseModules.id),
+  currentLessonId: integer('current_lesson_id').references(() => courseLessons.id),
+  status: text('status').default('active'),
+  startedAt: timestamp('started_at').defaultNow(),
+  completedAt: timestamp('completed_at'),
+  lastActivityAt: timestamp('last_activity_at').defaultNow(),
+}, (t) => ({
+  userCourse: uniqueIndex('course_enrollments_user_course').on(t.userId, t.courseId),
+  userIdx: index('idx_course_enrollments_user').on(t.userId),
+}));
+
+export const lessonCompletions = pgTable('lesson_completions', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id),
+  userId: text('user_id').notNull(),
+  lessonId: integer('lesson_id').references(() => courseLessons.id, { onDelete: 'cascade' }),
+  timeSpentMinutes: integer('time_spent_minutes').default(0),
+  completedAt: timestamp('completed_at').defaultNow(),
+}, (t) => ({
+  userLesson: uniqueIndex('lesson_completions_user_lesson').on(t.userId, t.lessonId),
+  userIdx: index('idx_lesson_completions_user').on(t.userId),
+}));
+
+export const courseAnswers = pgTable('course_answers', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id),
+  userId: text('user_id').notNull(),
+  lessonId: integer('lesson_id').references(() => courseLessons.id, { onDelete: 'cascade' }),
+  questionKey: text('question_key').notNull(),
+  answer: text('answer'),
+  answeredAt: timestamp('answered_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  userLessonQuestion: uniqueIndex('course_answers_user_lesson_question').on(t.userId, t.lessonId, t.questionKey),
+  userIdx: index('idx_course_answers_user').on(t.userId),
+}));
+
+export const exerciseCompletions = pgTable('exercise_completions', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id),
+  userId: text('user_id').notNull(),
+  exerciseId: integer('exercise_id').references(() => courseExercises.id, { onDelete: 'cascade' }),
+  exerciseType: text('exercise_type').notNull(),
+  data: jsonb('data'),
+  completedAt: timestamp('completed_at').defaultNow(),
+});
+
+export const dailyPracticeLog = pgTable('daily_practice_log', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id),
+  userId: text('user_id').notNull(),
+  practiceType: text('practice_type').notNull(),
+  date: date('date').notNull(),
+  durationMinutes: integer('duration_minutes'),
+  notes: text('notes'),
+  completedAt: timestamp('completed_at').defaultNow(),
+}, (t) => ({
+  userTypeDate: uniqueIndex('daily_practice_log_user_type_date').on(t.userId, t.practiceType, t.date),
+  userDateIdx: index('idx_daily_practice_user').on(t.userId, t.date),
+}));
+
+export const userAssessments = pgTable('user_assessments', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id),
+  userId: text('user_id').notNull(),
+  assessmentType: text('assessment_type').notNull(),
+  results: jsonb('results').notNull(),
+  completedAt: timestamp('completed_at').defaultNow(),
+}, (t) => ({
+  userIdx: index('idx_user_assessments_user').on(t.userId),
+}));
+
+export const courseAchievements = pgTable('course_achievements', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id),
+  userId: text('user_id').notNull(),
+  achievementKey: text('achievement_key').notNull(),
+  courseId: integer('course_id').references(() => courses.id, { onDelete: 'cascade' }),
+  unlockedAt: timestamp('unlocked_at').defaultNow(),
+}, (t) => ({
+  userAchievement: uniqueIndex('course_achievements_user_achievement').on(t.userId, t.achievementKey),
+}));
+
+// --- Push-notificaties ---
+//
+// Ooit aangemaakt via het losse create-push-tables.js, buiten dit canonieke Drizzle-schema en
+// zonder organization_id — zie migrations/manual/0008_courses_and_push_multitenant.sql.
+// notificationPreferences en scheduledNotifications zijn bevestigd ongebruikt (geen route leest/
+// schrijft ze) — voor consistentie wél in het schema opgenomen, niet verwijderd.
+
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (t) => ({
+  userIdx: index('idx_push_subscriptions_user_id').on(t.userId),
+}));
+
+export const notificationPreferences = pgTable('notification_preferences', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).unique(),
+  morningRitual: boolean('morning_ritual').default(true),
+  eveningRitual: boolean('evening_ritual').default(true),
+  weeklyReview: boolean('weekly_review').default(true),
+  streakReminders: boolean('streak_reminders').default(true),
+  morningTime: time('morning_time').default('07:00'),
+  eveningTime: time('evening_time').default('21:00'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const scheduledNotifications = pgTable('scheduled_notifications', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  type: varchar('type', { length: 50 }).notNull(),
+  scheduledFor: timestamp('scheduled_for', { withTimezone: true }).notNull(),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+  status: varchar('status', { length: 20 }).default('pending'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (t) => ({
+  scheduledForIdx: index('idx_scheduled_notifications_scheduled_for').on(t.scheduledFor, t.status),
 }));

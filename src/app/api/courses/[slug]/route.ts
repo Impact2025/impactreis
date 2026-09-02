@@ -34,7 +34,7 @@ export async function GET(
     // Fetch enrollment
     const [enrollment] = await sql`
       SELECT * FROM course_enrollments
-      WHERE course_id = ${course.id} AND user_id = ${userId}
+      WHERE course_id = ${course.id} AND user_id = ${userId} AND organization_id = ${organizationId}
     `;
 
     // Fetch modules
@@ -55,7 +55,7 @@ export async function GET(
     // Fetch completed lessons
     const completedLessons = await sql`
       SELECT lesson_id FROM lesson_completions
-      WHERE user_id = ${userId} AND lesson_id IN (
+      WHERE user_id = ${userId} AND organization_id = ${organizationId} AND lesson_id IN (
         SELECT cl.id FROM course_lessons cl
         JOIN course_modules cm ON cl.module_id = cm.id
         WHERE cm.course_id = ${course.id}
