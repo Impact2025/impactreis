@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const prompt = buildFollowUpPrompt(messages);
+    const prompt = await buildFollowUpPrompt(messages, authCtx?.organizationId ?? null);
     const analysis = await openRouterChat(prompt, 400);
     return NextResponse.json({ analysis });
   } catch (err) {

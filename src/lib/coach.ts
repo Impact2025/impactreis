@@ -76,6 +76,47 @@ export interface CoachContext {
   /** Holding-brede context uit ImpactOS — null als de brug uit staat of onbereikbaar was.
    *  Nooit blokkerend: de coachreflectie moet ook werken als ImpactOS niet draait. */
   holding: HoldingContext | null;
+  identity: CoachIdentity;
+}
+
+/** De organisatie van de oprichter zelf (v.munster@weareimpact.nl) — de enige waarvoor de coach
+ *  Vincents persoonlijke "Sparringpartner"-persona met de WeAreImpact-holding gebruikt. Elke
+ *  andere organisatie (klant-demo's zoals DatingAssistent) krijgt een generieke, org-gebonden
+ *  identiteit — zie loadCoachIdentity(). */
+const FOUNDER_ORGANIZATION_ID = 1;
+
+export interface CoachIdentity {
+  isFounder: boolean;
+  orgName: string;
+  /** Voornaam om de coach mee te laten aanspreken — leeg voor generieke organisaties, dan valt
+   *  de prompt terug op "je"/"de ondernemer" i.p.v. een verzonnen naam. */
+  addressName: string;
+  /** Korte typering van de context waarin deze persoon onderneemt, gebruikt in de systeemprompt-
+   *  intro (bv. "een ondernemer met een holding" vs. "de oprichter van DatingAssistent"). */
+  businessContext: string;
+}
+
+/** Bepaalt wie de coach vandaag voor zich heeft: Vincent zelf (hardcoded, ongewijzigd gedrag)
+ *  of een klant-organisatie (naam uit `organizations.name`, geen aanname van een voornaam). */
+export async function loadCoachIdentity(organizationId: number | null): Promise<CoachIdentity> {
+  if (organizationId === FOUNDER_ORGANIZATION_ID) {
+    return {
+      isFounder: true,
+      orgName: 'WeAreImpact',
+      addressName: 'Vincent',
+      businessContext: 'een ondernemer met een holding (WeAreImpact, met projecten als BewaardVoorJou eronder)',
+    };
+  }
+  const rows = organizationId
+    ? await sql`SELECT name FROM organizations WHERE id = ${organizationId} LIMIT 1`
+    : [];
+  const orgName = (rows[0]?.name as string | undefined) ?? 'je onderneming';
+  return {
+    isFounder: false,
+    orgName,
+    addressName: '',
+    businessContext: `de oprichter van ${orgName}`,
+  };
 }
 
 /** Vraagt de holding-brede context op bij ImpactOS (zie CLAUDE.md: coach_bridge-domein).
@@ -112,9 +153,10 @@ function parseData(raw: any) {
 
 /** Bouwt de multi-dag context die de coach nodig heeft. Alle cijfers komen uit de echte tabellen,
  *  nooit uit een aanname — de LLM krijgt straks alleen wat hier al gemeten is. */
-export async function loadCoachContext(userId: string): Promise<CoachContext> {
+export async function loadCoachContext(userId: string, organizationId: number | null = null): Promise<CoachContext> {
   const today = new Date().toISOString().split('T')[0];
   const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const identity = await loadCoachIdentity(organizationId);
 
   const [morningRows, allMorningDates, energyRows, lessonRows, contextRows, holding] = await Promise.all([
     sql`SELECT date_string, type, data FROM daily_logs
@@ -129,7 +171,9 @@ export async function loadCoachContext(userId: string): Promise<CoachContext> {
         ORDER BY confidence DESC LIMIT 10`,
     sql`SELECT current_energy_level, current_stress_level, recent_mood, current_focus_area, coaching_style
         FROM user_context WHERE user_id = ${userId} LIMIT 1`,
-    fetchHoldingContext(),
+    // De holding-brief komt uitsluitend uit Vincents eigen ImpactOS/agentos-brug — een klant-
+    // organisatie als DatingAssistent heeft geen holding en mag die call nooit triggeren.
+    identity.isFounder ? fetchHoldingContext() : Promise.resolve(null),
   ]);
 
   const todayMorning = (morningRows as DailyLogRow[]).find((r) => r.date_string === today && r.type === 'morning');
@@ -154,6 +198,7 @@ export async function loadCoachContext(userId: string): Promise<CoachContext> {
     activeLessons: lessonRows as CoachLesson[],
     userContext: uc,
     holding: holding as HoldingContext | null,
+    identity,
   };
 }
 
@@ -220,7 +265,7 @@ export function chooseTechnique(ctx: CoachContext): { technique: Technique; reas
     return { technique: 'strengths', reason: 'Hoge energie, nieuw begonnen ritueel — bouwen op wat al werkt.' };
   }
   if (ctx.userContext.current_stress_level >= 7) {
-    return { technique: 'systemisch', reason: 'Hoge stress — kijk naar wat er om Vincent heen speelt, niet alleen naar zijn agenda.' };
+    return { technique: 'systemisch', reason: `Hoge stress — kijk naar wat er om ${ctx.identity.addressName || 'deze ondernemer'} heen speelt, niet alleen naar de agenda.` };
   }
   return { technique: 'grow', reason: 'Geen uitschieter — een gewone dag verdient een gewone scherpe vraag.' };
 }
@@ -267,15 +312,22 @@ export async function openRouterChat(prompt: string, maxTokens = 400): Promise<s
   return data.choices?.[0]?.message?.content ?? 'Analyse niet beschikbaar.';
 }
 
-const TECHNIQUE_INSTRUCTIONS: Record<Technique, string> = {
-  grow: 'Gebruik het GROW-model: help Vincent zijn doel voor vandaag scherp krijgen (Goal), benoem kort de huidige realiteit (Reality), noem één onconventionele optie (Options), en eindig met een concrete vraag over de eerste stap (Will).',
-  mi: 'Gebruik motiverende gespreksvoering (OARS): geen advies, geen "je moet". Stel een open vraag die zijn eigen reden voor verandering naar boven haalt, en erken expliciet wat al goed gaat (affirmatie).',
-  oplossingsgericht: 'Gebruik oplossingsgericht coachen: stel een schaalvraag ("waar sta je nu op een schaal van 0-10, en wat maakt dat je niet lager zit") en een uitzonderingsvraag over een moment dat het al wél lukte.',
-  cgt: 'Gebruik een lichte CGT-geïnformeerde reflectie: benoem het patroon tussen wat er gebeurde en de reactie, zonder te diagnosticeren, en test één realistischer werkhypothese.',
-  act: 'Gebruik ACT: erken dat onzekerheid of ongemak aanwezig mag zijn, en vraag welke kleine, aan zijn waarden verbonden actie daar toch bij past.',
-  systemisch: 'Gebruik een systemische vraag: wat in de holding eromheen (team, projecten, verwachtingen) speelt mee, en welke rol neemt Vincent daar zelf in als spanning ontstaat.',
-  strengths: 'Gebruik strengths-based coachen: vraag naar een concreet moment dat het al lukte en welke omstandigheden dat mogelijk maakten, en hoe dat patroon nu te gebruiken is.',
-};
+/** Bouwt de techniekinstructies met het juiste bezittelijk voornaamwoord: "zijn"/"hem" voor
+ *  Vincent (ongewijzigd gedrag), neutraal "hun"/"die van deze ondernemer" voor klant-organisaties
+ *  — nooit een gegokt geslacht voor iemand die de coach niet kent. */
+function techniqueInstructions(identity: CoachIdentity): Record<Technique, string> {
+  const possessive = identity.addressName ? 'zijn' : 'hun';
+  const object = identity.addressName || 'deze ondernemer';
+  return {
+    grow: `Gebruik het GROW-model: help ${object} het doel voor vandaag scherp krijgen (Goal), benoem kort de huidige realiteit (Reality), noem één onconventionele optie (Options), en eindig met een concrete vraag over de eerste stap (Will).`,
+    mi: `Gebruik motiverende gespreksvoering (OARS): geen advies, geen "je moet". Stel een open vraag die ${possessive} eigen reden voor verandering naar boven haalt, en erken expliciet wat al goed gaat (affirmatie).`,
+    oplossingsgericht: 'Gebruik oplossingsgericht coachen: stel een schaalvraag ("waar sta je nu op een schaal van 0-10, en wat maakt dat je niet lager zit") en een uitzonderingsvraag over een moment dat het al wél lukte.',
+    cgt: 'Gebruik een lichte CGT-geïnformeerde reflectie: benoem het patroon tussen wat er gebeurde en de reactie, zonder te diagnosticeren, en test één realistischer werkhypothese.',
+    act: `Gebruik ACT: erken dat onzekerheid of ongemak aanwezig mag zijn, en vraag welke kleine, aan ${possessive} waarden verbonden actie daar toch bij past.`,
+    systemisch: `Gebruik een systemische vraag: wat in de omgeving eromheen (team, klanten, verwachtingen) speelt mee, en welke rol neemt ${object} daar zelf in als spanning ontstaat.`,
+    strengths: 'Gebruik strengths-based coachen: vraag naar een concreet moment dat het al lukte en welke omstandigheden dat mogelijk maakten, en hoe dat patroon nu te gebruiken is.',
+  };
+}
 
 /** Vertaalt de holding-context naar één blok voor de prompt — puur informatief, de coach mag
  *  dit gebruiken als aanleiding voor een vraag, maar het stuurt de techniekkeuze niet: die gaat
@@ -314,12 +366,17 @@ export function buildCoachPrompt(ctx: CoachContext, technique: Technique): strin
     ? ctx.recentEnergyLog.slice(0, 10).map((e) => `- ${e.date_string}: ${e.direction === 'gain' ? '+ gaf energie' : '- kostte energie'} — ${e.activity}${e.category ? ` (${e.category})` : ''}`).join('\n')
     : 'Nog geen energie-attributie ingevuld.';
 
-  return `Je bent De Sparringpartner: Vincents persoonlijke business- én welzijnscoach, niet gescheiden maar gecombineerd — precies zoals dat in de praktijk voor een ondernemer met een holding (WeAreImpact, met projecten als BewaardVoorJou eronder) altijd door elkaar loopt. Je bent niet zijn klantenservice-bot en je coacht niemand anders dan hem.
+  const { identity } = ctx;
+  const object = identity.addressName || 'deze ondernemer';
+  const possessive = identity.addressName ? 'zijn' : 'hun';
+  const instructions = techniqueInstructions(identity);
+
+  return `Je bent De Sparringpartner: ${identity.addressName ? `${identity.addressName}s` : 'de'} persoonlijke business- én welzijnscoach, niet gescheiden maar gecombineerd — precies zoals dat in de praktijk voor ${identity.businessContext} altijd door elkaar loopt. Je bent niet ${possessive} klantenservice-bot en je coacht niemand anders dan ${object}.
 
 Belangrijke grens: je diagnosticeert of behandelt nooit psychische of medische klachten. Zie je een signaal van aanhoudende uitputting, burn-out, angst of iets vergelijkbaars dat langer dan een paar dagen aanhoudt, benoem dat expliciet en adviseer professionele hulp — coach dan niet verder met een techniek.
 
 GEKOZEN TECHNIEK VOOR VANDAAG: ${TECHNIQUE_LABELS[technique]}
-${TECHNIQUE_INSTRUCTIONS[technique]}
+${instructions[technique]}
 
 SESSIE VAN VANDAAG (${todayDate}, ${dayName}):
 - Energie: ${ctx.today.energyLevel ?? 'onbekend'}/10
@@ -333,10 +390,10 @@ ${ctx.yesterday ? `GISTEREN: energie ${ctx.yesterday.energyLevel}/10, slaap ${ct
 RECENTE ENERGIE-ATTRIBUTIE (wat gaf/kostte energie):
 ${energyBlock}
 
-GELEERDE PATRONEN OVER VINCENT (gebruik deze, herhaal ze niet letterlijk):
+GELEERDE PATRONEN OVER ${identity.addressName ? identity.addressName.toUpperCase() : 'DEZE ONDERNEMER'} (gebruik deze, herhaal ze niet letterlijk):
 ${lessonsBlock}
 ${holdingBlock(ctx.holding)}
-Schrijf een coach-reflectie van 120-180 woorden in het Nederlands, in de jij-vorm, warm maar scherp. Volg de aangewezen techniek. Eindig met precies één concrete vraag aan Vincent — geen waslijst, geen bullet points, gewone paragrafen.`;
+Schrijf een coach-reflectie van 120-180 woorden in het Nederlands, in de jij-vorm, warm maar scherp. Volg de aangewezen techniek. Eindig met precies één concrete vraag aan ${object} — geen waslijst, geen bullet points, gewone paragrafen.`;
 }
 
 
@@ -344,19 +401,24 @@ Schrijf een coach-reflectie van 120-180 woorden in het Nederlands, in de jij-vor
  * Build a prompt for follow-up messages in the coach chat conversation.
  * Takes the message history and constructs a prompt that continues the coaching dialogue.
  */
-export function buildFollowUpPrompt(messages: { role: string; content: string }[]): string {
+export async function buildFollowUpPrompt(
+  messages: { role: string; content: string }[],
+  organizationId: number | null = null
+): Promise<string> {
+  const identity = await loadCoachIdentity(organizationId);
+  const object = identity.addressName || 'de ondernemer';
   const conversation = messages
-    .map((m) => `${m.role === 'coach' ? 'Sparringpartner' : 'Vincent'}: ${m.content}`)
+    .map((m) => `${m.role === 'coach' ? 'Sparringpartner' : object}: ${m.content}`)
     .join('\\n\\n');
 
-  return `Je bent De Sparringpartner, Vincents persoonlijke business- en welzijnscoach.
+  return `Je bent De Sparringpartner, ${identity.addressName ? `${identity.addressName}s` : 'de'} persoonlijke business- en welzijnscoach.
 
 Verloopt deze conversatie natuurlijk en kort. Wees warm maar scherp. Gebruik de jij-vorm. Maximaal 100 woorden.
 
 CONVERSATIEEL GESCHIEDENIS:
 ${conversation}
 
-${messages.length > 0 ? 'Beantwoord nu op het laatste bericht van Vincent.' : 'Start de gesprekstroom.'}`;
+${messages.length > 0 ? `Beantwoord nu op het laatste bericht van ${object}.` : 'Start de gesprekstroom.'}`;
 }
 
 /** Legt een observatie vast als coach_lesson: dedupe op pattern_key, confidence groeit met bewijs
@@ -593,7 +655,7 @@ export type CoachAnalysisResult =
  *  coach_lesson en werkt user_context bij. */
 export async function runCoachAnalysis(userId: string, organizationId: number | null): Promise<CoachAnalysisResult> {
   await resolveDuePredictions(userId, organizationId);
-  const ctx = await loadCoachContext(userId);
+  const ctx = await loadCoachContext(userId, organizationId);
 
   if (!ctx.today.energyLevel) {
     return {
