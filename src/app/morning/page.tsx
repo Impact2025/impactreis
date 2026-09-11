@@ -7,11 +7,46 @@ import { Sunrise, ArrowLeft, ArrowRight, CheckCircle, Heart, Target, Zap, Brain,
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { BottomNav } from '@/components/ui/bottom-nav';
+import { getToday } from '@/lib/weekflow.service';
+import { useRitualStatus } from '@/hooks/useRitualStatus';
 
 type Step = 'dagtype' | 'intentie' | 'focusblokken' | 'status' | 'dankbaarheid' | 'affirmatie' | 'done';
 type DayType = 'focus' | 'buffer' | 'free';
+type Mode = 'full' | 'quick';
 
-const STEPS: Step[] = ['dagtype', 'intentie', 'focusblokken', 'status', 'dankbaarheid', 'affirmatie'];
+const FULL_STEPS: Step[] = ['dagtype', 'intentie', 'focusblokken', 'status', 'dankbaarheid', 'affirmatie'];
+// Snelle modus: alleen de stappen die de meeste weerstand geven (agenda-planning,
+// slaap/energie-sliders) worden overgeslagen — dagtype/intentie/dankbaarheid/affirmatie
+// blijven staan omdat die het minste tijd kosten en het meeste effect hebben.
+const QUICK_STEPS: Step[] = ['dagtype', 'intentie', 'dankbaarheid', 'affirmatie'];
+
+const MODE_STORAGE_KEY = 'morning_ritual_mode';
+
+// Roterende suggesties voor dankbaarheid, zodat je niet elke dag opnieuw iets hoeft te
+// verzinnen. Welke 6 er getoond worden verschuift per dag (op basis van de datum), zodat
+// het toch niet elke ochtend dezelfde rijtjes zijn.
+const GRATITUDE_PRESETS = [
+  'Mijn gezondheid',
+  'Een klant die me vertrouwt',
+  'Het dak boven mijn hoofd',
+  'Iemand die me steunt',
+  'Dat ik mag ondernemen op mijn eigen manier',
+  'Een goed gesprek dat ik onlangs had',
+  'Mijn team',
+  'De vrijheid om mijn eigen agenda te bepalen',
+  'Iets kleins dat gisteren goed ging',
+  'Mijn gezin / dierbaren',
+  'Een les die ik onlangs leerde',
+  'Dat ik vandaag weer een kans krijg',
+];
+
+function getDailyGratitudePresets(dateKey: string, count = 6): string[] {
+  let seed = 0;
+  for (const ch of dateKey) seed += ch.charCodeAt(0);
+  const start = seed % GRATITUDE_PRESETS.length;
+  const rotated = [...GRATITUDE_PRESETS.slice(start), ...GRATITUDE_PRESETS.slice(0, start)];
+  return rotated.slice(0, count);
+}
 
 const STEP_LABELS: Record<Step, string> = {
   dagtype: 'Dagtype',
@@ -60,12 +95,31 @@ export default function MorningPage() {
   const [step, setStep] = useState<Step>('dagtype');
   const [alVoltooid, setAlVoltooid] = useState(false);
   const [meetingCount, setMeetingCount] = useState<number | null>(null);
+  const [mode, setMode] = useState<Mode>('full');
   const router = useRouter();
+  const { settings } = useRitualStatus();
+
+  const STEPS = mode === 'quick' ? QUICK_STEPS : FULL_STEPS;
+
+  useEffect(() => {
+    const stored = localStorage.getItem(MODE_STORAGE_KEY);
+    if (stored === 'quick' || stored === 'full') setMode(stored);
+  }, []);
+
+  const selectMode = (next: Mode) => {
+    setMode(next);
+    localStorage.setItem(MODE_STORAGE_KEY, next);
+  };
 
   const today = new Date();
   const dayName = today.toLocaleDateString('nl-NL', { weekday: 'long' });
   const dateStr = today.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
-  const todayStr = today.toISOString().split('T')[0];
+  // Datum in de tijdzone van de gebruiker, niet UTC/serverlokaal — anders komt een
+  // ochtendritueel vlak na middernacht onder de verkeerde dag te staan en mist streak/dashboard
+  // 'm als "vandaag gedaan". Moet in de pas lopen met ritual-status.service.ts, dat dezelfde
+  // settings.timezone gebruikt.
+  const todayStr = getToday(settings.timezone);
+  const dailyGratitudePresets = getDailyGratitudePresets(todayStr);
 
   const [formData, setFormData] = useState<MorningData>({
     dayType: null,
@@ -146,6 +200,7 @@ export default function MorningPage() {
         await api.logs.create({
           type: 'morning',
           date: todayStr,
+          mode,
           ...formData,
         });
       } catch (err) {
@@ -361,6 +416,32 @@ export default function MorningPage() {
         {/* Step: Dagtype */}
         {step === 'dagtype' && (
           <div className="space-y-4">
+            <div className="flex rounded-[14px] border border-line p-1 bg-surface-sunken">
+              <button
+                type="button"
+                onClick={() => selectMode('full')}
+                className={`flex-1 py-2.5 rounded-[10px] text-[13px] font-semibold transition-colors ${
+                  mode === 'full' ? 'bg-primary text-white' : 'text-ink-soft'
+                }`}
+              >
+                Volledig
+              </button>
+              <button
+                type="button"
+                onClick={() => selectMode('quick')}
+                className={`flex-1 py-2.5 rounded-[10px] text-[13px] font-semibold transition-colors ${
+                  mode === 'quick' ? 'bg-primary text-white' : 'text-ink-soft'
+                }`}
+              >
+                Snel (2 min)
+              </button>
+            </div>
+            {mode === 'quick' && (
+              <p className="text-[12px] text-ink-soft px-1 -mt-2">
+                Focusblokken en slaap/energie sla je nu over — je kunt altijd terugschakelen naar Volledig.
+              </p>
+            )}
+
             <div className="rounded-[16px] bg-surface-inverse p-5">
               <div className="flex items-center gap-2 mb-2">
                 <Mountain size={18} className="text-tertiary" />
@@ -618,6 +699,32 @@ export default function MorningPage() {
               <Heart size={16} className="text-tertiary" />
               <span className="text-[14px] font-semibold text-ink">3 dingen waar ik dankbaar voor ben</span>
             </div>
+
+            <div className="mb-4">
+              <p className="text-[11px] text-ink-soft mb-2">Niets bij te bedenken? Tik een suggestie aan:</p>
+              <div className="flex flex-wrap gap-2">
+                {dailyGratitudePresets.map((preset) => {
+                  const alreadyUsed = formData.dankbaarheid.includes(preset);
+                  const firstEmptyIndex = formData.dankbaarheid.findIndex((d) => !d.trim());
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      disabled={alreadyUsed || firstEmptyIndex === -1}
+                      onClick={() => updateDankbaarheid(firstEmptyIndex, preset)}
+                      className={`px-3 py-1.5 rounded-full text-[12px] border transition-colors ${
+                        alreadyUsed
+                          ? 'border-primary-light bg-primary-muted text-primary'
+                          : 'border-line bg-surface-sunken text-ink-soft disabled:opacity-40'
+                      }`}
+                    >
+                      {preset}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="space-y-3">
               {[0, 1, 2].map((index) => (
                 <div key={index} className="flex items-center gap-2.5">
