@@ -4,16 +4,20 @@ import { useEffect, useRef, useState } from 'react';
 import { Play, Pause } from 'lucide-react';
 import { Meditation, MEDITATION_CATEGORY_LABELS } from '@/lib/meditations/catalog';
 import { api } from '@/lib/api';
+import { ZenOverlay } from './ZenOverlay';
 
 interface MeditationPlayerProps {
   meditation: Meditation;
   compact?: boolean;
   onComplete?: () => void;
+  /** Toon een gedimde, fullscreen ademhalings-overlay tijdens het afspelen (aan by default). */
+  zenMode?: boolean;
 }
 
-export function MeditationPlayer({ meditation, compact = false, onComplete }: MeditationPlayerProps) {
+export function MeditationPlayer({ meditation, compact = false, onComplete, zenMode = true }: MeditationPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -46,6 +50,7 @@ export function MeditationPlayer({ meditation, compact = false, onComplete }: Me
   const handleEnded = () => {
     setIsPlaying(false);
     setProgress(0);
+    setRemainingSeconds(null);
     api.meditations.complete({
       meditationId: meditation.id,
       durationSeconds: Math.round(audioRef.current?.duration ?? 0),
@@ -68,10 +73,20 @@ export function MeditationPlayer({ meditation, compact = false, onComplete }: Me
         onTimeUpdate={() => {
           if (audioRef.current?.duration) {
             setProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
+            setRemainingSeconds(audioRef.current.duration - audioRef.current.currentTime);
           }
         }}
         onEnded={handleEnded}
       />
+
+      {zenMode && isPlaying && (
+        <ZenOverlay
+          meditation={meditation}
+          remainingSeconds={remainingSeconds}
+          onTogglePlay={togglePlay}
+          onClose={togglePlay}
+        />
+      )}
 
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
