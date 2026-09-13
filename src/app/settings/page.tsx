@@ -16,7 +16,32 @@ import {
   type NotificationPreferences,
 } from '@/lib/notifications.service';
 import { useRitualStatus } from '@/hooks/useRitualStatus';
+import { DEFAULT_RITUAL_SETTINGS, formatHour, type RitualSettings } from '@/lib/weekflow.service';
 import { BottomNav } from '@/components/ui/bottom-nav';
+
+const COMMON_TIMEZONES = [
+  'Europe/Amsterdam',
+  'Europe/London',
+  'Europe/Berlin',
+  'Europe/Paris',
+  'Europe/Madrid',
+  'America/New_York',
+  'America/Los_Angeles',
+  'Asia/Singapore',
+  'Asia/Dubai',
+  'Australia/Sydney',
+  'UTC',
+];
+
+const ISO_WEEKDAY_LABELS: { value: number; label: string }[] = [
+  { value: 1, label: 'Ma' },
+  { value: 2, label: 'Di' },
+  { value: 3, label: 'Wo' },
+  { value: 4, label: 'Do' },
+  { value: 5, label: 'Vr' },
+  { value: 6, label: 'Za' },
+  { value: 7, label: 'Zo' },
+];
 
 interface EmailPreferences {
   morningMotivation: boolean;
@@ -55,6 +80,8 @@ export default function SettingsPage() {
   const [emailResult, setEmailResult] = useState<{ type: string; ok: boolean } | null>(null);
   const [emailPrefs, setEmailPrefs] = useState<EmailPreferences | null>(null);
   const [emailPrefsSaving, setEmailPrefsSaving] = useState<keyof EmailPreferences | null>(null);
+  const [ritualSettings, setRitualSettings] = useState<RitualSettings>(DEFAULT_RITUAL_SETTINGS);
+  const [ritualSettingsSaving, setRitualSettingsSaving] = useState(false);
   const [isPWAInstalled, setIsPWAInstalled] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
@@ -78,6 +105,11 @@ export default function SettingsPage() {
       fetch('/api/settings/email-preferences', { headers: { Authorization: `Bearer ${token}` } })
         .then(res => res.ok ? res.json() : null)
         .then(data => { if (data) setEmailPrefs(data); })
+        .catch(() => {});
+
+      fetch('/api/ritual-settings', { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => { if (data) setRitualSettings(data); })
         .catch(() => {});
     }
 
@@ -150,6 +182,33 @@ export default function SettingsPage() {
     } finally {
       setEmailPrefsSaving(null);
     }
+  };
+
+  const handleSaveRitualSettings = async (next: RitualSettings) => {
+    const previous = ritualSettings;
+    setRitualSettings(next);
+    setRitualSettingsSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/ritual-settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(next),
+      });
+      if (!res.ok) setRitualSettings(previous);
+    } catch {
+      setRitualSettings(previous);
+    } finally {
+      setRitualSettingsSaving(false);
+    }
+  };
+
+  const handleToggleWorkDay = (day: number) => {
+    const workDays = ritualSettings.workDays.includes(day)
+      ? ritualSettings.workDays.filter((d) => d !== day)
+      : [...ritualSettings.workDays, day];
+    if (workDays.length === 0) return; // minstens één werkdag
+    handleSaveRitualSettings({ ...ritualSettings, workDays: workDays.sort((a, b) => a - b) });
   };
 
   const handleInstallPWA = async () => {
@@ -247,6 +306,82 @@ export default function SettingsPage() {
                 )}
               </>
             )}
+          </div>
+        </section>
+
+        {/* Ritueel-instellingen */}
+        <section>
+          <h2 className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-3 flex items-center gap-2">
+            Ritueel-instellingen
+            {ritualSettingsSaving && <Loader2 size={11} className="animate-spin text-ink-soft" />}
+          </h2>
+          <div className="rounded-[16px] border border-line bg-white divide-y divide-line overflow-hidden">
+            <div className="px-5 py-4">
+              <p className="text-[14px] font-medium text-ink mb-2">Tijdzone</p>
+              <select
+                value={ritualSettings.timezone}
+                onChange={(e) => handleSaveRitualSettings({ ...ritualSettings, timezone: e.target.value })}
+                className="w-full bg-surface-sunken rounded-[10px] px-3 py-2 text-[13px] text-ink border-none outline-none"
+              >
+                {(COMMON_TIMEZONES.includes(ritualSettings.timezone) ? COMMON_TIMEZONES : [ritualSettings.timezone, ...COMMON_TIMEZONES]).map((tz) => (
+                  <option key={tz} value={tz}>{tz}</option>
+                ))}
+              </select>
+              <p className="text-[12px] text-ink-soft mt-2">
+                Bepaalt wanneer voor jou &quot;vandaag&quot; begint en wanneer het avondritueel opengaat.
+              </p>
+            </div>
+            <div className="px-5 py-4">
+              <p className="text-[14px] font-medium text-ink mb-2">Werkdagen</p>
+              <div className="flex gap-1.5">
+                {ISO_WEEKDAY_LABELS.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => handleToggleWorkDay(value)}
+                    className={`w-9 h-9 rounded-[10px] text-[12px] font-semibold transition-colors ${
+                      ritualSettings.workDays.includes(value)
+                        ? 'bg-primary text-white'
+                        : 'bg-surface-sunken text-ink-soft'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[12px] text-ink-soft mt-2">
+                Op niet-geselecteerde dagen worden ochtend/avond/weekstart niet als &quot;gemist&quot; geteld.
+              </p>
+            </div>
+            <div className="px-5 py-4 flex items-center justify-between">
+              <div>
+                <p className="text-[14px] font-medium text-ink">Avondritueel opent om</p>
+                <p className="text-[12px] text-ink-soft mt-0.5">Vóór dit uur toont de app een wachtscherm</p>
+              </div>
+              <select
+                value={ritualSettings.eveningRitualOpensHour}
+                onChange={(e) => handleSaveRitualSettings({ ...ritualSettings, eveningRitualOpensHour: Number(e.target.value) })}
+                className="bg-surface-sunken rounded-[10px] px-3 py-1.5 text-[13px] text-ink border-none outline-none"
+              >
+                {Array.from({ length: 24 }, (_, hour) => (
+                  <option key={hour} value={hour}>{formatHour(hour)}</option>
+                ))}
+              </select>
+            </div>
+            <div className="px-5 py-4 flex items-center justify-between">
+              <div>
+                <p className="text-[14px] font-medium text-ink">Laatste dag om week te starten</p>
+                <p className="text-[12px] text-ink-soft mt-0.5">Daarna telt de weekstart als gemist</p>
+              </div>
+              <select
+                value={ritualSettings.weekStartDeadlineWeekday}
+                onChange={(e) => handleSaveRitualSettings({ ...ritualSettings, weekStartDeadlineWeekday: Number(e.target.value) })}
+                className="bg-surface-sunken rounded-[10px] px-3 py-1.5 text-[13px] text-ink border-none outline-none"
+              >
+                {ISO_WEEKDAY_LABELS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </section>
 

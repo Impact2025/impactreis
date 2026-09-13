@@ -28,8 +28,32 @@ function getClient(): JWT {
   return client;
 }
 
-export function isCalendarConfigured(): boolean {
-  return Boolean(process.env.GOOGLE_CALENDAR_CLIENT_EMAIL && process.env.GOOGLE_CALENDAR_PRIVATE_KEY);
+function getOwnerOrganizationId(): number | null {
+  const raw = process.env.GOOGLE_CALENDAR_OWNER_ORGANIZATION_ID;
+  const parsed = raw ? Number(raw) : NaN;
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
+/**
+ * Deze integratie is (nog) geen per-klant OAuth: één service-account met leestoegang tot één
+ * gedeelde agenda (`GOOGLE_CALENDAR_ID`, de persoonlijke/zakelijke agenda van de eigenaar).
+ * Zonder deze check zou elke ingelogde gebruiker — elke organisatie, inclusief het demo-account —
+ * die agenda kunnen uitlezen, of via een goedgekeurd `calendar_proposals`-voorstel zelfs een
+ * echte afspraak erin kunnen laten aanmaken. `GOOGLE_CALENDAR_OWNER_ORGANIZATION_ID` beperkt de
+ * hele integratie tot die ene organisatie totdat dit wordt omgebouwd naar per-gebruiker OAuth
+ * (nodig zodra agenda-koppeling een feature voor externe klanten wordt).
+ */
+function assertOwnerOrganization(organizationId: number | null): void {
+  const ownerOrgId = getOwnerOrganizationId();
+  if (ownerOrgId === null || organizationId !== ownerOrgId) {
+    throw new Error('Agenda-integratie is niet gekoppeld aan deze organisatie.');
+  }
+}
+
+export function isCalendarConfiguredFor(organizationId: number | null): boolean {
+  if (!process.env.GOOGLE_CALENDAR_CLIENT_EMAIL || !process.env.GOOGLE_CALENDAR_PRIVATE_KEY) return false;
+  const ownerOrgId = getOwnerOrganizationId();
+  return ownerOrgId !== null && organizationId === ownerOrgId;
 }
 
 export interface CalendarEvent {
@@ -42,7 +66,12 @@ export interface CalendarEvent {
 }
 
 /** Events tussen `timeMin` en `timeMax` (ISO 8601), gesorteerd op starttijd. */
-export async function listEvents(timeMin: string, timeMax: string): Promise<CalendarEvent[]> {
+export async function listEvents(
+  timeMin: string,
+  timeMax: string,
+  organizationId: number | null
+): Promise<CalendarEvent[]> {
+  assertOwnerOrganization(organizationId);
   const calendarId = process.env.GOOGLE_CALENDAR_ID;
   if (!calendarId) throw new Error('GOOGLE_CALENDAR_ID niet geconfigureerd.');
 
@@ -75,7 +104,8 @@ export interface NewCalendarEvent {
 
 /** Schrijft een nieuwe afspraak. Roep dit ALLEEN aan na expliciete gebruikersgoedkeuring
  * van een calendar_proposals-rij — nooit automatisch. */
-export async function createEvent(input: NewCalendarEvent): Promise<CalendarEvent> {
+export async function createEvent(input: NewCalendarEvent, organizationId: number | null): Promise<CalendarEvent> {
+  assertOwnerOrganization(organizationId);
   const calendarId = process.env.GOOGLE_CALENDAR_ID;
   if (!calendarId) throw new Error('GOOGLE_CALENDAR_ID niet geconfigureerd.');
 
@@ -104,11 +134,11 @@ export async function createEvent(input: NewCalendarEvent): Promise<CalendarEven
 }
 
 /** Vandaag (lokale Europe/Amsterdam-dag), voor de ochtendbriefing/dashboard. */
-export async function listTodayEvents(): Promise<CalendarEvent[]> {
+export async function listTodayEvents(organizationId: number | null): Promise<CalendarEvent[]> {
   const now = new Date();
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date(now);
   endOfDay.setHours(23, 59, 59, 999);
-  return listEvents(startOfDay.toISOString(), endOfDay.toISOString());
+  return listEvents(startOfDay.toISOString(), endOfDay.toISOString(), organizationId);
 }

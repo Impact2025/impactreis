@@ -489,6 +489,17 @@ class ApiClient {
     get: () => this.request<import('./ritual-status.service').RitualStatusPayload>('/ritual-status'),
   };
 
+  // Ritueel-instellingen: timezone, werkdagen, avond-openingstijd, weekstart-deadline
+  // (zie ritual-status.service.ts / weekflow.service.ts).
+  ritualSettings = {
+    get: () => this.request<import('./weekflow.service').RitualSettings>('/ritual-settings'),
+    update: (settings: import('./weekflow.service').RitualSettings) =>
+      this.request<import('./weekflow.service').RitualSettings>('/ritual-settings', {
+        method: 'PATCH',
+        body: JSON.stringify(settings),
+      }),
+  };
+
   // Identity (geen offline-laag — laagfrequente, niet-tijdskritische feature)
   identity = {
     getProfile: () => this.request<{ statements: any[]; proofs: any[]; updatedAt?: string }>('/identity'),

@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-client';
-import { getDayType, isAfter5PM } from '@/lib/weekflow.service';
+import { getDayType, isAfter5PM, DEFAULT_RITUAL_SETTINGS, type RitualSettings } from '@/lib/weekflow.service';
 import type { MissedRitual, RecoveryAction, RitualStatusPayload } from '@/lib/ritual-status.service';
 
 export interface NextRitual {
@@ -25,6 +25,7 @@ export interface RitualStatusData {
   welcomeMessage: RitualStatusPayload['welcomeMessage'];
   daysAwayFromApp: number;
   nextRitual: NextRitual | null;
+  settings: RitualSettings;
   isLoading: boolean;
 }
 
@@ -43,28 +44,20 @@ const defaultWelcome: RitualStatusPayload['welcomeMessage'] = {
   type: 'normal',
 };
 
-function computeNextRitual(status: RitualStatusPayload): NextRitual | null {
-  const dayType = getDayType();
-  const after5PM = isAfter5PM();
-  const isWeekday = dayType === 'weekday' || dayType === 'monday';
-
-  if (dayType === 'monday' && !status.weeklyStart.isComplete) {
-    return { path: '/weekly-start', title: 'Week Start', isRequired: true, isAvailable: true, reason: 'Start je nieuwe week met intentie' };
-  }
-  if (isWeekday) {
-    if (!status.today.morningDone) {
-      return { path: '/morning', title: 'Ochtend Ritueel', isRequired: true, isAvailable: true, reason: 'Begin je dag met focus en intentie' };
-    }
-    if (!status.today.eveningDone) {
-      return after5PM
-        ? { path: '/evening', title: 'Avond Ritueel', isRequired: true, isAvailable: true, reason: 'Sluit je dag af met reflectie' }
-        : { path: '/evening', title: 'Avond Ritueel', isRequired: true, isAvailable: false, reason: 'Beschikbaar na 17:00' };
-    }
-  }
-  if (dayType === 'weekend' && !status.weeklyReview.isComplete) {
-    return { path: '/weekly-review', title: 'Week Review', isRequired: true, isAvailable: true, reason: 'Sluit je week af met reflectie' };
-  }
-  return null;
+// De server (ritual-status.service.ts:getRitualStatus) is de enige bron van waarheid voor
+// "wat is de volgende stap" — hier vroeger nog een tweede, bijna-identieke beslisboom
+// (computeNextRitual) laten leven zorgde ervoor dat client en server uit de pas konden lopen
+// zodra één van de twee gewijzigd werd zonder de ander mee te nemen (bv. de evening-actie
+// ontbrak lange tijd server-side terwijl de client 'm wel toonde).
+function toNextRitual(action: RecoveryAction | null): NextRitual | null {
+  if (!action) return null;
+  return {
+    path: action.path,
+    title: action.title,
+    isRequired: action.type !== 'freshStart',
+    isAvailable: action.isAvailable,
+    reason: action.description,
+  };
 }
 
 export function useRitualStatus(): RitualStatusData {
@@ -74,13 +67,12 @@ export function useRitualStatus(): RitualStatusData {
     staleTime: 1000 * 30,
   });
 
-  const dayType = getDayType();
-  const after5PM = isAfter5PM();
-  const isWeekday = dayType === 'weekday' || dayType === 'monday';
-  const isWeekend = dayType === 'weekend';
-  const isMonday = dayType === 'monday';
-
   if (!data) {
+    const dayType = getDayType(DEFAULT_RITUAL_SETTINGS);
+    const after5PM = isAfter5PM(DEFAULT_RITUAL_SETTINGS);
+    const isWeekday = dayType === 'weekday' || dayType === 'monday';
+    const isWeekend = dayType === 'weekend';
+    const isMonday = dayType === 'monday';
     return {
       morning: { isComplete: false, isAvailable: isWeekday, isRequired: isWeekday },
       evening: { isComplete: false, isAvailable: isWeekday && after5PM, isRequired: isWeekday && after5PM },
@@ -92,9 +84,17 @@ export function useRitualStatus(): RitualStatusData {
       welcomeMessage: defaultWelcome,
       daysAwayFromApp: 0,
       nextRitual: null,
+      settings: DEFAULT_RITUAL_SETTINGS,
       isLoading,
     };
   }
+
+  // Vanaf hier is data.settings (server-geladen, per gebruiker) de bron van waarheid — niet
+  // meer de client-default die hierboven alleen dient als optimistische eerste render.
+  const dayType = getDayType(data.settings);
+  const after5PM = isAfter5PM(data.settings);
+  const isWeekday = dayType === 'weekday' || dayType === 'monday';
+  const isWeekend = dayType === 'weekend';
 
   return {
     morning: { isComplete: data.today.morningDone, isAvailable: isWeekday, isRequired: isWeekday },
@@ -115,7 +115,8 @@ export function useRitualStatus(): RitualStatusData {
     suggestedAction: data.suggestedAction,
     welcomeMessage: data.welcomeMessage,
     daysAwayFromApp: data.daysAwayFromApp,
-    nextRitual: computeNextRitual(data),
+    nextRitual: toNextRitual(data.suggestedAction),
+    settings: data.settings,
     isLoading: false,
   };
 }

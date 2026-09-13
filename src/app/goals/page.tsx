@@ -10,6 +10,7 @@ import {
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { getCurrentQuarter } from '@/lib/weekflow.service';
+import { useRitualStatus } from '@/hooks/useRitualStatus';
 import type { GoalAction } from '@/lib/goal-actions';
 import { Celebration } from '@/components/robbins/celebration';
 import { BottomNav } from '@/components/ui/bottom-nav';
@@ -62,6 +63,7 @@ export default function GoalsPage() {
     nextActions: [''], deadline: '', category: 'business',
   });
   const router = useRouter();
+  const { settings } = useRitualStatus();
 
   // Oudere/seed-doelen missen soms `progress` (bv. via een ander aanmaakpad dan dit formulier) —
   // zonder deze normalisatie propageert dat naar NaN% in de statistieken (bevonden tijdens live
@@ -124,7 +126,7 @@ export default function GoalsPage() {
     await api.goals.delete(id);
   };
 
-  const currentQuarter = getCurrentQuarter();
+  const currentQuarter = getCurrentQuarter(settings.timezone);
   const activeRocks = goals.filter(g => g.isRock && g.quarter === currentQuarter && !g.completed);
 
   const toggleRock = async (id: string) => {

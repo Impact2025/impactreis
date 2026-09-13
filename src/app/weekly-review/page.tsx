@@ -24,7 +24,8 @@ import {
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
-import { getCurrentQuarter } from '@/lib/weekflow.service';
+import { getCurrentQuarter, getCurrentWeekNumber, getWeekStart, getWeekEnd } from '@/lib/weekflow.service';
+import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
 type RockStatus = 'on-track' | 'at-risk' | 'done';
@@ -62,32 +63,28 @@ interface WeeklyReviewData {
 
 export default function WeeklyReviewPage() {
   const router = useRouter();
+  const { settings } = useRitualStatus();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [newWin, setNewWin] = useState('');
 
+  // Gebruikt dezelfde weeknummer/weekgrenzen-logica als ritual-status.service.ts
+  // (getCurrentWeekNumber/getWeekStart/getWeekEnd, settings.timezone-bewust) i.p.v. een eigen
+  // kopie — anders kan een weekly review onder het verkeerde weeknummer opgeslagen worden zodra
+  // de gebruiker een andere tijdzone instelt dan waar de server/browser toevallig in draait,
+  // waardoor de server 'm nooit als "gedaan" herkent.
   const getWeekInfo = () => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), 0, 1);
-    const days = Math.floor((now.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
-    const weekNumber = Math.ceil((days + start.getDay() + 1) / 7);
-    const currentDay = now.getDay();
-    const diff = currentDay === 0 ? -6 : 1 - currentDay;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() + diff);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    const toDateString = (d: Date) => {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${day}`;
-    };
+    const weekNumber = getCurrentWeekNumber(settings.timezone);
+    const monday = getWeekStart(settings.timezone);
+    const sunday = getWeekEnd(settings.timezone);
+    // monday/sunday zijn UTC-noon ankers van de juiste kalenderdag — UTC-geformatteerd geeft
+    // dus altijd de juiste datum, ongeacht de tijdzone van de browser die dit rendert.
+    const toDateString = (d: Date) => d.toISOString().split('T')[0];
     return {
       weekNumber,
-      weekStart: monday.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }),
-      weekEnd: sunday.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }),
+      weekStart: monday.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', timeZone: 'UTC' }),
+      weekEnd: sunday.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', timeZone: 'UTC' }),
       weekStartISO: monday.toISOString(),
       weekEndISO: sunday.toISOString(),
       weekStartDate: toDateString(monday),
@@ -170,7 +167,7 @@ export default function WeeklyReviewPage() {
   useEffect(() => {
     // Actieve Rocks van dit kwartaal ophalen zodat de week-review teruggrijpt op de
     // kwartaalprioriteiten i.p.v. alleen losse vrije-tekst wins te verzamelen.
-    const currentQuarter = getCurrentQuarter();
+    const currentQuarter = getCurrentQuarter(settings.timezone);
     api.goals.getAll()
       .then((allGoals: any[]) => {
         const activeRocks = allGoals.filter((g) => g.isRock && g.quarter === currentQuarter && !g.completed);

@@ -7,7 +7,8 @@ import { Moon, Lightbulb, TrendingDown, Calendar, Heart, ArrowLeft, CheckCircle,
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { TimeGateScreen } from '@/components/weekflow/time-gate-screen';
-import { isAfter5PM, getToday } from '@/lib/weekflow.service';
+import { isAfter5PM, getToday, formatHour } from '@/lib/weekflow.service';
+import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { buildRecoveryProposalUrl } from '@/lib/calendar-proposal';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
@@ -52,6 +53,7 @@ interface EveningRitualData {
 }
 
 function EveningContent() {
+  const { settings } = useRitualStatus();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -65,8 +67,8 @@ function EveningContent() {
 
   // Support ?date=YYYY-MM-DD for filling in a past evening ritual
   const dateParam = searchParams.get('date');
-  const targetDate = dateParam || getToday();
-  const isRecovery = dateParam !== null && dateParam !== getToday();
+  const targetDate = dateParam || getToday(settings.timezone);
+  const isRecovery = dateParam !== null && dateParam !== getToday(settings.timezone);
 
   const [formData, setFormData] = useState<EveningRitualData>({
     whatWentWell: '',
@@ -202,12 +204,13 @@ function EveningContent() {
     );
   }
 
-  if (!isRecovery && !isAfter5PM()) {
+  if (!isRecovery && !isAfter5PM(settings)) {
+    const availableTime = formatHour(settings.eveningRitualOpensHour);
     return (
       <TimeGateScreen
         title="Avond Ritueel"
-        message="Het avond ritueel is beschikbaar na 17:00 uur"
-        availableTime="17:00"
+        message={`Het avond ritueel is beschikbaar na ${availableTime} uur`}
+        availableTime={availableTime}
       />
     );
   }

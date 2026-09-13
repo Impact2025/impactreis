@@ -13,7 +13,7 @@ import { api } from '@/lib/api';
 import { Win } from '@/types';
 import { RitualGuard } from '@/components/weekflow/ritual-guard';
 import { canAccessDemoFeatures } from '@/lib/demo-guard';
-import { getDayType, getToday, getCurrentQuarter } from '@/lib/weekflow.service';
+import { getDayType, getToday, getCurrentQuarter, getCurrentHour, getDateDaysAgo } from '@/lib/weekflow.service';
 import { initializeNotifications } from '@/lib/notifications.service';
 import { buildRecoveryProposalUrl } from '@/lib/calendar-proposal';
 import { useRitualStatus } from '@/hooks/useRitualStatus';
@@ -91,7 +91,8 @@ export default function DashboardPage() {
   const router                      = useRouter();
 
   const ritualStatuses = useRitualStatus();
-  const dayType        = getDayType();
+  const settings        = ritualStatuses.settings;
+  const dayType        = getDayType(settings);
   const nextRitual      = ritualStatuses.nextRitual;
 
   const categoryLabel: Record<string, string> = {
@@ -112,7 +113,7 @@ export default function DashboardPage() {
         api.onboarding.profile(),
         api.coach.proactiveSignal(),
         api.calendar.proposals.list(),
-        api.logs.getByTypeAndDate('morning', getToday()),
+        api.logs.getByTypeAndDate('morning', getToday(settings.timezone)),
       ]);
 
       if (morningLogRes.status === 'fulfilled' && Array.isArray(morningLogRes.value) && morningLogRes.value[0]) {
@@ -151,7 +152,7 @@ export default function DashboardPage() {
       // Hefboom-taken vandaag: 80/20-gemarkeerde, nog niet voltooide acties uit alle actieve
       // Rocks van dit kwartaal (niet beperkt tot de 4 getoonde "Actuele Doelen") — Pareto-
       // discipline zit in de begrenzing tot 5, niet in een aparte prioriteitsberekening.
-      const currentQ = getCurrentQuarter();
+      const currentQ = getCurrentQuarter(settings.timezone);
       const tasks = activeGoals
         .filter((g: Goal) => g.isRock && g.quarter === currentQ)
         .flatMap((g: Goal) => (g.nextActions ?? [])
@@ -185,7 +186,7 @@ export default function DashboardPage() {
   }, []);
 
   const getGreeting = () => {
-    const h = new Date().getHours();
+    const h = getCurrentHour(settings.timezone);
     if (h < 12) return 'Goedemorgen';
     if (h < 18) return 'Goedemiddag';
     return 'Goedenavond';
@@ -196,19 +197,15 @@ export default function DashboardPage() {
   // Golden Egg: een actieve Rock van dit kwartaal weegt zwaarder dan "toevallig laatst bewerkt" —
   // dat is precies het punt van Rocks (EOS-kwartaalprioriteiten). Valt terug op het oude gedrag
   // zolang er nog geen Rocks zijn gemarkeerd.
-  const currentQuarter = getCurrentQuarter();
+  const currentQuarter = getCurrentQuarter(settings.timezone);
   const focusGoal  = goals.find(g => g.isRock && g.quarter === currentQuarter) ?? goals[0];
 
-  const yesterday = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  })();
+  const yesterday = getDateDaysAgo(1, settings.timezone);
   const missedEveningYesterday = ritualStatuses.missedRituals.some(
     (m) => m.type === 'evening' && m.daysAgo === 1
   );
 
-  const today = getToday();
+  const today = getToday(settings.timezone);
   const dismissSignalKey = proactiveSignal ? `proactiveSignalDismissed_${today}_${proactiveSignal.patternKey}` : null;
   const showProactiveSignal =
     proactiveSignal && !signalDismissed &&
@@ -290,7 +287,12 @@ export default function DashboardPage() {
               >
                 ?
               </button>
-              <button className="w-9 h-9 rounded-full bg-surface-sunken flex items-center justify-center text-ink-soft hover:text-ink transition-colors">
+              <button
+                onClick={() => router.push('/settings')}
+                aria-label="Instellingen en notificaties"
+                title="Instellingen en notificaties"
+                className="w-9 h-9 rounded-full bg-surface-sunken flex items-center justify-center text-ink-soft hover:text-ink transition-colors"
+              >
                 <Bell size={16} />
               </button>
             </div>

@@ -4,7 +4,7 @@ import { getRitualStatus } from '@/lib/ritual-status.service';
 
 /**
  * GET /api/ritual-status
- * Eén consolidatie-endpoint voor alles wat dashboard/smart-welcome/streak-badge nodig hebben:
+ * Eén consolidatie-endpoint voor alles wat dashboard/streak-badge nodig hebben:
  * dagstatus, streak, weekstart/weekreview-status, gemiste rituelen en een voorgestelde actie.
  * Vervangt de losse, localStorage-gebaseerde berekeningen die voorheen verspreid zaten over
  * weekflow.service.ts, ritual-recovery.service.ts en streak.service.ts.

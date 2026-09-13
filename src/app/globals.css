@@ -47,6 +47,16 @@
   --error: #ba1a1a;
   --error-soft: #ffdad6;
 
+  /* ══ Agent-statuskleuren (Approval Queue / Calm Tech) ═══════
+     Bewust ontzadigd — seinlichten in de periferie, geen alarmsirenes.
+     Gekozen binnen het bestaande warme Nordic-palet i.p.v. de near-black spec-variant,
+     zodat de Approval Queue niet tegen de rest van de (licht getinte) UI in schreeuwt. */
+  --agent-actief: #c99a3d;     /* amber, gedempt — agent werkt */
+  --agent-wacht: #c3603f;      /* terracotta, zacht — wacht op goedkeuring */
+  --agent-klaar: #4f9e6b;      /* rustig groen — voltooid/succes */
+  --agent-fout: #c0463e;       /* gedempt rood — interventie nodig */
+  --compliance-badge: #4a6c94; /* staalblauw — AVG/Wmo/subsidie-indicatoren */
+
   --background: var(--surface);
   --foreground: var(--ink);
 }
@@ -81,6 +91,12 @@
 
   --color-error: var(--error);
   --color-error-soft: var(--error-soft);
+
+  --color-agent-actief: var(--agent-actief);
+  --color-agent-wacht: var(--agent-wacht);
+  --color-agent-klaar: var(--agent-klaar);
+  --color-agent-fout: var(--agent-fout);
+  --color-compliance-badge: var(--compliance-badge);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

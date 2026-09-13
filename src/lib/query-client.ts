@@ -24,4 +24,5 @@ export const queryKeys = {
   focusSessions: (params?: { date?: string; limit?: number }) =>
     ['focus-sessions', params],
   ritualStatus: ['ritual-status'] as const,
+  ritualSettings: ['ritual-settings'] as const,
 };

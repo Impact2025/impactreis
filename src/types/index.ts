@@ -95,6 +95,35 @@ export interface Book {
   coachTip: string;
 }
 
+// =====================================================
+// APPROVAL QUEUE TYPES (ImpactOS)
+// =====================================================
+
+export type AgentKey = 'iris' | 'mara' | 'bram' | 'noor' | 'toby' | 'coach';
+
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'edited';
+
+export interface ApprovalDiffPart {
+  text: string;
+  type: 'unchanged' | 'added' | 'removed';
+}
+
+export interface ApprovalQueueItem {
+  id: number;
+  organization_id: number;
+  user_id: string;
+  agent_key: AgentKey;
+  kind: string; // 'calendar' | 'mail' | 'subsidie_verantwoording' | 'social_post' | ...
+  payload: Record<string, unknown>;
+  diff?: ApprovalDiffPart[] | null;
+  confidence?: number | null; // 0-1
+  status: ApprovalStatus;
+  reason?: string | null;
+  decided_by?: string | null;
+  decided_at?: string | null;
+  created_at: string;
+}
+
 export interface Win {
   id: number;
   user_id: string;

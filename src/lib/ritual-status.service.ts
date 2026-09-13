@@ -10,6 +10,11 @@
  * in-memory te berekenen — dat maakt een aparte, incrementeel bijgewerkte streak-tabel
  * overbodig (en voorkomt de subtiele bugs die incrementele upserts bij teruggehaalde/gemiste
  * dagen kunnen geven).
+ *
+ * Alle dag/tijd-afhankelijke beslissingen (werkdag of niet, wanneer het avondritueel opengaat,
+ * tot wanneer de weekstart nog mag) lopen via `RitualSettings` (ritual_settings-tabel, zie
+ * getRitualSettingsFor) i.p.v. vaste ma-vr/17:00/t-m-wo aannames — nodig zodra dit systeem
+ * door meer dan één gebruiker/tijdzone/werkweek gebruikt wordt.
  */
 import { sql } from './db';
 import {
@@ -18,6 +23,11 @@ import {
   getToday,
   getCurrentWeekNumber,
   getDateDaysAgo,
+  getWeekdayOf,
+  getCurrentHour,
+  formatHour,
+  DEFAULT_RITUAL_SETTINGS,
+  type RitualSettings,
 } from './weekflow.service';
 
 const STREAK_WINDOW_DAYS = 400;
@@ -31,11 +41,15 @@ export interface MissedRitual {
 }
 
 export interface RecoveryAction {
-  type: 'weeklyStart' | 'morning' | 'freshStart' | 'continue';
+  type: 'weeklyStart' | 'morning' | 'evening' | 'freshStart' | 'continue';
   title: string;
   description: string;
   path: string;
   isPrimary: boolean;
+  /** false zodra het ritueel wel de voorgestelde volgende stap is, maar nog niet open is
+   * (bv. avondritueel vóór de geconfigureerde openingstijd) — consumenten kunnen dit gebruiken
+   * om "later vandaag" te tonen in plaats van een actieve call-to-action. */
+  isAvailable: boolean;
 }
 
 export interface RitualStatusPayload {
@@ -54,6 +68,45 @@ export interface RitualStatusPayload {
   suggestedAction: RecoveryAction | null;
   welcomeMessage: { greeting: string; subtitle: string; type: 'normal' | 'recovery' | 'celebration' };
   daysAwayFromApp: number;
+  /** De instellingen waarmee bovenstaande berekend is — client-side consumenten (bv. de
+   * time-gate op /evening) gebruiken dit i.p.v. hun eigen (mogelijk verouderde) default. */
+  settings: RitualSettings;
+}
+
+async function getRitualSettingsFor(userId: string): Promise<RitualSettings> {
+  const rows = await sql`
+    SELECT timezone, work_days, evening_ritual_opens_hour, week_start_deadline_weekday
+    FROM ritual_settings WHERE user_id = ${userId}
+  `;
+  const row = rows[0] as
+    | {
+        timezone: string;
+        work_days: unknown;
+        evening_ritual_opens_hour: number;
+        week_start_deadline_weekday: number;
+      }
+    | undefined;
+  if (!row) return DEFAULT_RITUAL_SETTINGS;
+
+  let workDays: unknown = row.work_days;
+  if (typeof workDays === 'string') {
+    try {
+      workDays = JSON.parse(workDays);
+    } catch {
+      workDays = DEFAULT_RITUAL_SETTINGS.workDays;
+    }
+  }
+  const validWorkDays =
+    Array.isArray(workDays) && workDays.every((d) => Number.isInteger(d) && d >= 1 && d <= 7) && workDays.length > 0
+      ? (workDays as number[])
+      : DEFAULT_RITUAL_SETTINGS.workDays;
+
+  return {
+    timezone: row.timezone || DEFAULT_RITUAL_SETTINGS.timezone,
+    workDays: validWorkDays,
+    eveningRitualOpensHour: row.evening_ritual_opens_hour ?? DEFAULT_RITUAL_SETTINGS.eveningRitualOpensHour,
+    weekStartDeadlineWeekday: row.week_start_deadline_weekday ?? DEFAULT_RITUAL_SETTINGS.weekStartDeadlineWeekday,
+  };
 }
 
 type CompletionMap = Map<string, { morning: boolean; evening: boolean }>;
@@ -61,9 +114,10 @@ type CompletionMap = Map<string, { morning: boolean; evening: boolean }>;
 async function getCompletionMap(
   userId: string,
   organizationId: number | null,
-  windowDays: number
+  windowDays: number,
+  settings: RitualSettings
 ): Promise<CompletionMap> {
-  const since = getDateDaysAgo(windowDays);
+  const since = getDateDaysAgo(windowDays, settings.timezone);
   const rows = await sql`
     SELECT date_string, type FROM daily_logs
     WHERE user_id = ${userId} AND organization_id = ${organizationId}
@@ -107,23 +161,24 @@ async function getWeeklyFlags(
 
 function calculateStreaks(
   map: CompletionMap,
-  today: string
+  today: string,
+  timezone: string
 ): { current: number; longest: number; lastCompletedDate: string | null; totalDaysCompleted: number } {
   const todayCompleted = isDayCompleted(map, today);
-  const yesterdayCompleted = isDayCompleted(map, getDateDaysAgo(1));
+  const yesterdayCompleted = isDayCompleted(map, getDateDaysAgo(1, timezone));
 
   let current = 0;
   if (todayCompleted) {
     current = 1;
     let daysBack = 1;
-    while (isDayCompleted(map, getDateDaysAgo(daysBack)) && daysBack < STREAK_WINDOW_DAYS) {
+    while (isDayCompleted(map, getDateDaysAgo(daysBack, timezone)) && daysBack < STREAK_WINDOW_DAYS) {
       current++;
       daysBack++;
     }
   } else if (yesterdayCompleted) {
     current = 1;
     let daysBack = 2;
-    while (isDayCompleted(map, getDateDaysAgo(daysBack)) && daysBack < STREAK_WINDOW_DAYS) {
+    while (isDayCompleted(map, getDateDaysAgo(daysBack, timezone)) && daysBack < STREAK_WINDOW_DAYS) {
       current++;
       daysBack++;
     }
@@ -135,7 +190,7 @@ function calculateStreaks(
   let lastCompletedDate: string | null = null;
   let totalDaysCompleted = 0;
   for (let i = STREAK_WINDOW_DAYS; i >= 0; i--) {
-    const date = getDateDaysAgo(i);
+    const date = getDateDaysAgo(i, timezone);
     if (isDayCompleted(map, date)) {
       running++;
       totalDaysCompleted++;
@@ -149,28 +204,33 @@ function calculateStreaks(
   return { current, longest: Math.max(longest, current), lastCompletedDate, totalDaysCompleted };
 }
 
-function getWeeklyStartMessage(isComplete: boolean, dayOfWeek: number): string {
+function getWeeklyStartMessage(isComplete: boolean, isoDayOfWeek: number, settings: RitualSettings): string {
   if (isComplete) return 'Week gestart';
-  if (dayOfWeek === 1) return 'Start je week vandaag!';
-  if (dayOfWeek === 2) return 'Je kunt je week nog starten';
-  if (dayOfWeek === 3) return 'Laatste kans om je week te starten!';
-  if (dayOfWeek >= 4 && dayOfWeek <= 5) return 'Weekstart gemist - focus op dagelijkse rituelen';
-  return 'Weekend - geniet ervan!';
+  const workDays = [...settings.workDays].sort((a, b) => a - b);
+  if (!workDays.includes(isoDayOfWeek)) return 'Weekend - geniet ervan!';
+  if (isoDayOfWeek === workDays[0]) return 'Start je week vandaag!';
+  if (isoDayOfWeek === settings.weekStartDeadlineWeekday) return 'Laatste kans om je week te starten!';
+  if (isoDayOfWeek < settings.weekStartDeadlineWeekday) return 'Je kunt je week nog starten';
+  return 'Weekstart gemist - focus op dagelijkse rituelen';
 }
 
 export async function getRitualStatus(
   userId: string,
   organizationId: number | null
 ): Promise<RitualStatusPayload> {
-  const today = getToday();
-  const dayType = getDayType();
-  const after5PM = isAfter5PM();
-  const weekNumber = getCurrentWeekNumber();
-  const dayOfWeek = new Date().getDay();
-  const yesterday = getDateDaysAgo(1);
+  const settings = await getRitualSettingsFor(userId);
+  const workDays = [...settings.workDays].sort((a, b) => a - b);
+
+  const today = getToday(settings.timezone);
+  const dayType = getDayType(settings);
+  const after5PM = isAfter5PM(settings);
+  const weekNumber = getCurrentWeekNumber(settings.timezone);
+  const dayOfWeek = getWeekdayOf(today); // JS-conventie: 0 = zondag .. 6 = zaterdag
+  const isoDayOfWeek = dayOfWeek === 0 ? 7 : dayOfWeek;
+  const yesterday = getDateDaysAgo(1, settings.timezone);
 
   const [completionMap, weekFlags, lastWeekFlags] = await Promise.all([
-    getCompletionMap(userId, organizationId, STREAK_WINDOW_DAYS),
+    getCompletionMap(userId, organizationId, STREAK_WINDOW_DAYS, settings),
     getWeeklyFlags(userId, organizationId, weekNumber),
     getWeeklyFlags(userId, organizationId, weekNumber - 1),
   ]);
@@ -180,7 +240,8 @@ export async function getRitualStatus(
   const todayFullyDone = morningDone && eveningDone;
   const yesterdayFullyDone = isDayCompleted(completionMap, yesterday);
 
-  const { current: currentStreak, longest: longestStreak, lastCompletedDate, totalDaysCompleted } = calculateStreaks(completionMap, today);
+  const { current: currentStreak, longest: longestStreak, lastCompletedDate, totalDaysCompleted } =
+    calculateStreaks(completionMap, today, settings.timezone);
   const isAtRisk = !todayFullyDone && yesterdayFullyDone && currentStreak > 0;
 
   // Snelheid van terugkomst: dagen tussen de laatste voltooide dag vóór de meest recente
@@ -199,7 +260,7 @@ export async function getRitualStatus(
 
   let daysAwayFromApp = STREAK_WINDOW_DAYS;
   for (let i = 0; i < 30; i++) {
-    const date = getDateDaysAgo(i);
+    const date = getDateDaysAgo(i, settings.timezone);
     const entry = completionMap.get(date);
     if (entry?.morning || entry?.evening) {
       daysAwayFromApp = i;
@@ -207,12 +268,12 @@ export async function getRitualStatus(
     }
   }
 
-  const canStillCompleteWeeklyStart = dayOfWeek >= 1 && dayOfWeek <= 3;
+  const canStillCompleteWeeklyStart = isoDayOfWeek >= workDays[0] && isoDayOfWeek <= settings.weekStartDeadlineWeekday;
   const weeklyStart = {
     isComplete: weekFlags.start,
     canStillComplete: canStillCompleteWeeklyStart,
     dayOfWeek,
-    message: getWeeklyStartMessage(weekFlags.start, dayOfWeek),
+    message: getWeeklyStartMessage(weekFlags.start, isoDayOfWeek, settings),
   };
   const weeklyReview = { isComplete: weekFlags.review };
 
@@ -227,8 +288,11 @@ export async function getRitualStatus(
       priority: weeklyStart.canStillComplete ? 'high' : 'low',
     });
   }
-  const yesterdayDayOfWeek = new Date(yesterday).getDay();
-  if (yesterdayDayOfWeek >= 1 && yesterdayDayOfWeek <= 5) {
+  const yesterdayIsoDayOfWeek = (() => {
+    const jsDay = getWeekdayOf(yesterday);
+    return jsDay === 0 ? 7 : jsDay;
+  })();
+  if (workDays.includes(yesterdayIsoDayOfWeek)) {
     const yEntry = completionMap.get(yesterday);
     if (!yEntry?.morning) {
       missedRituals.push({ type: 'morning', date: yesterday, daysAgo: 1, canRecover: false, priority: 'low' });
@@ -237,10 +301,12 @@ export async function getRitualStatus(
       missedRituals.push({ type: 'evening', date: yesterday, daysAgo: 1, canRecover: true, priority: 'medium' });
     }
   }
-  if (dayType !== 'weekend' && new Date().getHours() >= 12 && !morningDone) {
+  if (dayType !== 'weekend' && getCurrentHour(settings.timezone) >= 12 && !morningDone) {
     missedRituals.push({ type: 'morning', date: today, daysAgo: 0, canRecover: true, priority: 'high' });
   }
-  if (!lastWeekFlags.review) {
+  // Niet op de eerste werkdag melden: de gebruiker heeft de nieuwe week dan nog niet eens een
+  // dag achter de rug en heeft geen realistische kans gehad om dit al op te merken/te herstellen.
+  if (isoDayOfWeek !== workDays[0] && !lastWeekFlags.review) {
     missedRituals.push({ type: 'weeklyReview', date: 'last week', daysAgo: 7, canRecover: false, priority: 'low' });
   }
 
@@ -253,30 +319,64 @@ export async function getRitualStatus(
       description: `Je was ${daysAwayFromApp} dagen weg. Laten we fris beginnen.`,
       path: dayType === 'weekend' ? '/weekly-review' : '/morning',
       isPrimary: true,
+      isAvailable: true,
     };
   } else if (dayType !== 'weekend' && !weeklyStart.isComplete && weeklyStart.canStillComplete) {
     suggestedAction = {
       type: 'weeklyStart',
       title: 'Week nog niet gestart',
-      description: (dayOfWeek === 3 ? 'Laatste kans! ' : '') + 'Plan je week met focus en intentie.',
+      description: (isoDayOfWeek === settings.weekStartDeadlineWeekday ? 'Laatste kans! ' : '') + 'Plan je week met focus en intentie.',
       path: '/weekly-start',
       isPrimary: true,
+      isAvailable: true,
     };
   } else if (dayType !== 'weekend' && !morningDone) {
-    suggestedAction = { type: 'morning', title: 'Start je dag', description: 'Begin met je ochtend ritueel.', path: '/morning', isPrimary: true };
+    suggestedAction = {
+      type: 'morning',
+      title: 'Start je dag',
+      description: 'Begin met je ochtend ritueel.',
+      path: '/morning',
+      isPrimary: true,
+      isAvailable: true,
+    };
+  } else if (dayType !== 'weekend' && morningDone && !eveningDone) {
+    suggestedAction = after5PM
+      ? {
+          type: 'evening',
+          title: 'Rond je dag af',
+          description: 'Sluit je dag af met je avond ritueel.',
+          path: '/evening',
+          isPrimary: true,
+          isAvailable: true,
+        }
+      : {
+          type: 'evening',
+          title: 'Avond ritueel',
+          description: `Beschikbaar vanaf ${formatHour(settings.eveningRitualOpensHour)}.`,
+          path: '/evening',
+          isPrimary: false,
+          isAvailable: false,
+        };
   } else if (dayType === 'weekend' && !weeklyReview.isComplete) {
-    suggestedAction = { type: 'continue', title: 'Week Review', description: 'Sluit je week af met reflectie.', path: '/weekly-review', isPrimary: true };
+    suggestedAction = {
+      type: 'continue',
+      title: 'Week Review',
+      description: 'Sluit je week af met reflectie.',
+      path: '/weekly-review',
+      isPrimary: true,
+      isAvailable: true,
+    };
   }
 
   // --- Welkomstbericht ---
-  const hour = new Date().getHours();
+  const hour = getCurrentHour(settings.timezone);
   const timeGreeting = hour < 12 ? 'Goedemorgen' : hour < 17 ? 'Goedemiddag' : 'Goedeavond';
   let welcomeMessage: RitualStatusPayload['welcomeMessage'];
   if (daysAwayFromApp >= 7) {
     welcomeMessage = { greeting: 'Welkom terug!', subtitle: 'Fijn dat je er weer bent. Laten we verder gaan.', type: 'recovery' };
   } else if (!weeklyStart.isComplete && weeklyStart.canStillComplete && dayType !== 'weekend') {
-    if (dayOfWeek === 1) welcomeMessage = { greeting: `${timeGreeting}!`, subtitle: 'Nieuwe week! Start met intentie.', type: 'normal' };
-    else if (dayOfWeek === 2) welcomeMessage = { greeting: `${timeGreeting}!`, subtitle: 'Je kunt je weekstart nog doen.', type: 'recovery' };
+    if (isoDayOfWeek === workDays[0]) welcomeMessage = { greeting: `${timeGreeting}!`, subtitle: 'Nieuwe week! Start met intentie.', type: 'normal' };
+    else if (isoDayOfWeek < settings.weekStartDeadlineWeekday) welcomeMessage = { greeting: `${timeGreeting}!`, subtitle: 'Je kunt je weekstart nog doen.', type: 'recovery' };
     else welcomeMessage = { greeting: `${timeGreeting}!`, subtitle: 'Laatste kans voor je weekstart!', type: 'recovery' };
   } else if (!weeklyStart.isComplete && !weeklyStart.canStillComplete && dayType !== 'weekend') {
     welcomeMessage = { greeting: `${timeGreeting}!`, subtitle: 'Focus op je dagelijkse rituelen.', type: 'normal' };
@@ -295,5 +395,6 @@ export async function getRitualStatus(
     suggestedAction,
     welcomeMessage,
     daysAwayFromApp,
+    settings,
   };
 }

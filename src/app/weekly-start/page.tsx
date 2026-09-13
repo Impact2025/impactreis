@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
-import { getCurrentQuarter } from '@/lib/weekflow.service';
+import { getCurrentQuarter, getCurrentWeekNumber, getToday } from '@/lib/weekflow.service';
+import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
 interface WeeklyStartData {
@@ -37,14 +38,9 @@ const FOCUS_LABELS: Record<string, string> = {
   personal: 'Persoonlijke groei',
 };
 
-function getWeekNumber(date: Date): number {
-  const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-  const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
-  return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-}
-
 export default function WeeklyStartPage() {
   const router = useRouter();
+  const { settings } = useRitualStatus();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -52,9 +48,11 @@ export default function WeeklyStartPage() {
   const [isAlreadyComplete, setIsAlreadyComplete] = useState(false);
   const [activeRockTitles, setActiveRockTitles] = useState<string[]>([]);
 
-  const today = new Date();
-  const currentWeek = getWeekNumber(today);
-  const currentYear = today.getFullYear();
+  // Zelfde weeknummer-logica als ritual-status.service.ts (settings.timezone-bewust) i.p.v. een
+  // eigen kopie — anders kan een weekstart onder het verkeerde weeknummer belanden zodra de
+  // gebruiker een andere tijdzone instelt, waardoor de server 'm nooit als "gedaan" herkent.
+  const currentWeek = getCurrentWeekNumber(settings.timezone);
+  const currentYear = Number(getToday(settings.timezone).slice(0, 4));
 
   const [formData, setFormData] = useState<WeeklyStartData>({
     weekNumber: currentWeek,
@@ -118,7 +116,7 @@ export default function WeeklyStartPage() {
     };
     checkAuth();
 
-    const currentQuarter = getCurrentQuarter();
+    const currentQuarter = getCurrentQuarter(settings.timezone);
     api.goals.getAll()
       .then((allGoals: any[]) => {
         const titles = allGoals

@@ -25,6 +25,13 @@ export const organizations = pgTable('organizations', {
   slug: text('slug').notNull().unique(),
   name: text('name').notNull(),
   plan: text('plan').notNull().default('starter'), // starter | pro | incubator
+  // Welke ImpactOS-modus deze organisatie draait: bepaalt agent-promptketens, databronnen en
+  // compliance-filters (zie ImpactOS-architectuurdoc), niet de UI-shell of het datamodel zelf —
+  // die blijven identiek voor beide waarden. 'scale' = sociaal ondernemer/impact MKB (Mara =
+  // content/marketing, Bram = sales/partnerships, Toby = lichte AVG); 'institutional' = Wmo/
+  // Jeugdzorg-stichtingen (Toby = DPIA-gate, niet overslaanbaar). Start altijd op 'scale' —
+  // zie de GTM-beslissing om eerst met dat segment te bouwen.
+  profileType: text('profile_type').notNull().default('scale'), // 'scale' | 'institutional'
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -97,6 +104,23 @@ export const identityProfiles = pgTable('identity_profiles', {
   organizationId: integer('organization_id').references(() => organizations.id).notNull(),
   statements: jsonb('statements').notNull().default('[]'),
   proofs: jsonb('proofs').notNull().default('[]'),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Ritueel-instellingen per gebruiker: maakt de gating in ritual-status.service.ts /
+// weekflow.service.ts los van de hardcoded Europe/Amsterdam + ma-vr + 17:00 + t/m wo
+// aannames (die kloppen voor de oorspronkelijke single-user aanname, niet per se voor andere
+// tijdzones/werkweken/werktijden). Singleton per user, multi-tenant vanaf dag 1.
+export const ritualSettings = pgTable('ritual_settings', {
+  userId: text('user_id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
+  timezone: text('timezone').notNull().default('Europe/Amsterdam'),
+  // ISO-weekdagen die als "werkdag" tellen (1 = maandag .. 7 = zondag).
+  workDays: jsonb('work_days').notNull().default('[1,2,3,4,5]'),
+  eveningRitualOpensHour: integer('evening_ritual_opens_hour').notNull().default(17),
+  // Laatste ISO-weekdag waarop de weekstart nog ingehaald mag worden.
+  weekStartDeadlineWeekday: integer('week_start_deadline_weekday').notNull().default(3),
+  createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
@@ -239,6 +263,34 @@ export const calendarProposals = pgTable('calendar_proposals', {
   resolvedAt: timestamp('resolved_at'),
 }, (t) => ({
   userStatusIdx: index('idx_calendar_proposals_user_status').on(t.userId, t.status),
+}));
+
+// De generieke Approval Queue: elk agent-voorstel (mail, subsidieverantwoording, social post,
+// CRM-follow-up, ...) landt hier als één rij, in plaats van dat elk domein zijn eigen
+// approve/reject-tabel krijgt zoals calendar_proposals dat nu apart doet. `kind` onderscheidt het
+// domein ('calendar' | 'mail' | 'subsidie_verantwoording' | ...), `payload` bevat de voorstel-data
+// zelf (agent-specifieke vorm), `diff` de inline-wijziging t.o.v. een sjabloon/vorige versie voor
+// de diff-viewer. Dit is het human-in-the-loop-mechanisme uit de Calm Tech-spec (§4.1/4.2) en
+// tegelijk de wettelijke waarborg voor menselijk toezicht (AVG art. 22 / EU AI Act) — nooit
+// auto-approve, altijd een expliciete decided_by. calendar_proposals blijft vooralsnog bestaan
+// (productiedata) en migreert later additief naar kind='calendar' i.p.v. in één stap vervangen.
+export const approvalQueue = pgTable('approval_queue', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
+  userId: text('user_id').notNull(),
+  agentKey: text('agent_key').notNull(), // 'iris' | 'mara' | 'bram' | 'noor' | 'toby' | 'coach'
+  kind: text('kind').notNull(), // 'calendar' | 'mail' | 'subsidie_verantwoording' | 'social_post' | ...
+  payload: jsonb('payload').notNull(), // het voorstel zelf, vorm hangt af van `kind`
+  diff: jsonb('diff'), // inline diff t.o.v. sjabloon/vorige versie, voor de diff-viewer; null als n.v.t.
+  confidence: real('confidence'), // 0-1, getoond als gedempte gradient-badge, null = geen score berekend
+  status: text('status').notNull().default('pending'), // 'pending' | 'approved' | 'rejected' | 'edited'
+  reason: text('reason'), // korte uitleg van de agent ("gebaseerd op 12 vergelijkbare mails")
+  decidedBy: text('decided_by'), // user_id die de beslissing nam; null zolang pending
+  decidedAt: timestamp('decided_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  orgStatusIdx: index('idx_approval_queue_org_status').on(t.organizationId, t.status),
+  userStatusIdx: index('idx_approval_queue_user_status').on(t.userId, t.status),
 }));
 
 // De AIPA-intake: één gesprek i.p.v. een statisch registratieformulier, dat het hele
