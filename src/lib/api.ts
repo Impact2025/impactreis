@@ -453,6 +453,17 @@ class ApiClient {
       }),
   };
 
+  // Meditaties
+  meditations = {
+    getStats: () => this.request<{ streak: number; totalCompleted: number; recentIds: string[] }>('/meditations'),
+
+    complete: (data: { meditationId: string; durationSeconds?: number }) =>
+      this.request<any>('/meditations', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  };
+
   // Daily Practice
   practice = {
     get: (type?: string, days?: number) => {

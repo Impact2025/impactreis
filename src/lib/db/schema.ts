@@ -164,6 +164,20 @@ export const focusSessions = pgTable('focus_sessions', {
   sessionType: text('session_type').default('work'), // 'work' | 'break'
 });
 
+export const meditationSessions = pgTable('meditation_sessions', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').references(() => organizations.id).notNull(),
+  userId: text('user_id').notNull(),
+  meditationId: text('meditation_id').notNull(),
+  date: date('date').notNull().defaultNow(),
+  durationSeconds: integer('duration_seconds'),
+  completed: boolean('completed').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  userIdx: index('idx_meditation_sessions_user_id').on(t.userId),
+  dateIdx: index('idx_meditation_sessions_date').on(t.date),
+}));
+
 export const wins = pgTable('wins', {
   id: serial('id').primaryKey(),
   organizationId: integer('organization_id').references(() => organizations.id).notNull(),
