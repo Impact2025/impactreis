@@ -9,12 +9,18 @@ import { api } from '@/lib/api';
 import { BottomNav } from '@/components/ui/bottom-nav';
 import { getToday } from '@/lib/weekflow.service';
 import { useRitualStatus } from '@/hooks/useRitualStatus';
+import { MeditationPlayer } from '@/components/meditations/MeditationPlayer';
+import { getMeditationsByCategory } from '@/lib/meditations/catalog';
 
-type Step = 'dagtype' | 'intentie' | 'focusblokken' | 'status' | 'dankbaarheid' | 'affirmatie' | 'done';
+type Step = 'dagtype' | 'centering' | 'intentie' | 'focusblokken' | 'status' | 'dankbaarheid' | 'affirmatie' | 'done';
 type DayType = 'focus' | 'buffer' | 'free';
 type Mode = 'full' | 'quick';
 
-const FULL_STEPS: Step[] = ['dagtype', 'intentie', 'focusblokken', 'status', 'dankbaarheid', 'affirmatie'];
+// Centering staat na dagtype/pre-work en vóór de rest: de neuro-somatische poortwachter die
+// ervoor zorgt dat intentie, focusblokken en de statuspeiling vanuit een gekalmeerd brein
+// worden ingevuld i.p.v. vanuit ochtendhaast. Alleen in de Volledige modus — Snel (2 min)
+// blijft bewust zonder audio, anders klopt de tijdsbelofte niet meer.
+const FULL_STEPS: Step[] = ['dagtype', 'centering', 'intentie', 'focusblokken', 'status', 'dankbaarheid', 'affirmatie'];
 // Snelle modus: alleen de stappen die de meeste weerstand geven (agenda-planning,
 // slaap/energie-sliders) worden overgeslagen — dagtype/intentie/dankbaarheid/affirmatie
 // blijven staan omdat die het minste tijd kosten en het meeste effect hebben.
@@ -50,6 +56,7 @@ function getDailyGratitudePresets(dateKey: string, count = 6): string[] {
 
 const STEP_LABELS: Record<Step, string> = {
   dagtype: 'Dagtype',
+  centering: 'Centering',
   intentie: 'Intentie',
   focusblokken: 'Focus Blokken',
   status: 'Status',
@@ -499,6 +506,28 @@ export default function MorningPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Step: Centering — de poortwachter vóór intentie/focusblokken/statuspeiling */}
+        {step === 'centering' && (
+          <div className="space-y-4">
+            <div className="rounded-[16px] bg-surface-inverse p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Brain size={18} className="text-primary" />
+                <span className="text-[11px] text-white/40 uppercase tracking-widest">Vóór de rest van je ochtend</span>
+              </div>
+              <p className="text-[17px] text-white font-semibold">Even landen.</p>
+              <p className="text-[13px] text-white/50 mt-1">
+                Drie minuten rust, zodat je intentie en focusblokken zo dadelijk vanuit kalmte komen — niet vanuit ochtendhaast.
+              </p>
+            </div>
+            {getMeditationsByCategory('ochtend').map((meditation) => (
+              <MeditationPlayer key={meditation.id} meditation={meditation} />
+            ))}
+            <p className="text-center text-[12px] text-ink-soft px-2">
+              Liever meteen door? Dat kan — tik gewoon op Volgende.
+            </p>
           </div>
         )}
 
