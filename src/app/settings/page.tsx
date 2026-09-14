@@ -382,6 +382,22 @@ export default function SettingsPage() {
                 ))}
               </select>
             </div>
+            <div className="px-5 py-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[14px] font-medium text-ink">Meditaties</p>
+                <p className="text-[12px] text-ink-soft mt-0.5">Ochtend-centering op het dashboard en in het ochtendritueel</p>
+              </div>
+              <button
+                onClick={() => handleSaveRitualSettings({ ...ritualSettings, meditationsEnabled: !ritualSettings.meditationsEnabled })}
+                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
+                  ritualSettings.meditationsEnabled ? 'bg-primary' : 'bg-line'
+                }`}
+              >
+                <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                  ritualSettings.meditationsEnabled ? 'translate-x-5' : ''
+                }`} />
+              </button>
+            </div>
           </div>
         </section>
 

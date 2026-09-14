@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ChevronLeft, Flame, Waves } from 'lucide-react';
 import { api } from '@/lib/api';
 import { AuthService } from '@/lib/auth';
+import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { MeditationPlayer } from '@/components/meditations/MeditationPlayer';
 import {
   MEDITATIONS,
@@ -19,6 +20,7 @@ export default function MeditationsPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<{ streak: number; totalCompleted: number } | null>(null);
   const router = useRouter();
+  const { settings } = useRitualStatus();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -43,6 +45,25 @@ export default function MeditationsPage() {
     return (
       <div className="min-h-screen bg-surface-card flex items-center justify-center">
         <div className="animate-spin rounded-full h-6 w-6 border-2 border-line border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!settings.meditationsEnabled) {
+    return (
+      <div className="min-h-screen bg-surface-card flex items-center justify-center px-6">
+        <div className="max-w-sm text-center space-y-4">
+          <div className="w-14 h-14 bg-surface-sunken rounded-full flex items-center justify-center mx-auto">
+            <Waves className="text-ink-soft" size={26} />
+          </div>
+          <p className="text-[15px] font-semibold text-ink">Meditaties staan uit</p>
+          <p className="text-[13px] text-ink-soft">
+            Je hebt deze functie uitgeschakeld. Zet &apos;m weer aan in Instellingen om de bibliotheek te bekijken.
+          </p>
+          <Link href="/settings" className="inline-block text-[13px] font-semibold text-primary hover:underline">
+            Naar Instellingen →
+          </Link>
+        </div>
       </div>
     );
   }

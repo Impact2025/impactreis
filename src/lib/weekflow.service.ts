@@ -29,6 +29,8 @@ export interface RitualSettings {
   eveningRitualOpensHour: number;
   /** Laatste ISO-weekdag waarop de weekstart nog ingehaald mag worden. */
   weekStartDeadlineWeekday: number;
+  /** Meditaties zijn optioneel — uit te zetten in onboarding of instellingen. */
+  meditationsEnabled: boolean;
 }
 
 export const DEFAULT_RITUAL_SETTINGS: RitualSettings = {
@@ -36,6 +38,7 @@ export const DEFAULT_RITUAL_SETTINGS: RitualSettings = {
   workDays: [1, 2, 3, 4, 5],
   eveningRitualOpensHour: 17,
   weekStartDeadlineWeekday: 3,
+  meditationsEnabled: true,
 };
 
 interface TzParts {

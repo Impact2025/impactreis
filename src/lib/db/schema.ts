@@ -120,6 +120,7 @@ export const ritualSettings = pgTable('ritual_settings', {
   eveningRitualOpensHour: integer('evening_ritual_opens_hour').notNull().default(17),
   // Laatste ISO-weekdag waarop de weekstart nog ingehaald mag worden.
   weekStartDeadlineWeekday: integer('week_start_deadline_weekday').notNull().default(3),
+  meditationsEnabled: boolean('meditations_enabled').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });

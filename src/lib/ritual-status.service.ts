@@ -75,7 +75,7 @@ export interface RitualStatusPayload {
 
 async function getRitualSettingsFor(userId: string): Promise<RitualSettings> {
   const rows = await sql`
-    SELECT timezone, work_days, evening_ritual_opens_hour, week_start_deadline_weekday
+    SELECT timezone, work_days, evening_ritual_opens_hour, week_start_deadline_weekday, meditations_enabled
     FROM ritual_settings WHERE user_id = ${userId}
   `;
   const row = rows[0] as
@@ -84,6 +84,7 @@ async function getRitualSettingsFor(userId: string): Promise<RitualSettings> {
         work_days: unknown;
         evening_ritual_opens_hour: number;
         week_start_deadline_weekday: number;
+        meditations_enabled: boolean | null;
       }
     | undefined;
   if (!row) return DEFAULT_RITUAL_SETTINGS;
@@ -106,6 +107,7 @@ async function getRitualSettingsFor(userId: string): Promise<RitualSettings> {
     workDays: validWorkDays,
     eveningRitualOpensHour: row.evening_ritual_opens_hour ?? DEFAULT_RITUAL_SETTINGS.eveningRitualOpensHour,
     weekStartDeadlineWeekday: row.week_start_deadline_weekday ?? DEFAULT_RITUAL_SETTINGS.weekStartDeadlineWeekday,
+    meditationsEnabled: row.meditations_enabled ?? DEFAULT_RITUAL_SETTINGS.meditationsEnabled,
   };
 }
 

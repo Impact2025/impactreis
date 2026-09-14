@@ -106,7 +106,10 @@ export default function MorningPage() {
   const router = useRouter();
   const { settings } = useRitualStatus();
 
-  const STEPS = mode === 'quick' ? QUICK_STEPS : FULL_STEPS;
+  const baseSteps = mode === 'quick' ? QUICK_STEPS : FULL_STEPS;
+  // Meditaties zijn optioneel (zie Instellingen / onboarding) — sla de centering-stap over
+  // als de gebruiker die heeft uitgezet, i.p.v. 'm gedwongen te tonen.
+  const STEPS = settings.meditationsEnabled ? baseSteps : baseSteps.filter((s) => s !== 'centering');
 
   useEffect(() => {
     const stored = localStorage.getItem(MODE_STORAGE_KEY);

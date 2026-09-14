@@ -322,16 +322,18 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* ══ MEDITATIE — RUSTMOMENT ═══════════════════════════ */}
-          <div className="pb-6">
-            <MeditationPlayer meditation={getRecommendedMeditation()!} compact />
-            <Link
-              href="/meditations"
-              className="mt-2 inline-block text-[11px] font-semibold text-primary hover:underline"
-            >
-              Alle meditaties bekijken →
-            </Link>
-          </div>
+          {/* ══ MEDITATIE — RUSTMOMENT (optioneel, zie Instellingen) ══ */}
+          {settings.meditationsEnabled && (
+            <div className="pb-6">
+              <MeditationPlayer meditation={getRecommendedMeditation()!} compact />
+              <Link
+                href="/meditations"
+                className="mt-2 inline-block text-[11px] font-semibold text-primary hover:underline"
+              >
+                Alle meditaties bekijken →
+              </Link>
+            </div>
+          )}
 
           {/* ══ FREE DAY — RUST, GEEN PRESTATIEDRUK ═════════════ */}
           {todayDayType === 'free' && (

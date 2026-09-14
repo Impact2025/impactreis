@@ -17,6 +17,7 @@ function toRitualSettings(row: {
   work_days: unknown;
   evening_ritual_opens_hour: number;
   week_start_deadline_weekday: number;
+  meditations_enabled: boolean | null;
 }): RitualSettings {
   let workDays: unknown = row.work_days;
   if (typeof workDays === 'string') {
@@ -31,6 +32,7 @@ function toRitualSettings(row: {
     workDays: validWorkDays,
     eveningRitualOpensHour: row.evening_ritual_opens_hour ?? DEFAULT_RITUAL_SETTINGS.eveningRitualOpensHour,
     weekStartDeadlineWeekday: row.week_start_deadline_weekday ?? DEFAULT_RITUAL_SETTINGS.weekStartDeadlineWeekday,
+    meditationsEnabled: row.meditations_enabled ?? DEFAULT_RITUAL_SETTINGS.meditationsEnabled,
   };
 }
 
@@ -40,11 +42,11 @@ export async function GET(request: NextRequest) {
     if (!authCtx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const rows = await sql`
-      SELECT timezone, work_days, evening_ritual_opens_hour, week_start_deadline_weekday
+      SELECT timezone, work_days, evening_ritual_opens_hour, week_start_deadline_weekday, meditations_enabled
       FROM ritual_settings WHERE user_id = ${String(authCtx.userId)}
     `;
     const row = rows[0] as
-      | { timezone: string; work_days: unknown; evening_ritual_opens_hour: number; week_start_deadline_weekday: number }
+      | { timezone: string; work_days: unknown; evening_ritual_opens_hour: number; week_start_deadline_weekday: number; meditations_enabled: boolean | null }
       | undefined;
 
     return NextResponse.json(row ? toRitualSettings(row) : DEFAULT_RITUAL_SETTINGS);
@@ -90,19 +92,23 @@ export async function PATCH(request: NextRequest) {
         ? (body.weekStartDeadlineWeekday as number)
         : DEFAULT_RITUAL_SETTINGS.weekStartDeadlineWeekday;
 
+    const meditationsEnabled =
+      typeof body.meditationsEnabled === 'boolean' ? body.meditationsEnabled : DEFAULT_RITUAL_SETTINGS.meditationsEnabled;
+
     const userId = String(authCtx.userId);
     await sql`
-      INSERT INTO ritual_settings (user_id, organization_id, timezone, work_days, evening_ritual_opens_hour, week_start_deadline_weekday, updated_at)
-      VALUES (${userId}, ${authCtx.organizationId}, ${timezone}, ${JSON.stringify(workDays)}, ${eveningRitualOpensHour}, ${weekStartDeadlineWeekday}, NOW())
+      INSERT INTO ritual_settings (user_id, organization_id, timezone, work_days, evening_ritual_opens_hour, week_start_deadline_weekday, meditations_enabled, updated_at)
+      VALUES (${userId}, ${authCtx.organizationId}, ${timezone}, ${JSON.stringify(workDays)}, ${eveningRitualOpensHour}, ${weekStartDeadlineWeekday}, ${meditationsEnabled}, NOW())
       ON CONFLICT (user_id) DO UPDATE SET
         timezone = EXCLUDED.timezone,
         work_days = EXCLUDED.work_days,
         evening_ritual_opens_hour = EXCLUDED.evening_ritual_opens_hour,
         week_start_deadline_weekday = EXCLUDED.week_start_deadline_weekday,
+        meditations_enabled = EXCLUDED.meditations_enabled,
         updated_at = NOW()
     `;
 
-    return NextResponse.json({ timezone, workDays, eveningRitualOpensHour, weekStartDeadlineWeekday });
+    return NextResponse.json({ timezone, workDays, eveningRitualOpensHour, weekStartDeadlineWeekday, meditationsEnabled });
   } catch (error) {
     console.error('Update ritual settings error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

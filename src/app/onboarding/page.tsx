@@ -33,6 +33,8 @@ export default function OnboardingPage() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(true);
+  const [meditationsEnabled, setMeditationsEnabled] = useState(true);
+  const [activating, setActivating] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const startedRef = useRef(false);
 
@@ -155,6 +157,22 @@ export default function OnboardingPage() {
     send(next);
   };
 
+  const activateWorkspace = async () => {
+    setActivating(true);
+    try {
+      const token = AuthService.getToken();
+      // Best-effort: als dit faalt, val je terug op DEFAULT_RITUAL_SETTINGS (meditaties aan),
+      // wat later alsnog in Instellingen aan te passen is — mag onboarding niet blokkeren.
+      await fetch('/api/ritual-settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ meditationsEnabled }),
+      }).catch(() => {});
+    } finally {
+      router.push('/dashboard');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <div className="sticky top-0 z-10 bg-white border-b border-line px-5 py-4">
@@ -212,13 +230,34 @@ export default function OnboardingPage() {
         )}
 
         {done && (
-          <div className="rounded-[16px] border border-line p-5 text-center space-y-3">
-            <p className="text-[14px] font-semibold text-ink">Je werkruimte staat klaar.</p>
+          <div className="rounded-[16px] border border-line p-5 space-y-4">
+            <p className="text-[14px] font-semibold text-ink text-center">Je werkruimte staat klaar.</p>
+
+            <div className="rounded-[14px] bg-surface-sunken px-4 py-3.5 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[13px] font-medium text-ink">Meditaties</p>
+                <p className="text-[11px] text-ink-soft mt-0.5">Ochtend-centering op je dashboard en in het ochtendritueel</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMeditationsEnabled((v) => !v)}
+                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
+                  meditationsEnabled ? 'bg-primary' : 'bg-line'
+                }`}
+              >
+                <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                  meditationsEnabled ? 'translate-x-5' : ''
+                }`} />
+              </button>
+            </div>
+            <p className="text-[11px] text-ink-soft text-center -mt-1">Later altijd te wijzigen in Instellingen</p>
+
             <button
-              onClick={() => router.push('/dashboard')}
-              className="w-full py-3 rounded-[14px] bg-primary text-white font-bold text-[14px]"
+              onClick={activateWorkspace}
+              disabled={activating}
+              className="w-full py-3 rounded-[14px] bg-primary text-white font-bold text-[14px] disabled:opacity-60"
             >
-              Activeer mijn werkruimte
+              {activating ? 'Bezig...' : 'Activeer mijn werkruimte'}
             </button>
           </div>
         )}
