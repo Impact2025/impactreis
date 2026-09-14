@@ -29,12 +29,25 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function getRank(total: number) {
-  if (total >= 100) return 'Legende';
-  if (total >= 50)  return 'Elite';
-  if (total >= 25)  return 'Pro';
-  if (total >= 10)  return 'Stijgend';
-  return 'Starter';
+// Consecutive dagen met minstens 1 win, tellend vanaf vandaag/gisteren terug — zelfde patroon
+// als getCurrentStreak() in coach.ts en sessie-analyse/route.ts, hier lokaal op wins.date i.p.v.
+// ritueel-logs. Geen gok-cijfer meer tonen: als er geen win gisteren/vandaag was, is de streak 0.
+function getCurrentStreak(wins: Win[]): number {
+  const dates = [...new Set(wins.map(w => new Date(w.date).toISOString().split('T')[0]))].sort().reverse();
+  if (dates.length === 0) return 0;
+
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  if (dates[0] !== today && dates[0] !== yesterday) return 0;
+
+  let streak = 1;
+  let prev = new Date(dates[0]);
+  for (const d of dates.slice(1)) {
+    const cur = new Date(d);
+    const diff = Math.round((prev.getTime() - cur.getTime()) / 86400000);
+    if (diff === 1) { streak++; prev = cur; } else break;
+  }
+  return streak;
 }
 
 export default function WinsPage() {
@@ -46,7 +59,6 @@ export default function WinsPage() {
   const [selectedCat, setSelectedCat]           = useState('all');
   const [searchQuery, setSearchQuery]           = useState('');
   const [searchOpen, setSearchOpen]             = useState(false);
-  const streak                                  = 12; // TODO: from API
 
   useEffect(() => {
     if (!AuthService.getUser()) { router.push('/auth/login'); return; }
@@ -97,10 +109,11 @@ export default function WinsPage() {
     return acc;
   }, {});
 
-  const rank = getRank(wins.length);
+  const streak = getCurrentStreak(wins);
+  const highImpactCount = wins.filter(w => w.impact_level >= 4).length;
 
   return (
-    <div className="min-h-screen bg-surface pb-28">
+    <div className="min-h-screen bg-surface pb-40">
 
       {/* ══ HEADER ══════════════════════════════════════════ */}
       <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-md border-b border-line">
@@ -123,23 +136,18 @@ export default function WinsPage() {
 
       <main className="max-w-lg mx-auto px-5">
 
-        {/* ══ HERO ════════════════════════════════════════════ */}
-        <div className="rounded-[20px] bg-primary-muted mt-5 mb-6 px-5 pt-7 pb-6 text-center">
-          <div className="w-12 h-12 rounded-full bg-primary-light flex items-center justify-center mx-auto mb-4">
-            <Sparkles size={22} className="text-primary" />
+        {/* ══ STATUS BAR ══════════════════════════════════════ */}
+        <div className="flex items-center justify-between mt-5 mb-5">
+          <div className="flex items-center gap-2 text-ink-soft">
+            <Sparkles size={14} className="text-primary" />
+            <span className="text-[12px]">Leiderschapsarchief</span>
           </div>
-          <h2 className="text-[30px] font-bold text-ink leading-tight mb-2">
-            Blijf winnen.
-          </h2>
-          <p className="text-[13px] text-ink-soft leading-relaxed mb-5">
-            Succes is een gewoonte. Leg je reis vast<br />en vier elke mijlpaal.
-          </p>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-primary text-white font-bold text-[14px] shadow-[0_4px_18px_rgba(81,96,80,0.38)] active:scale-[0.97] transition-transform"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-white font-semibold text-[12.5px] active:scale-95 transition-transform"
           >
-            <Plus size={16} strokeWidth={2.5} />
-            Nieuwe win vastleggen
+            <Plus size={14} strokeWidth={2.5} />
+            Nieuwe win
           </button>
         </div>
 
@@ -147,15 +155,15 @@ export default function WinsPage() {
         <div className="grid grid-cols-3 gap-2.5 mb-6">
           <div className="rounded-[14px] bg-surface-sunken px-3 py-4 text-center">
             <p className="text-[9px] font-bold text-ink-soft uppercase tracking-[0.14em] mb-2">Totaal</p>
-            <p className="text-[26px] font-bold text-ink leading-none">{wins.length}</p>
-          </div>
-          <div className="rounded-[14px] border border-tertiary-soft bg-tertiary-soft px-3 py-4 text-center">
-            <p className="text-[9px] font-bold text-tertiary uppercase tracking-[0.14em] mb-2">Streak</p>
-            <p className="text-[26px] font-bold text-ink leading-none">{streak}</p>
+            <p className="text-[26px] font-bold text-ink leading-none tabular-nums">{wins.length}</p>
           </div>
           <div className="rounded-[14px] bg-surface-sunken px-3 py-4 text-center">
-            <p className="text-[9px] font-bold text-ink-soft uppercase tracking-[0.14em] mb-2">Niveau</p>
-            <p className="text-[18px] font-bold text-ink leading-none mt-0.5">{rank}</p>
+            <p className="text-[9px] font-bold text-ink-soft uppercase tracking-[0.14em] mb-2">Op rij</p>
+            <p className="text-[26px] font-bold text-ink leading-none tabular-nums">{streak}</p>
+          </div>
+          <div className="rounded-[14px] border border-tertiary-soft bg-tertiary-soft px-3 py-4 text-center">
+            <p className="text-[9px] font-bold text-tertiary uppercase tracking-[0.14em] mb-2">Hoge impact</p>
+            <p className="text-[26px] font-bold text-ink leading-none tabular-nums">{highImpactCount}</p>
           </div>
         </div>
 
@@ -180,21 +188,27 @@ export default function WinsPage() {
         )}
 
         {/* ══ FILTERS ══════════════════════════════════════════ */}
-        <div className="flex gap-2 overflow-x-auto pb-1 mb-5 -mx-5 px-5">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat.value}
-              onClick={() => setSelectedCat(cat.value)}
-              className={`flex-none flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[12px] font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                selectedCat === cat.value
-                  ? 'bg-surface-inverse text-white'
-                  : 'bg-surface-sunken text-ink-soft hover:bg-line'
-              }`}
-            >
-              <cat.icon size={13} />
-              {cat.label}
-            </button>
-          ))}
+        <div className="relative mb-5">
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat.value}
+                onClick={() => setSelectedCat(cat.value)}
+                className={`flex-none flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[12px] font-semibold whitespace-nowrap transition-all active:scale-95 ${
+                  selectedCat === cat.value
+                    ? 'bg-surface-inverse text-white'
+                    : 'bg-surface-sunken text-ink-soft hover:bg-line'
+                }`}
+              >
+                <cat.icon size={13} />
+                {cat.label}
+              </button>
+            ))}
+          </div>
+          <div
+            className="pointer-events-none absolute top-0 right-0 h-full w-8"
+            style={{ background: 'linear-gradient(to right, transparent, var(--surface))' }}
+          />
         </div>
 
         {/* ══ LOADING ══════════════════════════════════════════ */}
@@ -297,34 +311,8 @@ export default function WinsPage() {
           </section>
         )}
 
-        {/* ══ MASTERMIND STATUS CARD ══════════════════════════ */}
-        {wins.length >= 5 && (
-          <div className="mt-8 rounded-card bg-surface-inverse p-5 shadow-organic">
-            <div className="flex items-center gap-1.5 mb-3">
-              <Trophy size={14} className="text-tertiary-soft" />
-              <span className="text-[8px] font-bold tracking-[0.2em] text-on-surface-inverse/60 uppercase">
-                Mastermind Status
-              </span>
-            </div>
-            <h3 className="text-[19px] font-bold text-on-surface-inverse leading-tight mb-1.5">
-              Top {Math.max(1, Math.round(100 - wins.length * 1.5))}% Performer
-            </h3>
-            <p className="text-[12px] text-on-surface-inverse/60 leading-relaxed">
-              Je win rate is met 14% gestegen deze maand.<br />Houd het momentum vast!
-            </p>
-          </div>
-        )}
-
         <div className="h-6" />
       </main>
-
-      {/* ══ FAB (mobile, above nav) ══════════════════════════ */}
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="fixed z-40 bottom-24 right-5 w-[52px] h-[52px] rounded-full bg-primary flex items-center justify-center shadow-[0_4px_20px_rgba(81,96,80,0.45)] active:scale-95 transition-transform sm:hidden"
-      >
-        <Plus size={22} strokeWidth={2.5} className="text-white" />
-      </button>
 
       <AddWinModal
         isOpen={isModalOpen}
