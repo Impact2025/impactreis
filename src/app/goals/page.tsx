@@ -56,6 +56,10 @@ export default function GoalsPage() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [rockLimitMessage, setRockLimitMessage] = useState<string | null>(null);
   const [celebrationMessage, setCelebrationMessage] = useState('');
+  // Welke kaart z'n categorie-picker openstaat — legacy/geïmporteerde doelen komen soms binnen
+  // met een categorie buiten de vier RPM-categorieën (zie defaultCategoryConfig) en konden die
+  // tot nu toe alleen via het formulier bij aanmaak zetten, niet achteraf corrigeren.
+  const [categoryPickerFor, setCategoryPickerFor] = useState<string | null>(null);
   // Het formulier werkt met kale strings voor nieuwe acties (eenvoudige UX bij het aanmaken) —
   // de server zet dit om naar de GoalAction-vorm (completed/leverage) via normalizeNextActions().
   const [newGoal, setNewGoal] = useState<Omit<Partial<Goal>, 'nextActions'> & { nextActions: string[] }>({
@@ -126,6 +130,12 @@ export default function GoalsPage() {
     await api.goals.delete(id);
   };
 
+  const setGoalCategory = async (id: string, category: string) => {
+    setCategoryPickerFor(null);
+    setGoals(prev => prev.map(g => g.id === id ? { ...g, category } : g));
+    await api.goals.update(id, { category });
+  };
+
   const currentQuarter = getCurrentQuarter(settings.timezone);
   const activeRocks = goals.filter(g => g.isRock && g.quarter === currentQuarter && !g.completed);
 
@@ -192,7 +202,7 @@ export default function GoalsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface pb-28">
+    <div className="min-h-screen bg-surface pb-40">
       {/* Header */}
       <header className="bg-surface border-b border-line px-5 py-4 sticky top-0 z-30">
         <div className="max-w-lg mx-auto flex items-center justify-between">
@@ -219,15 +229,15 @@ export default function GoalsPage() {
         {/* Stats Row */}
         <div className="grid grid-cols-3 gap-3 py-5">
           <div className="bg-surface-sunken rounded-[14px] p-4 text-center">
-            <p className="text-[22px] font-bold text-ink">{totalGoals}</p>
+            <p className="text-[22px] font-bold text-ink tabular-nums">{totalGoals}</p>
             <p className="text-[11px] text-ink-soft font-medium mt-0.5">Totaal</p>
           </div>
           <div className="bg-surface-sunken rounded-[14px] p-4 text-center">
-            <p className="text-[22px] font-bold text-primary">{completedGoals}</p>
+            <p className="text-[22px] font-bold text-primary tabular-nums">{completedGoals}</p>
             <p className="text-[11px] text-ink-soft font-medium mt-0.5">Voltooid</p>
           </div>
           <div className="bg-surface-sunken rounded-[14px] p-4 text-center">
-            <p className="text-[22px] font-bold text-ink">{averageProgress}%</p>
+            <p className="text-[22px] font-bold text-ink tabular-nums">{averageProgress}%</p>
             <p className="text-[11px] text-ink-soft font-medium mt-0.5">Gemiddeld</p>
           </div>
         </div>
@@ -456,12 +466,34 @@ export default function GoalsPage() {
                     </button>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
-                        <span
-                          className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold"
-                          style={{ backgroundColor: cfg.bg, color: cfg.text }}
-                        >
-                          {cfg.label}
-                        </span>
+                        <div className="relative">
+                          <button
+                            onClick={() => setCategoryPickerFor(categoryPickerFor === goal.id ? null : goal.id)}
+                            className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold active:scale-95 transition-transform"
+                            style={{ backgroundColor: cfg.bg, color: cfg.text }}
+                          >
+                            {cfg.label}
+                            <ChevronDown size={11} className="ml-1 opacity-60" />
+                          </button>
+                          {categoryPickerFor === goal.id && (
+                            <>
+                              <div className="fixed inset-0 z-40" onClick={() => setCategoryPickerFor(null)} />
+                              <div className="absolute left-0 top-full mt-1.5 z-50 bg-white rounded-[12px] shadow-organic-lg border border-line p-1.5 flex flex-col gap-1 min-w-[140px]">
+                                {(Object.entries(categoryConfig) as [string, typeof categoryConfig[keyof typeof categoryConfig]][]).map(([key, opt]) => (
+                                  <button
+                                    key={key}
+                                    onClick={() => setGoalCategory(goal.id, key)}
+                                    className="text-left px-2.5 py-1.5 rounded-[8px] text-[12px] font-medium hover:bg-surface-sunken transition-colors"
+                                    style={{ color: opt.text }}
+                                  >
+                                    <span className="inline-block w-2 h-2 rounded-full mr-2 align-middle" style={{ backgroundColor: opt.text }} />
+                                    {opt.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </div>
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => toggleRock(goal.id)}
@@ -506,14 +538,16 @@ export default function GoalsPage() {
                       {!goal.completed && (
                         <div className="mt-3 space-y-1.5">
                           <div className="flex items-center justify-between">
-                            <span className="text-[11px] text-ink-soft">Voortgang</span>
-                            <span className="text-[11px] font-semibold text-ink">{goal.progress}%</span>
+                            <span className="text-[11px] text-ink-soft">
+                              {goal.progress === 0 ? 'Nog niet gestart' : 'Voortgang'}
+                            </span>
+                            <span className="text-[11px] font-semibold text-ink tabular-nums">{goal.progress}%</span>
                           </div>
                           <div className="relative h-2">
-                            <div className="w-full h-2 bg-surface-sunken rounded-full overflow-hidden">
+                            <div className="w-full h-2 bg-surface-sunken-strong rounded-full overflow-hidden">
                               <div
                                 className="h-2 bg-primary rounded-full transition-all duration-300"
-                                style={{ width: `${goal.progress}%` }}
+                                style={{ width: `${Math.max(goal.progress, 3)}%` }}
                               />
                             </div>
                             <input
