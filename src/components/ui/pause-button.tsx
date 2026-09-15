@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { X, Pause } from 'lucide-react';
 
 type Phase = 'idle' | 'breathing' | 'questions' | 'done';
@@ -11,7 +12,12 @@ const QUESTIONS = [
   'Of is stilte de schone reactie?',
 ];
 
+// Publieke marketing- en auth-pagina's krijgen geen ingelogde-gebruikersfunctie te zien — dit
+// floating widget overlapte daar met de hero-CTA en had daar sowieso geen functie.
+const PUBLIC_PATH_PREFIXES = ['/auth', '/offline', '/share'];
+
 export function PauseButton() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [breathPhase, setBreathPhase] = useState<'in' | 'out'>('in');
@@ -67,6 +73,9 @@ export function PauseButton() {
 
     return () => clearTimeout(timer);
   }, [phase, visibleQuestions]);
+
+  const isPublicPage = pathname === '/' || PUBLIC_PATH_PREFIXES.some((p) => pathname?.startsWith(p));
+  if (isPublicPage) return null;
 
   if (!open) {
     return (

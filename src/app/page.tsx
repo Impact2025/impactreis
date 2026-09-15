@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import {
   ArrowRight, ChevronDown, Check, Plus, Minus,
-  Sunrise, Target, Shield, Timer, Trophy, RefreshCw,
+  Sunrise, Target, Shield, Timer, Trophy, RefreshCw, LogIn,
 } from 'lucide-react';
 
 /* ─── Data ─────────────────────────────────────────────────── */
@@ -137,11 +137,11 @@ export default function SalesPage() {
       {/* ══ NAV ═════════════════════════════════════════════════ */}
       <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-line">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
             <Logo size={28} />
-            <div className="flex flex-col leading-none">
-              <span className="text-[16px] font-bold tracking-tight">Sparren.app</span>
-              <span className="text-[10px] text-ink-soft">Geen ja-knikker. Wel een spiegel.</span>
+            <div className="flex flex-col leading-none min-w-0">
+              <span className="text-[16px] font-bold tracking-tight truncate">Sparren.app</span>
+              <span className="hidden sm:block text-[10px] text-ink-soft truncate">Geen ja-knikker. Wel een spiegel.</span>
             </div>
           </div>
 
@@ -157,16 +157,23 @@ export default function SalesPage() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             <Link
               href="/auth/login"
-              className="inline-flex items-center px-4 py-2 rounded-full text-[13px] font-semibold text-ink-soft hover:text-ink transition-colors"
+              className="hidden sm:inline-flex items-center px-4 py-2 rounded-full text-[13px] font-semibold text-ink-soft hover:text-ink transition-colors"
             >
               Inloggen
             </Link>
             <Link
+              href="/auth/login"
+              aria-label="Inloggen"
+              className="sm:hidden inline-flex items-center justify-center w-9 h-9 rounded-full text-ink-soft hover:text-ink hover:bg-surface-sunken transition-colors"
+            >
+              <LogIn size={16} />
+            </Link>
+            <Link
               href="/auth/register"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface-inverse text-white text-[13px] font-semibold hover:bg-accent-dark transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-full bg-surface-inverse text-white text-[12px] sm:text-[13px] font-semibold hover:bg-accent-dark transition-colors whitespace-nowrap"
             >
               Gratis kennismaking
               <ArrowRight size={13} />
@@ -180,9 +187,9 @@ export default function SalesPage() {
         <div className="pointer-events-none absolute -top-32 -right-32 w-[480px] h-[480px] rounded-full bg-primary-light/60 blur-3xl" />
         <div className="pointer-events-none absolute -top-10 -left-40 w-[380px] h-[380px] rounded-full bg-tertiary-soft/70 blur-3xl" />
       <div className="relative max-w-5xl mx-auto px-6 pt-20 pb-24 text-center">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary-light bg-primary-muted mb-8">
-          <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
-          <span className="text-[11px] font-semibold text-primary-dark tracking-wide">
+        <div className="inline-flex items-start gap-2 px-3.5 py-1.5 rounded-full border border-primary-light bg-primary-muted mb-8 max-w-[92vw] sm:max-w-none">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block mt-[5px] shrink-0" />
+          <span className="text-[11px] font-semibold text-primary-dark tracking-wide text-left">
             Voor ondernemers, directeuren en impactmakers die niet langer geleefd willen worden door hun agenda
           </span>
         </div>
@@ -195,13 +202,13 @@ export default function SalesPage() {
         </h1>
 
         <p className="text-[16px] sm:text-[18px] text-ink-soft max-w-xl mx-auto leading-relaxed mb-10">
-          Sparren.app is je dagelijkse executive challenger. Geen ja-knikker die alles goedvindt, maar een spiegel die je scherp houdt op je doelen, je agenda en je uitstelgedrag — elke dag in slechts 10 minuten.
+          Sparren.app is je dagelijkse executive challenger — een systeem dat je scherp houdt op je doelen, je agenda en je uitstelgedrag, elke dag in slechts 10 minuten.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
           <Link
             href="/auth/register"
-            className="group inline-flex items-center gap-2 px-8 py-4 rounded-full bg-primary text-white font-bold text-[15px] shadow-[0_4px_24px_rgba(81,96,80,0.35)] hover:bg-primary-dark active:scale-[0.98] transition-all"
+            className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-primary text-white font-bold text-[15px] shadow-[0_4px_24px_rgba(81,96,80,0.35)] hover:bg-primary-dark active:scale-[0.98] transition-all"
           >
             Boek een gratis kennismaking (20 min)
             <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
