@@ -18,6 +18,7 @@ function baseContext(overrides: Partial<CoachContext> = {}): CoachContext {
     },
     holding: null,
     identity: { isFounder: true, orgName: 'WeAreImpact', addressName: 'Vincent', businessContext: 'een ondernemer met een holding' },
+    challenger: null,
     ...overrides,
   };
 }

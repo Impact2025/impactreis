@@ -22,6 +22,7 @@ import { WelcomeTour, type TourStep } from '@/components/ui/welcome-tour';
 import type { GoalAction } from '@/lib/goal-actions';
 import { MeditationPlayer } from '@/components/meditations/MeditationPlayer';
 import { getRecommendedMeditation } from '@/lib/meditations/catalog';
+import { FrogButton } from '@/components/coach/frog-button';
 
 const dashboardTourSteps: TourStep[] = [
   {
@@ -731,6 +732,9 @@ export default function DashboardPage() {
               </div>
             </section>
           )}
+
+          {/* ══ KIKKER-KNOP ══════════════════════════════════════ */}
+          <FrogButton />
 
           {/* ══ AIPA ═════════════════════════════════════════════ */}
           <Link

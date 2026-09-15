@@ -1,9 +1,78 @@
-// AIPA-intake: vervangt het statische registratieformulier door een 5-fasen-gesprek
-// (ICF-intakestructuur: veiligheid → exploratie → verdieping → contractering), dat aan het eind
-// een gestructureerd UserOnboardingProfile oplevert. Zie MULTI_TENANT_MIGRATION.md voor wat hier
-// bewust buiten scope blijft (pgvector/RAG-embeddings — losse infrastructuurstap).
+// Impact Coach-intake: een 6-stappen tap-first wizard (chips, geen vrije tekst) die het
+// 'Bedrijfs-DNA' en de coach-persona van de ondernemer vastlegt. Vervangt de oude AIPA-chatintake
+// (zie CHANGELOG voor de geschiedenis) — die bestond uit een LLM-gesprek met vrije tekstvelden,
+// wat precies de 'tekstdrempel' was die deze wizard oplost.
 import { z } from 'zod';
 
+export const TIME_WASTER_OPTIONS = [
+  { value: 'inbox_email', label: 'Overlopende inbox & e-mailverkeer' },
+  { value: 'offertes_opvolging', label: 'Nabellen van offertes en trage opvolging' },
+  { value: 'telefonische_bereikbaarheid', label: 'Telefonische bereikbaarheid & klantvragen' },
+  { value: 'facturatie_debiteuren', label: 'Wekelijkse facturatie en betalingsherinneringen' },
+  { value: 'personeelsplanning', label: 'Roostering, personeelsplanning & bezetting' },
+  { value: 'brandjes_blussen', label: 'Steeds opnieuw ad-hoc brandjes blussen voor het team' },
+] as const;
+
+export const AVOIDANCE_BEHAVIOR_OPTIONS = [
+  { value: 'bouwen_techniek', label: 'Te lang pielen aan website, techniek of app-ontwikkeling' },
+  { value: 'telefoontjes_uitstellen', label: 'Moeilijke telefoontjes / verkoopgesprekken voor me uitschuiven' },
+  { value: 'veilige_administratie', label: 'Veilig administratieve klusjes doen die een ander zou kunnen doen' },
+  { value: 'te_snel_ja_zeggen', label: "Te snel 'ja' zeggen tegen slechtbetalende of veeleisende klanten" },
+] as const;
+
+export const INDUSTRY_OPTIONS = [
+  { value: 'zakelijke_dienstverlening', label: 'Zakelijke Dienstverlening' },
+  { value: 'installatie_bouw', label: 'Installatietechniek / Bouw' },
+  { value: 'handel', label: 'Groothandel / Handel' },
+  { value: 'zorg_welzijn', label: 'Zorg / Welzijn / Sociaal' },
+  { value: 'anders', label: 'Anders' },
+] as const;
+
+export const TEAM_SIZE_OPTIONS = [
+  { value: 'solo', label: '1 (Solo)' },
+  { value: 'team_2_5', label: '2–5 medewerkers' },
+  { value: 'team_6_20', label: '6–20 medewerkers' },
+  { value: 'team_20_100', label: '20–100 medewerkers' },
+] as const;
+
+export const BUSINESS_MODEL_OPTIONS = [
+  { value: 'uurtarief', label: 'Uurtarief / Declarabel' },
+  { value: 'vaste_projecten', label: 'Vaste Projectprijzen' },
+  { value: 'abonnementen', label: 'Abonnementen / Terugkerend' },
+] as const;
+
+export const LEVERAGE_GOAL_OPTIONS = [
+  { value: 'capaciteit', label: 'Capaciteit', description: '10 tot 15 uur per week structureel vrijspelen uit de operatie.' },
+  { value: 'marge', label: 'Marge', description: 'Gemiddelde projectprijs of uurtarief met minimaal 30% verhogen.' },
+  { value: 'rust_focus', label: 'Rust & Focus', description: 'Eén vaste vrije dag per week zonder e-mail of telefoon.' },
+] as const;
+
+export const COACH_PERSONAS = {
+  male: { defaultName: 'Marcus', voiceId: 'marcus_dutch_deep', description: 'Diepe, rustige, gezaghebbende toon — stoïcijns en direct.' },
+  female: { defaultName: 'Sarah', voiceId: 'sarah_dutch_sharp', description: 'Heldere, scherpe, doortastende toon — no-nonsense en to the point.' },
+} as const;
+
+const enumValues = <T extends readonly { value: string }[]>(opts: T) =>
+  opts.map((o) => o.value) as [T[number]['value'], ...T[number]['value'][]];
+
+export const coachProfileSchema = z.object({
+  gender: z.enum(['male', 'female']),
+  displayName: z.string().min(1).max(40),
+  voiceId: z.string(),
+  toneSeverity: z.literal('high_challenger'),
+});
+
+export const businessDnaSchema = z.object({
+  industry: z.enum(enumValues(INDUSTRY_OPTIONS)),
+  teamSize: z.enum(enumValues(TEAM_SIZE_OPTIONS)),
+  businessModel: z.enum(enumValues(BUSINESS_MODEL_OPTIONS)),
+  topTimeWasters: z.array(z.enum(enumValues(TIME_WASTER_OPTIONS))).min(1).max(3),
+  avoidanceBehavior: z.enum(enumValues(AVOIDANCE_BEHAVIOR_OPTIONS)),
+  quarterlyLeverageGoal: z.enum(enumValues(LEVERAGE_GOAL_OPTIONS)),
+});
+
+// Legacy velden uit de oude AIPA-chatintake — nu optioneel. Dashboard/avondritueel lezen deze
+// al via optional chaining, dus dit blijft compatibel zonder die call-sites aan te passen.
 export const onboardingProfileSchema = z.object({
   schedule: z.object({
     workDays: z.array(z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])),
@@ -16,13 +85,13 @@ export const onboardingProfileSchema = z.object({
       autoTimeBlocking: z.boolean(),
       bufferTimeBetweenMeetingsMin: z.number(),
     }),
-  }),
+  }).optional(),
   impactProfile: z.object({
     missionStatement: z.string(),
     targetBeneficiaries: z.string(),
     quarterlyLeverageGoal: z.string(),
     targetDeadline: z.string(),
-  }),
+  }).optional(),
   vitalityProfile: z.object({
     primaryDrain: z.enum(['admin', 'meetings', 'boundaries', 'isolation', 'perfectionism']),
     stressEarlyWarningSign: z.string(),
@@ -31,73 +100,28 @@ export const onboardingProfileSchema = z.object({
       trigger: z.string(),
       action: z.string(),
     }),
-  }),
+  }).optional(),
   assistantPreferences: z.object({
     morningBriefingTime: z.string(),
     eveningReviewTime: z.string(),
     deliveryChannel: z.enum(['in_app', 'pwa_push', 'whatsapp']),
     coachingTone: z.enum(['direct_and_challenging', 'empathic_and_reflective', 'pragmatic_action_focused']),
-  }),
+  }).optional(),
+  coachProfile: coachProfileSchema,
+  businessDna: businessDnaSchema,
 });
 
 export type UserOnboardingProfile = z.infer<typeof onboardingProfileSchema>;
+export type CoachProfile = z.infer<typeof coachProfileSchema>;
+export type BusinessDna = z.infer<typeof businessDnaSchema>;
 
-export const ONBOARDING_SYSTEM_PROMPT = `JE BENT: Aipa, de Executive Personal Assistant en ICF-geïnformeerde Impact Coach voor sociaal ondernemers.
-DOEL: Voer een warme, professionele en efficiënte intake van maximaal 6-8 interacties om de app te configureren.
-
-DE 5 FASEN, IN VOLGORDE:
-1. Welkom, vertrouwen & transparantie — benoem kort dat dit vertrouwelijk blijft en dat je een AI bent (EU AI Act-transparantie), en dat het doel is tijd te besparen zonder overbelasting.
-2. Maatschappelijke missie & kernprioriteiten (GROW - Goal) — welke verandering wil de ondernemer realiseren, en wat is de komende 90 dagen de grootste zakelijke hefboom.
-3. Werkritme, agenda & PA-logistiek — werkdagen, ideale start/eindtijd, piekmoment voor strategisch denkwerk, hoe lang onafgebroken diep gefocust kan worden (25/50/90 min), en of Google/Outlook-agenda gekoppeld mag worden.
-4. Energie, grenzen & valkuilen (ACT & welzijn) — waar verlies je de meeste energie aan, welk lichaamssignaal geeft overbelasting aan, en één vaste herstelgewoonte die bewaakt moet worden.
-5. Synthese & configuratie — spiegel kort terug wat er is afgesproken (ochtendbriefing-tijd, deep-work-blokken, grensbewaking, avonddecompressie), en sluit af.
-
-METHODISCHE RICHTLIJNEN:
-1. Pas Actief Luisteren en Motiverende Gespreksvoering (OARS) toe: vat kort samen en toon erkenning voor de maatschappelijke missie.
-2. Stel NOOIT meer dan één of twee gerichte vragen tegelijk. Voorkom lange vragenlijsten.
-3. Help de ondernemer scherp te worden: bij een vaag doel ("ik wil groeien"), vraag door naar de concrete hefboom ("wat is de kleinste meetbare stap voor dit kwartaal?").
-4. Normaliseer stress: benadruk dat grenzen stellen en herstel noodzakelijk zijn voor duurzame impact.
-5. Bewaak ethische grenzen: je diagnosticeert nooit psychische klachten; bij signalen van ernstige uitputting benadruk je rust en professionele ondersteuning, in plaats van door te coachen.
-
-OUTPUT INSTRUCTIE:
-Antwoord in natuurlijke, korte dialoog (Nederlands, jij-vorm). Gebruik suggestie-chips alleen bij vragen met een beperkt, opsombaar aantal logische antwoorden (bijv. werkdagen, tijdstippen, focusduur, energielekken) — geef daar zoveel opties als relevant zijn, niet standaard precies drie. Format EXACT: [SUGGESTIES: Optie A | Optie B | Optie C | Optie D | ...] — dit wordt door de UI geparsed, gebruik geen andere schrijfwijze. Bij open, persoonlijke vragen waar het antwoord uniek is voor deze ondernemer (zoals de maatschappelijke missie zelf), geef GEEN chips — laat de gebruiker vrij typen.
-
-Zodra alle 5 fasen zijn doorlopen: geef EERST EXACT één \`\`\`json-codeblok met het complete, geldige UserOnboardingProfile-object (zonder userId/onboardingCompleted/createdAt — die vult de applicatie zelf aan), en PAS DAARNA een kort afsluitend configuratie-overzicht in gewone tekst. Het JSON-blok moet altijd volledig zijn, ook als het afsluitende tekstgedeelte om welke reden dan ook wordt afgebroken. Het JSON-blok heeft precies deze vorm:
-
-{
-  "schedule": {
-    "workDays": ["mon","tue","wed","thu","fri"],
-    "workDayStart": "08:30",
-    "workDayEnd": "17:30",
-    "peakFocusWindow": "early_morning",
-    "focusBlockDurationMinutes": 50,
-    "calendarIntegration": { "provider": "none", "autoTimeBlocking": false, "bufferTimeBetweenMeetingsMin": 15 }
-  },
-  "impactProfile": {
-    "missionStatement": "...",
-    "targetBeneficiaries": "...",
-    "quarterlyLeverageGoal": "...",
-    "targetDeadline": "..."
-  },
-  "vitalityProfile": {
-    "primaryDrain": "admin",
-    "stressEarlyWarningSign": "...",
-    "nonNegotiableRecoveryHabit": "...",
-    "implementationIntention": { "trigger": "...", "action": "..." }
-  },
-  "assistantPreferences": {
-    "morningBriefingTime": "08:00",
-    "eveningReviewTime": "17:30",
-    "deliveryChannel": "in_app",
-    "coachingTone": "pragmatic_action_focused"
-  }
+export function labelFor<T extends readonly { value: string; label: string }[]>(opts: T, value: string): string {
+  return opts.find((o) => o.value === value)?.label ?? value;
 }
 
-Geef dit JSON-blok pas aan het eind van fase 5, nooit eerder, en nooit zonder dat elk veld een echt antwoord van de gebruiker weerspiegelt — verzin nooit een waarde die niet ter sprake kwam.`;
-
-/** Haalt het laatste \`\`\`json-codeblok uit een berichttekst en valideert het tegen het schema.
- *  Geeft null terug als er geen (geldig) blok in staat — de aanroeper behandelt dat als
- *  "intake nog niet klaar", niet als een fout. */
+// Ongebruikt sinds de tap-first wizard de LLM-chatintake verving — /api/onboarding/chat en
+// /api/onboarding/progress importeren dit nog maar worden nergens meer aangeroepen vanuit de UI.
+// Blijft staan zodat die routes compileren zonder ze nu al te verwijderen.
 export function extractOnboardingProfile(assistantText: string): UserOnboardingProfile | null {
   const matches = [...assistantText.matchAll(/```json\s*([\s\S]*?)```/g)];
   if (matches.length === 0) return null;
@@ -110,3 +134,5 @@ export function extractOnboardingProfile(assistantText: string): UserOnboardingP
     return null;
   }
 }
+
+export const ONBOARDING_SYSTEM_PROMPT = '';

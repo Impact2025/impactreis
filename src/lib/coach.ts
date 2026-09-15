@@ -7,6 +7,14 @@
 // niet na één keer zenden. Zelfde filosofie als iris_lessons in Impact OS.
 import { createHash } from 'node:crypto';
 import { sql } from './db';
+import {
+  AVOIDANCE_BEHAVIOR_OPTIONS,
+  TIME_WASTER_OPTIONS,
+  LEVERAGE_GOAL_OPTIONS,
+  INDUSTRY_OPTIONS,
+  labelFor,
+  type UserOnboardingProfile,
+} from './onboarding';
 
 export type Technique =
   | 'grow'
@@ -77,6 +85,74 @@ export interface CoachContext {
    *  Nooit blokkerend: de coachreflectie moet ook werken als ImpactOS niet draait. */
   holding: HoldingContext | null;
   identity: CoachIdentity;
+  /** Impact Coach-persona + Bedrijfs-DNA uit de tap-first onboarding — null zolang iemand nog de
+   *  oude AIPA-intake heeft (of nooit `coachProfile.toneSeverity: 'high_challenger'` koos), dan
+   *  valt de prompt terug op de bestaande "Sparringpartner"-persona hieronder. */
+  challenger: ChallengerProfile | null;
+}
+
+export interface ChallengerProfile {
+  displayName: string;
+  gender: 'male' | 'female';
+  industryLabel: string;
+  topTimeWasterLabels: string[];
+  avoidanceBehavior: string;
+  avoidanceLabel: string;
+  quarterlyLeverageLabel: string;
+}
+
+/** Haalt de Impact Coach-persona en het Bedrijfs-DNA op uit de tap-first onboarding-wizard.
+ *  Geeft null terug zolang toneSeverity niet 'high_challenger' is — dat is de enige modus die
+ *  de wizard vandaag oplevert, maar deze check houdt de deur open voor mildere varianten later. */
+export async function loadChallengerProfile(userId: string): Promise<ChallengerProfile | null> {
+  const rows = await sql`SELECT profile FROM onboarding_profiles WHERE user_id = ${userId} AND completed = TRUE LIMIT 1`;
+  const profile = (rows as { profile: UserOnboardingProfile | null }[])[0]?.profile;
+  if (!profile?.coachProfile || !profile.businessDna || profile.coachProfile.toneSeverity !== 'high_challenger') return null;
+  const { coachProfile, businessDna } = profile;
+  return {
+    displayName: coachProfile.displayName,
+    gender: coachProfile.gender,
+    industryLabel: labelFor(INDUSTRY_OPTIONS, businessDna.industry),
+    topTimeWasterLabels: businessDna.topTimeWasters.map((w) => labelFor(TIME_WASTER_OPTIONS, w)),
+    avoidanceBehavior: businessDna.avoidanceBehavior,
+    avoidanceLabel: labelFor(AVOIDANCE_BEHAVIOR_OPTIONS, businessDna.avoidanceBehavior),
+    quarterlyLeverageLabel: labelFor(LEVERAGE_GOAL_OPTIONS, businessDna.quarterlyLeverageGoal),
+  };
+}
+
+/** MECHANISME 2 — Challenger Prompt Injection: doorzoekt de vrije tekstvelden van vandaag op
+ *  zelfondermijnend gedrag (te laag tarief, of het eigen bekende vluchtgedrag) en geeft, indien
+ *  gevonden, een harde sturingsinstructie terug die buildCoachPrompt vóór de gewone techniek-
+ *  instructie plakt. Puur keyword-based en deterministisch — geen LLM nodig om te bepalen wanneer
+ *  hij moet ingrijpen, alleen om het antwoord te formuleren. */
+function detectChallengerTrigger(ctx: CoachContext): string | null {
+  if (!ctx.challenger) return null;
+  const textFields = [
+    (ctx.today as any).intentie,
+    (ctx.today as any).focusBlok1,
+    (ctx.today as any).focusBlok2,
+    (ctx.today as any).whatWentWell,
+    (ctx.today as any).challenges,
+  ].filter((v): v is string => typeof v === 'string' && v.length > 0);
+  const combined = textFields.join(' \n ').toLowerCase();
+  if (!combined) return null;
+
+  const lowRateMatch = combined.match(/€\s?(\d{1,2})(?:[,.]|\D|$)/);
+  if (lowRateMatch && Number(lowRateMatch[1]) < 100) {
+    return `CHALLENGER_MODE_ACTIVE: ${ctx.challenger.displayName} moet direct wijzen op zelfondermijning — een tarief van €${lowRateMatch[1]} past niet bij het kwartaaldoel "${ctx.challenger.quarterlyLeverageLabel}". Vraag waarom de ROI voor de klant genegeerd wordt, en confronteer met dit hefboomdoel.`;
+  }
+
+  const AVOIDANCE_KEYWORDS: Record<string, string[]> = {
+    bouwen_techniek: ['app bouwen', 'website', 'coderen', 'programmeren', 'automatisering bouwen', 'tool bouwen'],
+    telefoontjes_uitstellen: ['nog even niet bellen', 'later bellen', 'bel morgen wel', 'geen tijd om te bellen'],
+    veilige_administratie: ['administratie bijwerken', 'mailtjes wegwerken', 'inbox opruimen', 'planning bijwerken'],
+    te_snel_ja_zeggen: ['toch maar ja gezegd', 'korting gegeven', 'akkoord gegaan met'],
+  };
+  const hitKeyword = (AVOIDANCE_KEYWORDS[ctx.challenger.avoidanceBehavior] ?? []).find((k) => combined.includes(k));
+  if (hitKeyword) {
+    return `CHALLENGER_MODE_ACTIVE: dit is exact ${ctx.challenger.displayName}'${ctx.challenger.gender === 'male' ? 's' : ''} bekende vluchtgedrag ("${ctx.challenger.avoidanceLabel}"). Noem dit patroon expliciet bij naam, en vraag direct naar de commerciële actie die hiervoor in de plaats hoort te staan.`;
+  }
+  return null;
 }
 
 /** De organisatie van de oprichter zelf (v.munster@weareimpact.nl) — de enige waarvoor de coach
@@ -158,7 +234,7 @@ export async function loadCoachContext(userId: string, organizationId: number | 
   const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
   const identity = await loadCoachIdentity(organizationId);
 
-  const [morningRows, allMorningDates, energyRows, lessonRows, contextRows, holding] = await Promise.all([
+  const [morningRows, allMorningDates, energyRows, lessonRows, contextRows, holding, challenger] = await Promise.all([
     sql`SELECT date_string, type, data FROM daily_logs
         WHERE user_id = ${userId} AND date_string IN (${today}, ${yesterday})`,
     sql`SELECT date_string FROM daily_logs
@@ -174,10 +250,12 @@ export async function loadCoachContext(userId: string, organizationId: number | 
     // De holding-brief komt uitsluitend uit Vincents eigen ImpactOS/agentos-brug — een klant-
     // organisatie als DatingAssistent heeft geen holding en mag die call nooit triggeren.
     identity.isFounder ? fetchHoldingContext() : Promise.resolve(null),
+    loadChallengerProfile(userId),
   ]);
 
   const todayMorning = (morningRows as DailyLogRow[]).find((r) => r.date_string === today && r.type === 'morning');
   const yesterdayMorning = (morningRows as DailyLogRow[]).find((r) => r.date_string === yesterday && r.type === 'morning');
+  const todayEvening = (morningRows as DailyLogRow[]).find((r) => r.date_string === today && r.type === 'evening');
 
   const streak = getCurrentStreak((allMorningDates as { date_string: string }[]).map((r) => r.date_string));
 
@@ -190,7 +268,10 @@ export async function loadCoachContext(userId: string, organizationId: number | 
   };
 
   return {
-    today: todayMorning ? parseData(todayMorning.data) : {},
+    today: {
+      ...(todayMorning ? parseData(todayMorning.data) : {}),
+      ...(todayEvening ? parseData(todayEvening.data) : {}),
+    },
     yesterday: yesterdayMorning ? parseData(yesterdayMorning.data) : null,
     streak,
     last7Days: morningRows as DailyLogRow[],
@@ -199,6 +280,7 @@ export async function loadCoachContext(userId: string, organizationId: number | 
     userContext: uc,
     holding: holding as HoldingContext | null,
     identity,
+    challenger: challenger as ChallengerProfile | null,
   };
 }
 
@@ -366,19 +448,12 @@ export function buildCoachPrompt(ctx: CoachContext, technique: Technique): strin
     ? ctx.recentEnergyLog.slice(0, 10).map((e) => `- ${e.date_string}: ${e.direction === 'gain' ? '+ gaf energie' : '- kostte energie'} — ${e.activity}${e.category ? ` (${e.category})` : ''}`).join('\n')
     : 'Nog geen energie-attributie ingevuld.';
 
-  const { identity } = ctx;
+  const { identity, challenger } = ctx;
   const object = identity.addressName || 'deze ondernemer';
   const possessive = identity.addressName ? 'zijn' : 'hun';
   const instructions = techniqueInstructions(identity);
 
-  return `Je bent De Sparringpartner: ${identity.addressName ? `${identity.addressName}s` : 'de'} persoonlijke business- én welzijnscoach, niet gescheiden maar gecombineerd — precies zoals dat in de praktijk voor ${identity.businessContext} altijd door elkaar loopt. Je bent niet ${possessive} klantenservice-bot en je coacht niemand anders dan ${object}.
-
-Belangrijke grens: je diagnosticeert of behandelt nooit psychische of medische klachten. Zie je een signaal van aanhoudende uitputting, burn-out, angst of iets vergelijkbaars dat langer dan een paar dagen aanhoudt, benoem dat expliciet en adviseer professionele hulp — coach dan niet verder met een techniek.
-
-GEKOZEN TECHNIEK VOOR VANDAAG: ${TECHNIQUE_LABELS[technique]}
-${instructions[technique]}
-
-SESSIE VAN VANDAAG (${todayDate}, ${dayName}):
+  const sessionBlock = `SESSIE VAN VANDAAG (${todayDate}, ${dayName}):
 - Energie: ${ctx.today.energyLevel ?? 'onbekend'}/10
 - Slaap: ${ctx.today.sleepQuality ?? 'onbekend'}/10
 - Wakker om: ${ctx.today.wakeTime ?? 'onbekend'}
@@ -392,7 +467,46 @@ ${energyBlock}
 
 GELEERDE PATRONEN OVER ${identity.addressName ? identity.addressName.toUpperCase() : 'DEZE ONDERNEMER'} (gebruik deze, herhaal ze niet letterlijk):
 ${lessonsBlock}
-${holdingBlock(ctx.holding)}
+${holdingBlock(ctx.holding)}`;
+
+  if (challenger) {
+    const trigger = detectChallengerTrigger(ctx);
+    return `Jij bent ${challenger.displayName}, de exclusieve executive AI-challenger van ${object}.
+Jouw doel is NIET om aardig gevonden te worden, noch om als therapeut op te treden. Jouw doel is om ${object} te dwingen tot meedogenloze executie, strategische hefbomen en het doorbreken van comfortabel uitstelgedrag.
+
+JOUW KARAKTER:
+- Nuchter, scherp, directief, zakelijk en uiterst beknopt (maximaal 2-3 zinnen per reactie).
+- Wars van corporate jargon, wellness-clichés en theoretische modellen.
+- Je spreekt ${object} aan op ooghoogte als een doorgewinterde DGA-mentor.
+
+Belangrijke grens: je diagnosticeert of behandelt nooit psychische of medische klachten. Zie je een signaal van aanhoudende uitputting, burn-out, angst of iets vergelijkbaars dat langer dan een paar dagen aanhoudt, benoem dat expliciet en adviseer professionele hulp — challenge dan niet verder.
+
+CONTEXT VAN DEZE ONDERNEMER:
+- Sector: ${challenger.industryLabel}.
+- Primaire hefboomdoel (90 dagen): ${challenger.quarterlyLeverageLabel}.
+- Gekende valkuil: ${challenger.avoidanceLabel}.
+- Top tijdvreters: ${challenger.topTimeWasterLabels.join(', ')}.
+
+GEDRAGSREGELS:
+1. FOCUS OP DE KIKKER: vraag uitsluitend naar de moeilijkste commerciële of operationele taak van vandaag. Weiger vage antwoorden zoals 'administratie' of 'website updaten'.
+2. CHALLENGE UITSTELGEDRAG: zodra ${object} vlucht in veilig bouwen, coderen of interne regelzaken in plaats van klantcontact en margeverbetering, grijp je direct in en noem je de valkuil bij naam.
+3. TARIEVEN EN MARGE: accepteer nooit dat ${object} zichzelf onder de marktprijs verkoopt. Herinner eraan dat ROI en vrijgespeelde uren verkocht worden, geen uurtjes.
+4. EXECUTIE BOVEN ANALYSE: breek elk knelpunt direct af tot een actie die binnen 15 minuten gestart kan worden. Eindig altijd met een concrete vraag of aansporing.
+
+${trigger ? `${trigger}\n\n` : ''}(Gekozen coachingslens op de achtergrond, gebruik dit alleen om je vraag scherper te maken, noem de techniek zelf nooit: ${TECHNIQUE_LABELS[technique]} — ${instructions[technique]})
+
+${sessionBlock}
+Schrijf een reactie van maximaal 2-3 zinnen in het Nederlands, in de jij-vorm. Geen wollige inleiding. Eindig altijd met precies één concrete vraag of aansporing aan ${object}.`;
+  }
+
+  return `Je bent De Sparringpartner: ${identity.addressName ? `${identity.addressName}s` : 'de'} persoonlijke business- én welzijnscoach, niet gescheiden maar gecombineerd — precies zoals dat in de praktijk voor ${identity.businessContext} altijd door elkaar loopt. Je bent niet ${possessive} klantenservice-bot en je coacht niemand anders dan ${object}.
+
+Belangrijke grens: je diagnosticeert of behandelt nooit psychische of medische klachten. Zie je een signaal van aanhoudende uitputting, burn-out, angst of iets vergelijkbaars dat langer dan een paar dagen aanhoudt, benoem dat expliciet en adviseer professionele hulp — coach dan niet verder met een techniek.
+
+GEKOZEN TECHNIEK VOOR VANDAAG: ${TECHNIQUE_LABELS[technique]}
+${instructions[technique]}
+
+${sessionBlock}
 Schrijf een coach-reflectie van 120-180 woorden in het Nederlands, in de jij-vorm, warm maar scherp. Volg de aangewezen techniek. Eindig met precies één concrete vraag aan ${object} — geen waslijst, geen bullet points, gewone paragrafen.`;
 }
 
@@ -642,6 +756,41 @@ function slugifyPattern(text: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '')
     .slice(0, 60);
+}
+
+/** MECHANISME 1 — Kikker-knop: genereert 3 korte, direct te gebruiken openingszinnen voor het
+ *  telefoontje/bericht dat wordt uitgesteld, gebaseerd op het bekende vluchtgedrag en de top-
+ *  tijdvreters uit de onboarding. Geen audioprimer (geen voice-assets beschikbaar) — alleen tekst,
+ *  bedoeld om precies bij de 15-minuten countdown te verschijnen zodat er niet nagedacht hoeft te
+ *  worden, alleen getypt of gebeld. */
+export async function generateFrogOpeners(userId: string, taskDescription: string | null): Promise<{ displayName: string; lines: string[] }> {
+  const challenger = await loadChallengerProfile(userId);
+  const displayName = challenger?.displayName ?? 'je coach';
+  const task = taskDescription?.trim() || challenger?.topTimeWasterLabels[0] || 'de taak die je uitstelt';
+
+  const prompt = `Jij bent ${displayName}, een nuchtere, directieve executive-challenger voor een ondernemer.
+Context: de ondernemer stelt dit uit: "${task}"${challenger ? `. Bekende valkuil: ${challenger.avoidanceLabel}.` : '.'}
+Geef EXACT 3 korte openingszinnen (max 20 woorden elk) die de ondernemer letterlijk kan gebruiken om dit gesprek of bericht nu te starten, zonder verder na te denken. Geen inleiding, geen uitleg — alleen de 3 zinnen, elk op een eigen regel, genummerd "1." "2." "3.".`;
+
+  try {
+    const raw = await openRouterChat(prompt, 200);
+    const lines = raw
+      .split('\n')
+      .map((l) => l.replace(/^\s*\d+[.)]\s*/, '').trim())
+      .filter(Boolean)
+      .slice(0, 3);
+    if (lines.length === 3) return { displayName, lines };
+  } catch (err) {
+    console.error('Kikker-opener LLM error:', err);
+  }
+  return {
+    displayName,
+    lines: [
+      `Hoi, ik bel je nu even over ${task} — heb je twee minuten?`,
+      `Ik wilde dit niet langer laten liggen: ${task}. Zullen we dat nu afronden?`,
+      `Kort en direct: ${task}. Kunnen we dat nu even regelen?`,
+    ],
+  };
 }
 
 export type CoachAnalysisResult =
