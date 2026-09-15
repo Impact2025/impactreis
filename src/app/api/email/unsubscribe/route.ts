@@ -26,7 +26,7 @@ function page(title: string, message: string): string {
 <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>${title}</title></head>
 <body style="margin:0;padding:0;background:#f4f3f1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
   <div style="max-width:420px;margin:80px auto;padding:0 20px;text-align:center;">
-    <p style="font-size:11px;color:#7D8C7B;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;margin:0 0 16px;">myAiPA</p>
+    <p style="font-size:11px;color:#7D8C7B;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;margin:0 0 16px;">Sparren.app</p>
     <h1 style="font-size:22px;font-weight:700;color:#2f312f;margin:0 0 12px;">${title}</h1>
     <p style="font-size:14px;color:#444842;line-height:1.6;">${message}</p>
   </div>
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
   }
 
   return new NextResponse(
-    page('Afgemeld', `Je ontvangt geen ${LABELS[type]} meer. Je andere myAiPA-mails blijven gewoon binnenkomen — pas je voorkeuren aan in de instellingen als je meer wilt uitzetten.`),
+    page('Afgemeld', `Je ontvangt geen ${LABELS[type]} meer. Je andere Sparren.app-mails blijven gewoon binnenkomen — pas je voorkeuren aan in de instellingen als je meer wilt uitzetten.`),
     { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
   );
 }

@@ -31,7 +31,7 @@ const powerQuestions = [
 ];
 
 export default function FocusPage() {
-  // Standaard 25 min (Pomodoro); overschreven zodra de AIPA-intake een voorkeur oplevert
+  // Standaard 25 min (Pomodoro); overschreven zodra de onboarding een voorkeur oplevert
   // (focusBlockDurationMinutes: 25 | 50 | 90) — zie fetchWorkMinutes hieronder.
   const [workMinutes, setWorkMinutes] = useState(25);
   const [timeLeft, setTimeLeft] = useState(25 * 60);

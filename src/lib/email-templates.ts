@@ -1,6 +1,6 @@
 // Korte, on-brand affirmaties voor de rituelen-mails (motivatie/herinnering/sessie-analyse/
 // streak/weekrapport) — bewust generiek en professioneel i.p.v. de vroegere persoonlijk-aan-
-// Vincent geschreven quote, want deze mails gaan nu naar alle myAiPA-klanten. Niet gebruikt op
+// Vincent geschreven quote, want deze mails gaan nu naar alle Sparren.app-klanten. Niet gebruikt op
 // puur transactionele mails (welkom, wachtwoord-reset) — daar past geen affirmatie-toon.
 const QUOTES = [
   'Rust is geen luxe — het is de voorwaarde voor scherpe beslissingen.',
@@ -47,7 +47,7 @@ function base(title: string, preview: string, body: string, opts: BaseOptions = 
 
       <!-- Header -->
       <tr><td style="background:#2f312f;border-radius:20px 20px 0 0;padding:32px 36px;">
-        <p style="margin:0 0 16px;font-size:11px;color:#7D8C7B;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;">myAiPA</p>
+        <p style="margin:0 0 16px;font-size:11px;color:#7D8C7B;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;">Sparren.app</p>
         <h1 style="margin:0;font-size:26px;font-weight:700;color:#ffffff;line-height:1.3;">${title}</h1>
       </td></tr>
 ${quoteBlock}
@@ -58,7 +58,7 @@ ${quoteBlock}
 
       <!-- Footer -->
       <tr><td style="padding:20px 0;text-align:center;">
-        <p style="margin:0 0 6px;font-size:11px;color:#747872;">myAiPA &bull; Executive AI-Assistant &amp; Mindset Copiloot</p>
+        <p style="margin:0 0 6px;font-size:11px;color:#747872;">Sparren.app &bull; Geen ja-knikker. Wel een spiegel.</p>
         ${unsubscribeLine ? `<p style="margin:0;font-size:11px;">${unsubscribeLine}</p>` : ''}
       </td></tr>
 
@@ -505,7 +505,7 @@ export function adhdRapportEmail(data: AdhdRapportData, appUrl: string): { subje
 // ─── Template 4: Wachtwoord reset ────────────────────────────────────────────
 
 export function resetWachtwoordEmail(resetUrl: string): { subject: string; html: string } {
-  const subject = '🔑 Wachtwoord resetten — myAiPA';
+  const subject = '🔑 Wachtwoord resetten — Sparren.app';
 
   const body = `
     <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Wachtwoord vergeten?</p>
@@ -532,19 +532,19 @@ export function resetWachtwoordEmail(resetUrl: string): { subject: string; html:
 // ─── Template 7: Welkomstmail ────────────────────────────────────────────────
 
 export function welcomeEmail(appUrl: string): { subject: string; html: string } {
-  const subject = 'Welkom bij myAiPA — laten we je copiloot instellen';
+  const subject = 'Welkom bij Sparren.app — laten we je copiloot instellen';
 
   const body = `
     <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Je account staat klaar.</p>
     <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
-      myAiPA wordt pas echt waardevol zodra we weten wie je bent, wat je doelen zijn en hoe je agenda eruitziet.
+      Sparren.app wordt pas echt waardevol zodra we weten wie je bent, wat je doelen zijn en hoe je agenda eruitziet.
       Dat gebeurt in één kort intakegesprek met je AI-copiloot — geen formulier, gewoon een gesprek.
     </p>
 
     ${section('Wat je zo meteen doet', `
       🎯 &nbsp;Je missie en belangrijkste kwartaaldoel scherp krijgen<br/>
       🗓️ &nbsp;Je werkritme en energiepatroon delen<br/>
-      🛡️ &nbsp;Instellen hoe myAiPA je agenda mag bewaken
+      🛡️ &nbsp;Instellen hoe Sparren.app je agenda mag bewaken
     `)}
 
     <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 28px;">Het kost ongeveer 10 minuten. Daarna begint elke ochtend met een briefing die echt op jou is toegesneden.</p>
@@ -552,7 +552,7 @@ export function welcomeEmail(appUrl: string): { subject: string; html: string } 
     <div style="text-align:center;">${btn('Start de intake →', `${appUrl}/onboarding`)}</div>
   `;
 
-  return { subject, html: base('Welkom bij myAiPA', subject, body) };
+  return { subject, html: base('Welkom bij Sparren.app', subject, body) };
 }
 
 // ─── Template 8: Onboarding-nudge ────────────────────────────────────────────
@@ -563,7 +563,7 @@ export function onboardingNudgeEmail(appUrl: string, unsubscribeUrl?: string): {
   const body = `
     <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Je hebt een account, maar nog geen copiloot.</p>
     <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
-      Zonder de korte intake weet myAiPA nog niet wie je bent of wat je doelen zijn — dus kan het je nog niet écht helpen.
+      Zonder de korte intake weet Sparren.app nog niet wie je bent of wat je doelen zijn — dus kan het je nog niet écht helpen.
       Het kost 10 minuten en daarna is elke ochtendbriefing persoonlijk.
     </p>
 
@@ -611,8 +611,8 @@ const WINBACK_COPY: Record<3 | 10 | 30, { title: string; body: string; cta: stri
   },
   10: {
     title: 'Tien dagen stil — alles goed?',
-    body: 'Soms verandert er iets: drukte, een andere prioriteit, of het paste even niet meer. Dat is prima. Mocht er iets zijn waar myAiPA je anders in kan ondersteunen, laat het gerust weten door gewoon weer in te loggen.',
-    cta: 'Open myAiPA →',
+    body: 'Soms verandert er iets: drukte, een andere prioriteit, of het paste even niet meer. Dat is prima. Mocht er iets zijn waar Sparren.app je anders in kan ondersteunen, laat het gerust weten door gewoon weer in te loggen.',
+    cta: 'Open Sparren.app →',
   },
   30: {
     title: 'Een maand geleden — nog steeds welkom',

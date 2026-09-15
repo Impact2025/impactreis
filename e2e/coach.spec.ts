@@ -21,7 +21,7 @@ test.describe('Coach — guard-pad', () => {
     page.on('pageerror', (err) => pageErrors.push(err.message));
 
     await page.goto('/coach');
-    await expect(page.getByRole('heading', { name: 'AIPA' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Sparren' })).toBeVisible();
 
     expect(pageErrors, `Onverwachte client-side exceptions: ${pageErrors.join('; ')}`).toEqual([]);
   });

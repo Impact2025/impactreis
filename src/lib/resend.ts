@@ -32,4 +32,4 @@ export function getResend(): Resend {
  * reminders, weekrapport, winback, ...) will silently fail to deliver.
  */
 export const FROM_EMAIL =
-  process.env.RESEND_FROM_EMAIL || 'myAiPA <onboarding@resend.dev>';
+  process.env.RESEND_FROM_EMAIL || 'Sparren.app <onboarding@resend.dev>';

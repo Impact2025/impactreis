@@ -28,7 +28,7 @@ const dashboardTourSteps: TourStep[] = [
   {
     target: '[data-tour="golden-egg"]',
     title: 'Golden Egg — jouw Focus van de dag',
-    content: 'Dit is het ene doel dat er vandaag het meest toe doet. AIPA kiest deze op basis van je actieve Rocks (kwartaaldoelen) — zo weet je bij twijfel altijd waar je energie heen moet.',
+    content: 'Dit is het ene doel dat er vandaag het meest toe doet. Sparren kiest deze op basis van je actieve Rocks (kwartaaldoelen) — zo weet je bij twijfel altijd waar je energie heen moet.',
   },
   {
     target: '[data-tour="leverage-tasks"]',
@@ -43,7 +43,7 @@ const dashboardTourSteps: TourStep[] = [
   },
   {
     target: '[data-tour="aipa"]',
-    title: 'AIPA — je coach',
+    title: 'Sparren — je coach',
     content: 'Praat hier met je AI-coach voor een reflectie op je dag, een sparringspartner bij lastige keuzes, of hulp om patronen in je gedrag te herkennen.',
     placement: 'top',
   },
@@ -274,16 +274,16 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <Image
                 src="/logo.png"
-                alt="myAiPA logo"
+                alt="Sparren.app logo"
                 width={36}
                 height={36}
                 className="rounded-full"
                 priority
               />
               <div className="leading-tight">
-                <p className="text-[13px] font-bold text-ink">myAiPA</p>
+                <p className="text-[13px] font-bold text-ink">Sparren.app</p>
                 <p className="text-[9px] font-bold tracking-[0.18em] text-primary uppercase">
-                  Jouw persoonlijke AI PA
+                  Geen ja-knikker. Wel een spiegel.
                 </p>
               </div>
             </div>
@@ -355,7 +355,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* ══ PROACTIEVE SIGNAALKAART (AIPA) ══════════════════ */}
+          {/* ══ PROACTIEVE SIGNAALKAART (Sparren) ══════════════════ */}
           {todayDayType !== 'free' && showProactiveSignal && proactiveSignal && (
             <div className="rounded-card border border-accent/25 bg-accent-soft p-4 mb-5">
               <div className="flex items-start gap-3">
@@ -363,14 +363,14 @@ export default function DashboardPage() {
                   <AlertCircle size={17} className="text-accent" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-bold tracking-[0.15em] text-accent uppercase mb-1">AIPA signaleert</p>
+                  <p className="text-[9px] font-bold tracking-[0.15em] text-accent uppercase mb-1">Sparren signaleert</p>
                   <p className="text-[13px] text-ink leading-relaxed mb-3">{proactiveSignal.message}</p>
                   <div className="flex items-center gap-3">
                     <Link
                       href="/coach"
                       className="text-[12px] font-semibold text-accent"
                     >
-                      Bespreek met AIPA →
+                      Bespreek met Sparren →
                     </Link>
                     <button
                       onClick={dismissSignal}
@@ -618,7 +618,7 @@ export default function DashboardPage() {
             const recoveryUrl = buildRecoveryProposalUrl(
               recoveryStart,
               60,
-              'Hersteltijd (voorgesteld door AIPA)',
+              'Hersteltijd (voorgesteld door Sparren)',
               'Voorgesteld na een drukke dag met veel vergaderingen — even geen scherm, even geen taak.'
             );
 
@@ -673,7 +673,7 @@ export default function DashboardPage() {
                 >
                   <Sparkles size={14} className="text-primary flex-shrink-0" />
                   <span className="text-[12px] font-medium text-ink flex-1">
-                    Drukke dag — AIPA stelt een uur hersteltijd voor na je laatste afspraak
+                    Drukke dag — Sparren stelt een uur hersteltijd voor na je laatste afspraak
                   </span>
                   <ChevronRight size={14} className="text-primary flex-shrink-0" />
                 </a>
@@ -758,7 +758,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* ══ AIPA ═════════════════════════════════════════════ */}
+          {/* ══ Sparren ═════════════════════════════════════════════ */}
           <Link
             href="/coach"
             data-tour="aipa"
@@ -769,7 +769,7 @@ export default function DashboardPage() {
                 <Sparkles size={18} className="text-primary-light" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-bold text-on-surface-inverse">AIPA</p>
+                <p className="text-[13px] font-bold text-on-surface-inverse">Sparren</p>
                 <p className="text-[11px] text-on-surface-inverse/50 leading-snug">Je business- en welzijnscoach — vraag een reflectie op je dag</p>
               </div>
               <ChevronRight size={16} className="text-on-surface-inverse/40 flex-shrink-0" />

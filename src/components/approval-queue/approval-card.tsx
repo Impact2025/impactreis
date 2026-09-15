@@ -13,7 +13,7 @@ const AGENT_LABELS: Record<string, string> = {
   bram: 'Bram',
   noor: 'Noor',
   toby: 'Toby',
-  coach: 'AIPA',
+  coach: 'Sparren',
 };
 
 // Swipe-drempel: onder dit aantal pixels veert de kaart terug i.p.v. door te schieten naar

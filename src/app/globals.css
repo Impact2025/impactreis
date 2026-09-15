@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  /* ══ MyAIPA design tokens — FlowPA Narrative palette ═══════ */
+  /* ══ Sparren.app design tokens — FlowPA Narrative palette ═══ */
   /* Nordic minimalism: warm off-white surfaces, sage/slate/terracotta
      accents, dark fills are warm charcoal (inverse-surface), never pure black. */
   --bg: #faf9f6;

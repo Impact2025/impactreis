@@ -33,7 +33,7 @@ function useDemoAccess(): boolean {
 const TABS = [
   { href: '/dashboard', icon: CalendarCheck, label: 'Vandaag' },
   { href: '/focus',     icon: Target,        label: 'Focus'   },
-  { href: '/coach',     icon: Sparkles,      label: 'AIPA'    },
+  { href: '/coach',     icon: Sparkles,      label: 'Sparren' },
   { href: '/wins',      icon: Trophy,        label: 'Wins'    },
 ];
 
@@ -147,7 +147,7 @@ export function BottomNav({ fab }: BottomNavProps) {
             );
           })}
 
-          {/* Center: AIPA — elevated pill, or FAB when provided */}
+          {/* Center: Sparren — elevated pill, or FAB when provided */}
           <div className="flex flex-col items-center flex-1 relative">
             {fab ? (
               <button
@@ -230,7 +230,7 @@ export function BottomNav({ fab }: BottomNavProps) {
           >
             <div className="sticky top-0 bg-surface/95 backdrop-blur-md px-5 pt-4 pb-3 flex items-center justify-between border-b border-line">
               <div>
-                <p className="text-[9px] font-bold tracking-[0.18em] text-primary uppercase">myAiPA</p>
+                <p className="text-[9px] font-bold tracking-[0.18em] text-primary uppercase">Sparren.app</p>
                 <h2 className="text-[18px] font-bold text-ink">Alles op één plek</h2>
               </div>
               <button

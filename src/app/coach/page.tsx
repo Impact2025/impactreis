@@ -183,7 +183,7 @@ export default function CoachPage() {
           <Link href="/dashboard" className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-sunken transition-colors">
             <ArrowLeft size={18} className="text-ink" />
           </Link>
-          <h1 className="text-[17px] font-semibold text-ink">AIPA</h1>
+          <h1 className="text-[17px] font-semibold text-ink">Sparren</h1>
         </div>
       </div>
 

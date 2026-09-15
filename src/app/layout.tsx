@@ -16,13 +16,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MyAIPA",
-  description: "MyAIPA — jouw persoonlijke AI PA voor Rituelen, Doelen, Wins",
+  title: "Sparren.app",
+  description: "Sparren.app — geen ja-knikker, wel een spiegel. Je dagelijkse executive challenger.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "MyAIPA",
+    title: "Sparren.app",
     startupImage: [
       {
         url: "/icons/icon-512x512.png",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#faf8f5",
+  themeColor: "#0f2646",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

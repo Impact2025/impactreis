@@ -52,7 +52,7 @@ const morningQuestions = [
     suggestions: [
       'Denk aan alledaagse dingen: koffie, een wandeling, een gesprek',
       'Als het antwoord elke dag hetzelfde is, is dat prima — herhaling is genieting',
-      'Merk je dit steeds leeg blijft? Bespreek het met AIPA in de coach',
+      'Merk je dit steeds leeg blijft? Bespreek het met Sparren in de coach',
     ],
   },
   {

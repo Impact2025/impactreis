@@ -60,7 +60,7 @@ function ResetPasswordForm() {
   return (
     <>
       <div className="mb-8">
-        <Image src="/logo.png" alt="myAiPA" width={48} height={48} className="rounded-[14px] mb-5" />
+        <Image src="/logo.png" alt="Sparren.app" width={48} height={48} className="rounded-[14px] mb-5" />
         <h1 className="text-[28px] font-bold text-ink tracking-tight">
           Nieuw wachtwoord
         </h1>

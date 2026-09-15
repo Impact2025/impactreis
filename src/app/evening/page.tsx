@@ -472,7 +472,7 @@ function EveningContent() {
               const recoveryUrl = buildRecoveryProposalUrl(
                 tomorrow,
                 30,
-                'Hersteltijd ochtend (voorgesteld door Aipa)',
+                'Hersteltijd ochtend (voorgesteld door Sparren)',
                 'Voorgesteld na een dag met lage energie — begin morgen rustig, geen taken.'
               );
               return (
@@ -554,7 +554,7 @@ function EveningContent() {
             </div>
           </div>
 
-          {/* Herstelbewaking — alleen zichtbaar als de AIPA-intake een gewoonte heeft opgeleverd */}
+          {/* Herstelbewaking — alleen zichtbaar als de onboarding een gewoonte heeft opgeleverd */}
           {recoveryHabit && (
             <div className="rounded-[16px] border border-line p-5">
               <div className="flex items-center gap-2.5 mb-4">

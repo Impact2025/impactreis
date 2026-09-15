@@ -88,7 +88,7 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="text-center mb-10">
-          <Image src="/logo.png" alt="myAiPA" width={48} height={48} className="rounded-[14px] mx-auto mb-5" priority />
+          <Image src="/logo.png" alt="Sparren.app" width={48} height={48} className="rounded-[14px] mx-auto mb-5" priority />
           <h1 className="text-[28px] font-bold text-ink tracking-tight">
             Welkom terug
           </h1>
