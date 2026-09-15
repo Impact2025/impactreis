@@ -39,7 +39,17 @@ const SCORE_COLORS: Record<number, { selected: string; text: string }> = {
 const defaultAdhdScores = () =>
   Object.fromEntries(SYMPTOMS.map((s) => [s, 0])) as Record<string, number>;
 
+type EveningVerdict = 'waarde_verkocht' | 'gered_door_operatie' | 'gevlucht_in_veiligheid';
+
+const VERDICT_OPTIONS: { value: EveningVerdict; label: string }[] = [
+  { value: 'waarde_verkocht', label: 'Waarde Verkocht / Kikker Afgemaakt' },
+  { value: 'gered_door_operatie', label: 'Gered door Operatie' },
+  { value: 'gevlucht_in_veiligheid', label: 'Gevlucht in Veilige Klussen' },
+];
+
 interface EveningRitualData {
+  eveningVerdict: EveningVerdict | null;
+  eveningVerdictDetail: string;
   whatWentWell: string;
   biggestWin: string;
   whatLearned: string;
@@ -71,6 +81,8 @@ function EveningContent() {
   const isRecovery = dateParam !== null && dateParam !== getToday(settings.timezone);
 
   const [formData, setFormData] = useState<EveningRitualData>({
+    eveningVerdict: null,
+    eveningVerdictDetail: '',
     whatWentWell: '',
     biggestWin: '',
     whatLearned: '',
@@ -155,6 +167,7 @@ function EveningContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.eveningVerdict) return;
     setSaving(true);
     try {
       localStorage.setItem(`adhdLog_${targetDate}`, JSON.stringify(adhdScores));
@@ -299,6 +312,47 @@ function EveningContent() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* MECHANISME 3 — De Commerciële Realiteitstoets */}
+          <div className="rounded-[16px] border border-line p-5">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-[10px] bg-red-50 flex items-center justify-center">
+                <TrendingDown size={15} className="text-red-500" />
+              </div>
+              <div>
+                <label className="block text-[14px] font-semibold text-ink">Realiteitstoets</label>
+                <p className="text-[11px] text-ink-soft">Wat is er vandaag écht gebeurd met je kikker?</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {VERDICT_OPTIONS.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, eveningVerdict: o.value })}
+                  className={`w-full text-left rounded-[12px] px-4 py-3 text-[13px] transition-colors ${
+                    formData.eveningVerdict === o.value ? 'bg-surface-inverse text-white font-medium' : 'bg-surface-sunken text-ink'
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            {formData.eveningVerdict === 'gevlucht_in_veiligheid' && (
+              <div className="mt-4 pt-4 border-t border-surface-sunken">
+                <p className="text-[13px] text-ink font-medium mb-2">
+                  Welke veilige taak heeft je afgeleid, en staat deze taak morgen om 09:00 uur ingepland?
+                </p>
+                <input
+                  type="text"
+                  value={formData.eveningVerdictDetail}
+                  onChange={(e) => setFormData({ ...formData, eveningVerdictDetail: e.target.value })}
+                  placeholder="Bijv. inbox opgeruimd — morgen 09:00 het telefoontje wél doen"
+                  className="w-full px-4 py-3 bg-surface-sunken border border-line focus:border-primary outline-none rounded-[12px] text-[14px] text-ink placeholder-ink-soft transition-colors"
+                />
+              </div>
+            )}
+          </div>
+
           {/* What went well */}
           <div className="rounded-[16px] border border-line p-5">
             <div className="flex items-center gap-2.5 mb-4">
@@ -603,7 +657,7 @@ function EveningContent() {
           {/* Submit */}
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || !formData.eveningVerdict}
             className="w-full py-4 bg-surface-inverse text-white text-[15px] font-semibold rounded-[16px] flex items-center justify-center gap-2.5 active:scale-[0.98] transition-transform disabled:opacity-50"
           >
             {saving ? (

@@ -82,6 +82,7 @@ export default function DashboardPage() {
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [calendarConfigured, setCalendarConfigured] = useState(false);
   const [leverageGoal, setLeverageGoal] = useState<string | null>(null);
+  const [commercialDensity, setCommercialDensity] = useState<{ percentage: number | null; verdictsLogged: number } | null>(null);
   const [proactiveSignal, setProactiveSignal] = useState<{ signal: boolean; patternKey: string; message: string } | null>(null);
   const [signalDismissed, setSignalDismissed] = useState(false);
   const [proposals, setProposals] = useState<any[]>([]);
@@ -108,7 +109,7 @@ export default function DashboardPage() {
 
   const fetchData = async (retry = 0) => {
     try {
-      const [goalsRes, focusRes, winsRes, calendarRes, onboardingRes, signalRes, proposalsRes, morningLogRes] = await Promise.allSettled([
+      const [goalsRes, focusRes, winsRes, calendarRes, onboardingRes, signalRes, proposalsRes, morningLogRes, densityRes] = await Promise.allSettled([
         api.goals.getAll(),
         api.focus.getAll(),
         api.wins.getAll(),
@@ -117,7 +118,12 @@ export default function DashboardPage() {
         api.coach.proactiveSignal(),
         api.calendar.proposals.list(),
         api.logs.getByTypeAndDate('morning', getToday(settings.timezone)),
+        fetch('/api/coach/commerciele-dichtheid', { headers: { Authorization: `Bearer ${AuthService.getToken()}` } }).then((r) => (r.ok ? r.json() : null)),
       ]);
+
+      if (densityRes.status === 'fulfilled' && densityRes.value) {
+        setCommercialDensity(densityRes.value);
+      }
 
       if (morningLogRes.status === 'fulfilled' && Array.isArray(morningLogRes.value) && morningLogRes.value[0]) {
         const raw = morningLogRes.value[0].data;
@@ -735,6 +741,21 @@ export default function DashboardPage() {
 
           {/* ══ KIKKER-KNOP ══════════════════════════════════════ */}
           <FrogButton />
+
+          {/* ══ COMMERCIËLE DICHTHEID (mechanisme 4) ═════════════ */}
+          {commercialDensity && commercialDensity.percentage !== null && (
+            <div className="rounded-card border border-line p-4 mb-6 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full border-4 border-primary/20 flex items-center justify-center shrink-0 relative">
+                <span className="text-[15px] font-bold text-ink">{commercialDensity.percentage}%</span>
+              </div>
+              <div>
+                <p className="text-[13px] font-bold text-ink">Commerciële Dichtheid</p>
+                <p className="text-[11px] text-ink-soft leading-snug">
+                  {commercialDensity.verdictsLogged}x avondtoets deze week — % waarin waarde is verkocht i.p.v. gevlucht in veilige klussen
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* ══ AIPA ═════════════════════════════════════════════ */}
           <Link

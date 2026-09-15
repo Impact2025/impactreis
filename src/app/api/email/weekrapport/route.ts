@@ -7,6 +7,12 @@ import { getRecipients, recordEmailSent, unsubscribeUrl } from '@/lib/email-reci
 
 const EMAIL_TYPE = 'weekly_report';
 
+const FOCUS_CATEGORY_LABELS: Record<string, string> = {
+  commercie: 'Commercie / Sales',
+  proces: 'Proces & Automatisering',
+  klantwerk: 'Klantwerk / Uitvoering',
+};
+
 async function openRouterChat(prompt: string): Promise<string> {
   try {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -65,15 +71,19 @@ async function buildAndSend(userId: number, toEmail: string, unsubUrl?: string) 
     const d = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
     if (typeof d.energyLevel === 'number') { totalEnergy += d.energyLevel; energyCount++; }
     if (typeof d.sleepQuality === 'number') { totalSleep += d.sleepQuality; sleepCount++; }
-    if (d.focusBlok1?.onderwerp) {
+    // focusBlok1/2 zijn sinds Impact Coach categorie+taaknaam i.p.v. vrije onderwerp/doel-tekst
+    // (zie src/app/morning/page.tsx) — oudere logs kunnen nog het oude onderwerp-veld hebben.
+    const label1 = d.focusBlok1?.category ? FOCUS_CATEGORY_LABELS[d.focusBlok1.category] ?? d.focusBlok1.category : d.focusBlok1?.onderwerp;
+    const label2 = d.focusBlok2?.category ? FOCUS_CATEGORY_LABELS[d.focusBlok2.category] ?? d.focusBlok2.category : d.focusBlok2?.onderwerp;
+    if (label1) {
       focusBlokkengepland++;
       if (topFocusBlokken.length < 4)
-        topFocusBlokken.push({ time: '08:30', onderwerp: d.focusBlok1.onderwerp, doel: d.focusBlok1.doel || '' });
+        topFocusBlokken.push({ time: '08:30', onderwerp: label1, doel: d.focusBlok1.taaknaam || d.focusBlok1.doel || '' });
     }
-    if (d.focusBlok2?.onderwerp) {
+    if (label2) {
       focusBlokkengepland++;
       if (topFocusBlokken.length < 4)
-        topFocusBlokken.push({ time: '12:30', onderwerp: d.focusBlok2.onderwerp, doel: d.focusBlok2.doel || '' });
+        topFocusBlokken.push({ time: '12:30', onderwerp: label2, doel: d.focusBlok2.taaknaam || d.focusBlok2.doel || '' });
     }
   }
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Sunrise, ArrowLeft, ArrowRight, CheckCircle, Heart, Target, Zap, Brain, CalendarClock, Mountain, Coffee, Sun, GlassWater } from 'lucide-react';
+import { Sunrise, ArrowLeft, ArrowRight, CheckCircle, Heart, Target, Zap, Brain, CalendarClock, Mountain, Coffee, Sun, GlassWater, Mic } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { BottomNav } from '@/components/ui/bottom-nav';
@@ -11,6 +11,14 @@ import { getToday } from '@/lib/weekflow.service';
 import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { MeditationPlayer } from '@/components/meditations/MeditationPlayer';
 import { getMeditationsByCategory } from '@/lib/meditations/catalog';
+import { useSpeechRecognition } from '@/hooks/use-speech';
+import { TIME_WASTER_OPTIONS } from '@/lib/onboarding';
+
+const FOCUS_CATEGORY_OPTIONS = [
+  { value: 'commercie', label: 'Commercie / Sales' },
+  { value: 'proces', label: 'Proces & Automatisering' },
+  { value: 'klantwerk', label: 'Klantwerk / Uitvoering' },
+] as const;
 
 type Step = 'dagtype' | 'centering' | 'intentie' | 'focusblokken' | 'status' | 'dankbaarheid' | 'affirmatie' | 'done';
 type DayType = 'focus' | 'buffer' | 'free';
@@ -57,7 +65,7 @@ function getDailyGratitudePresets(dateKey: string, count = 6): string[] {
 const STEP_LABELS: Record<Step, string> = {
   dagtype: 'Dagtype',
   centering: 'Centering',
-  intentie: 'Intentie',
+  intentie: 'De Kikker',
   focusblokken: 'Focus Blokken',
   status: 'Status',
   dankbaarheid: 'Dankbaarheid',
@@ -72,8 +80,8 @@ const DAY_TYPE_OPTIONS: { value: DayType; label: string; description: string }[]
 ];
 
 interface FocusBlok {
-  onderwerp: string;
-  doel: string;
+  category: string | null;
+  taaknaam: string;
 }
 
 interface PreWork {
@@ -85,6 +93,8 @@ interface PreWork {
 interface MorningData {
   dayType: DayType | null;
   preWork: PreWork;
+  kikkerCategory: string | null;
+  kikkerDetail: string;
   intentie: string;
   affirmatie: string;
   dankbaarheid: string[];
@@ -134,6 +144,8 @@ export default function MorningPage() {
   const [formData, setFormData] = useState<MorningData>({
     dayType: null,
     preWork: { daylight: false, hydration: false, caffeineDelay: false },
+    kikkerCategory: null,
+    kikkerDetail: '',
     intentie: '',
     affirmatie: '',
     dankbaarheid: ['', '', ''],
@@ -141,9 +153,11 @@ export default function MorningPage() {
     sleepQuality: 7,
     sleepTime: '23:00',
     wakeTime: '06:30',
-    focusBlok1: { onderwerp: '', doel: '' },
-    focusBlok2: { onderwerp: '', doel: '' },
+    focusBlok1: { category: null, taaknaam: '' },
+    focusBlok2: { category: null, taaknaam: '' },
   });
+  const [topTimeWasters, setTopTimeWasters] = useState<string[]>([]);
+  const kikkerSpeech = useSpeechRecognition();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -164,6 +178,8 @@ export default function MorningPage() {
                   caffeineDelay: !!p.preWork.caffeineDelay,
                 }
               : { daylight: false, hydration: false, caffeineDelay: false },
+            kikkerCategory: typeof p.kikkerCategory === 'string' ? p.kikkerCategory : null,
+            kikkerDetail: typeof p.kikkerDetail === 'string' ? p.kikkerDetail : '',
             intentie: typeof p.intentie === 'string' ? p.intentie : '',
             affirmatie: typeof p.affirmatie === 'string' ? p.affirmatie : '',
             dankbaarheid: Array.isArray(p.dankbaarheid)
@@ -174,11 +190,11 @@ export default function MorningPage() {
             sleepTime: typeof p.sleepTime === 'string' ? p.sleepTime : '23:00',
             wakeTime: typeof p.wakeTime === 'string' ? p.wakeTime : '06:30',
             focusBlok1: p.focusBlok1 && typeof p.focusBlok1 === 'object'
-              ? { onderwerp: p.focusBlok1.onderwerp || '', doel: p.focusBlok1.doel || '' }
-              : { onderwerp: '', doel: '' },
+              ? { category: p.focusBlok1.category || null, taaknaam: p.focusBlok1.taaknaam || p.focusBlok1.onderwerp || '' }
+              : { category: null, taaknaam: '' },
             focusBlok2: p.focusBlok2 && typeof p.focusBlok2 === 'object'
-              ? { onderwerp: p.focusBlok2.onderwerp || '', doel: p.focusBlok2.doel || '' }
-              : { onderwerp: '', doel: '' },
+              ? { category: p.focusBlok2.category || null, taaknaam: p.focusBlok2.taaknaam || p.focusBlok2.onderwerp || '' }
+              : { category: null, taaknaam: '' },
           });
           setAlVoltooid(true);
         }
@@ -195,7 +211,21 @@ export default function MorningPage() {
     api.calendar.today()
       .then((res) => { if (res?.configured) setMeetingCount(res.events?.length ?? 0); })
       .catch(() => {});
+
+    // De Kikker kiest uit de eigen top-3 tijdvreters uit de onboarding — geen nieuw lijstje.
+    fetch('/api/onboarding/profile', { headers: { Authorization: `Bearer ${AuthService.getToken()}` } })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const wasters = data?.profile?.businessDna?.topTimeWasters;
+        if (Array.isArray(wasters)) setTopTimeWasters(wasters);
+      })
+      .catch(() => {});
   }, [router, todayStr]);
+
+  // Houdt het kikker-detailveld live bij tijdens het inspreken.
+  useEffect(() => {
+    if (kikkerSpeech.listening) setFormData((f) => ({ ...f, kikkerDetail: kikkerSpeech.transcript }));
+  }, [kikkerSpeech.transcript, kikkerSpeech.listening]);
 
   const updateDankbaarheid = (index: number, value: string) => {
     const updated = [...formData.dankbaarheid];
@@ -206,12 +236,17 @@ export default function MorningPage() {
   const handleComplete = async () => {
     setSaving(true);
     try {
+      const kikkerLabel = formData.kikkerCategory
+        ? TIME_WASTER_OPTIONS.find((o) => o.value === formData.kikkerCategory)?.label ?? formData.kikkerCategory
+        : '';
+      const derivedIntentie = [kikkerLabel, formData.kikkerDetail].filter(Boolean).join(' — ') || formData.intentie;
       try {
         await api.logs.create({
           type: 'morning',
           date: todayStr,
           mode,
           ...formData,
+          intentie: derivedIntentie,
         });
       } catch (err) {
         console.error('API save error:', err);
@@ -247,8 +282,8 @@ export default function MorningPage() {
 
   const canGoNext = () => {
     if (step === 'dagtype') return formData.dayType !== null;
-    if (step === 'intentie') return (formData.intentie ?? '').trim().length > 0;
-    if (step === 'focusblokken') return formData.focusBlok1.onderwerp.trim().length > 0 && formData.focusBlok2.onderwerp.trim().length > 0;
+    if (step === 'intentie') return formData.kikkerCategory !== null;
+    if (step === 'focusblokken') return formData.focusBlok1.category !== null && formData.focusBlok2.category !== null;
     if (step === 'dankbaarheid') return (formData.dankbaarheid ?? []).some((d) => (d ?? '').trim().length > 0);
     if (step === 'affirmatie') return (formData.affirmatie ?? '').trim().length > 0;
     return true;
@@ -307,27 +342,27 @@ export default function MorningPage() {
                 </div>
               )}
               <div>
-                <p className="text-[11px] text-ink-soft uppercase tracking-widest mb-1">Intentie</p>
+                <p className="text-[11px] text-ink-soft uppercase tracking-widest mb-1">De Kikker</p>
                 <p className="text-[14px] text-ink leading-relaxed">{formData.intentie}</p>
               </div>
-              {(formData.focusBlok1?.onderwerp || formData.focusBlok2?.onderwerp) ? (
+              {(formData.focusBlok1?.category || formData.focusBlok2?.category) ? (
                 <div className="border-t border-surface-sunken pt-4 space-y-2">
                   <p className="text-[11px] text-ink-soft uppercase tracking-widest mb-2">Focus Blokken</p>
-                  {formData.focusBlok1?.onderwerp ? (
+                  {formData.focusBlok1?.category ? (
                     <div className="flex items-start gap-3 bg-surface-sunken rounded-[12px] p-3">
                       <span className="text-[11px] font-bold text-primary bg-primary-muted px-2 py-0.5 rounded-md shrink-0">08:30</span>
                       <div>
-                        <p className="text-[13px] font-semibold text-ink">{formData.focusBlok1.onderwerp}</p>
-                        {formData.focusBlok1.doel ? <p className="text-[12px] text-ink-soft mt-0.5">Doel: {formData.focusBlok1.doel}</p> : null}
+                        <p className="text-[13px] font-semibold text-ink">{FOCUS_CATEGORY_OPTIONS.find((o) => o.value === formData.focusBlok1.category)?.label}</p>
+                        {formData.focusBlok1.taaknaam ? <p className="text-[12px] text-ink-soft mt-0.5">{formData.focusBlok1.taaknaam}</p> : null}
                       </div>
                     </div>
                   ) : null}
-                  {formData.focusBlok2?.onderwerp ? (
+                  {formData.focusBlok2?.category ? (
                     <div className="flex items-start gap-3 bg-surface-sunken rounded-[12px] p-3">
                       <span className="text-[11px] font-bold text-primary bg-primary-muted px-2 py-0.5 rounded-md shrink-0">12:30</span>
                       <div>
-                        <p className="text-[13px] font-semibold text-ink">{formData.focusBlok2.onderwerp}</p>
-                        {formData.focusBlok2.doel ? <p className="text-[12px] text-ink-soft mt-0.5">Doel: {formData.focusBlok2.doel}</p> : null}
+                        <p className="text-[13px] font-semibold text-ink">{FOCUS_CATEGORY_OPTIONS.find((o) => o.value === formData.focusBlok2.category)?.label}</p>
+                        {formData.focusBlok2.taaknaam ? <p className="text-[12px] text-ink-soft mt-0.5">{formData.focusBlok2.taaknaam}</p> : null}
                       </div>
                     </div>
                   ) : null}
@@ -534,7 +569,7 @@ export default function MorningPage() {
           </div>
         )}
 
-        {/* Step: Intentie */}
+        {/* Step: De Kikker (vermijdings-check) */}
         {step === 'intentie' && (
           <div className="space-y-4">
             <div className="rounded-[16px] bg-surface-inverse p-5">
@@ -544,22 +579,60 @@ export default function MorningPage() {
                   {dayName}, {dateStr}
                 </span>
               </div>
-              <p className="text-[17px] text-white font-semibold">Goedemorgen.</p>
-              <p className="text-[13px] text-white/50 mt-1">Zet de toon voor een geweldige dag.</p>
+              <p className="text-[17px] text-white font-semibold">Wat is je kikker vandaag?</p>
+              <p className="text-[13px] text-white/50 mt-1">De moeilijkste commerciële of operationele taak — kies 'm nu, geen uitstel.</p>
             </div>
             <div className="rounded-[16px] border border-line p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Target size={16} className="text-primary" />
-                <span className="text-[14px] font-semibold text-ink">Wat is je intentie voor vandaag?</span>
+                <span className="text-[14px] font-semibold text-ink">Kies uit je eigen tijdvreters</span>
               </div>
-              <textarea
-                value={formData.intentie}
-                onChange={(e) => setFormData({ ...formData, intentie: e.target.value })}
-                placeholder="Vandaag focus ik op... Ik wil bereiken dat..."
-                rows={4}
-                autoFocus
-                className="w-full resize-none bg-surface-sunken border border-line focus:border-primary outline-none rounded-[12px] px-4 py-3 text-[14px] text-ink placeholder-ink-soft transition-colors"
-              />
+              {topTimeWasters.length === 0 ? (
+                <p className="text-[12px] text-ink-soft">Nog geen tijdvreters bekend — vul je Bedrijfs-DNA aan in Instellingen.</p>
+              ) : (
+                <div className="space-y-2">
+                  {topTimeWasters.map((value) => {
+                    const label = TIME_WASTER_OPTIONS.find((o) => o.value === value)?.label ?? value;
+                    const selected = formData.kikkerCategory === value;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, kikkerCategory: value })}
+                        className={`w-full text-left rounded-[12px] px-4 py-3 text-[13px] transition-colors ${
+                          selected ? 'bg-primary-muted text-primary font-medium' : 'bg-surface-sunken text-ink'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="mt-4 pt-4 border-t border-surface-sunken">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={formData.kikkerDetail}
+                    onChange={(e) => setFormData({ ...formData, kikkerDetail: e.target.value })}
+                    placeholder={kikkerSpeech.listening ? 'Ik luister...' : 'Optioneel: wie of wat precies?'}
+                    disabled={kikkerSpeech.listening}
+                    className="flex-1 px-4 py-3 bg-surface-sunken border border-line focus:border-primary outline-none rounded-[12px] text-[14px] text-ink placeholder-ink-soft transition-colors"
+                  />
+                  {kikkerSpeech.supported && (
+                    <button
+                      type="button"
+                      onClick={() => (kikkerSpeech.listening ? kikkerSpeech.stop() : kikkerSpeech.start())}
+                      className={`w-11 h-11 rounded-[12px] flex items-center justify-center shrink-0 transition-colors ${
+                        kikkerSpeech.listening ? 'bg-red-500 text-white animate-pulse' : 'bg-surface-sunken text-ink'
+                      }`}
+                    >
+                      <Mic size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -597,23 +670,29 @@ export default function MorningPage() {
                   08:30 – 10:00
                 </span>
               </div>
-              <div>
-                <label className="block text-[12px] text-ink-soft mb-1.5 font-medium uppercase tracking-wide">Wat ga ik doen?</label>
-                <input
-                  type="text"
-                  value={formData.focusBlok1.onderwerp}
-                  onChange={(e) => setFormData({ ...formData, focusBlok1: { ...formData.focusBlok1, onderwerp: e.target.value } })}
-                  placeholder="Bijv: Voorstel schrijven voor klant X"
-                  className="w-full px-4 py-3 bg-surface-sunken border border-line focus:border-primary outline-none rounded-[12px] text-[14px] text-ink placeholder-ink-soft transition-colors"
-                />
+              <div className="flex flex-wrap gap-2">
+                {FOCUS_CATEGORY_OPTIONS.map((o) => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, focusBlok1: { ...formData.focusBlok1, category: o.value } })}
+                    className={`text-[13px] px-3.5 py-2 rounded-full border transition-colors ${
+                      formData.focusBlok1.category === o.value
+                        ? 'border-primary bg-primary-muted text-primary font-medium'
+                        : 'border-line text-ink hover:border-primary/50'
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
               </div>
               <div>
-                <label className="block text-[12px] text-ink-soft mb-1.5 font-medium uppercase tracking-wide">Welk doel wil ik bereiken?</label>
                 <input
                   type="text"
-                  value={formData.focusBlok1.doel}
-                  onChange={(e) => setFormData({ ...formData, focusBlok1: { ...formData.focusBlok1, doel: e.target.value } })}
-                  placeholder="Bijv: Eerste versie klaar hebben"
+                  value={formData.focusBlok1.taaknaam}
+                  onChange={(e) => setFormData({ ...formData, focusBlok1: { ...formData.focusBlok1, taaknaam: e.target.value.slice(0, 50) } })}
+                  placeholder="Optioneel: taaknaam (max 50 tekens)"
+                  maxLength={50}
                   className="w-full px-4 py-3 bg-surface-sunken border border-line focus:border-primary outline-none rounded-[12px] text-[14px] text-ink placeholder-ink-soft transition-colors"
                 />
               </div>
@@ -632,23 +711,29 @@ export default function MorningPage() {
                   12:30 – 14:00
                 </span>
               </div>
-              <div>
-                <label className="block text-[12px] text-ink-soft mb-1.5 font-medium uppercase tracking-wide">Wat ga ik doen?</label>
-                <input
-                  type="text"
-                  value={formData.focusBlok2.onderwerp}
-                  onChange={(e) => setFormData({ ...formData, focusBlok2: { ...formData.focusBlok2, onderwerp: e.target.value } })}
-                  placeholder="Bijv: Acquisitiegesprekken voorbereiden"
-                  className="w-full px-4 py-3 bg-surface-sunken border border-line focus:border-primary outline-none rounded-[12px] text-[14px] text-ink placeholder-ink-soft transition-colors"
-                />
+              <div className="flex flex-wrap gap-2">
+                {FOCUS_CATEGORY_OPTIONS.map((o) => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, focusBlok2: { ...formData.focusBlok2, category: o.value } })}
+                    className={`text-[13px] px-3.5 py-2 rounded-full border transition-colors ${
+                      formData.focusBlok2.category === o.value
+                        ? 'border-primary bg-primary-muted text-primary font-medium'
+                        : 'border-line text-ink hover:border-primary/50'
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
               </div>
               <div>
-                <label className="block text-[12px] text-ink-soft mb-1.5 font-medium uppercase tracking-wide">Welk doel wil ik bereiken?</label>
                 <input
                   type="text"
-                  value={formData.focusBlok2.doel}
-                  onChange={(e) => setFormData({ ...formData, focusBlok2: { ...formData.focusBlok2, doel: e.target.value } })}
-                  placeholder="Bijv: 3 concrete afspraken ingepland"
+                  value={formData.focusBlok2.taaknaam}
+                  onChange={(e) => setFormData({ ...formData, focusBlok2: { ...formData.focusBlok2, taaknaam: e.target.value.slice(0, 50) } })}
+                  placeholder="Optioneel: taaknaam (max 50 tekens)"
+                  maxLength={50}
                   className="w-full px-4 py-3 bg-surface-sunken border border-line focus:border-primary outline-none rounded-[12px] text-[14px] text-ink placeholder-ink-soft transition-colors"
                 />
               </div>

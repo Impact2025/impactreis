@@ -127,6 +127,14 @@ export async function loadChallengerProfile(userId: string): Promise<ChallengerP
  *  hij moet ingrijpen, alleen om het antwoord te formuleren. */
 function detectChallengerTrigger(ctx: CoachContext): string | null {
   if (!ctx.challenger) return null;
+
+  // MECHANISME 3 — De Commerciële Realiteitstoets: expliciete avondkeuze weegt zwaarder dan
+  // een keyword-gok in vrije tekst, en gebruikt de exacte vraag uit het bouwplan.
+  if ((ctx.today as any).eveningVerdict === 'gevlucht_in_veiligheid') {
+    const detail = (ctx.today as any).eveningVerdictDetail;
+    return `CHALLENGER_MODE_ACTIVE: de ondernemer geeft zelf aan vandaag gevlucht te zijn in veilige klussen in plaats van de kikker af te maken${detail ? ` ("${detail}")` : ''}. Vraag: "Welke veilige taak heeft je afgeleid, en staat deze taak morgen om 09:00 uur ingepland?" — accepteer geen ontwijkend antwoord.`;
+  }
+
   const textFields = [
     (ctx.today as any).intentie,
     (ctx.today as any).focusBlok1,
@@ -790,6 +798,41 @@ Geef EXACT 3 korte openingszinnen (max 20 woorden elk) die de ondernemer letterl
       `Ik wilde dit niet langer laten liggen: ${task}. Zullen we dat nu afronden?`,
       `Kort en direct: ${task}. Kunnen we dat nu even regelen?`,
     ],
+  };
+}
+
+export interface CommercialDensity {
+  /** Percentage van de avond-realiteitstoetsen deze week die 'waarde_verkocht' waren — 0-100,
+   *  null als er nog geen enkele avondcheck deze week is gedaan (dan is een percentage misleidend). */
+  percentage: number | null;
+  verdictsLogged: number;
+  waardeVerkocht: number;
+  gevluchtInVeiligheid: number;
+}
+
+/** MECHANISME 4 — Wekelijkse Data-Spiegel: berekent hoeveel van de laatste 7 avond-
+ *  realiteitstoetsen 'waarde verkocht / kikker afgemaakt' waren t.o.v. 'gevlucht in veilige
+ *  klussen'. Dit is de enige plek in de dagritmes waar "veilige klussen" een expliciete, eigen
+ *  keuze is (focusblok-categorieën zijn allemaal legitieme werksoorten) — dus de avondkeuze is
+ *  het eerlijkste signaal, geen aanname op basis van focusblok-labels. */
+export async function getCommercialDensity(userId: string): Promise<CommercialDensity> {
+  const rows = await sql`
+    SELECT data FROM daily_logs
+    WHERE user_id = ${userId} AND type = 'evening' AND date_string >= (CURRENT_DATE - INTERVAL '6 days')
+    ORDER BY date_string DESC
+  `;
+  const verdicts = (rows as { data: any }[])
+    .map((r) => parseData(r.data)?.eveningVerdict)
+    .filter((v): v is string => typeof v === 'string');
+
+  const waardeVerkocht = verdicts.filter((v) => v === 'waarde_verkocht').length;
+  const gevluchtInVeiligheid = verdicts.filter((v) => v === 'gevlucht_in_veiligheid').length;
+
+  return {
+    percentage: verdicts.length > 0 ? Math.round((waardeVerkocht / verdicts.length) * 100) : null,
+    verdictsLogged: verdicts.length,
+    waardeVerkocht,
+    gevluchtInVeiligheid,
   };
 }
 
