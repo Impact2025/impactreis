@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Sparkles, RefreshCw, Compass, Send, TrendingUp, Check, X, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Sparkles, RefreshCw, Compass, Send, TrendingUp, Check, X, HelpCircle, Mic, Volume2, VolumeX } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { BottomNav } from '@/components/ui/bottom-nav';
+import { useSpeechRecognition, useSpeechSynthesis } from '@/hooks/use-speech';
 
 interface AnalyseResult {
   technique: string;
@@ -49,6 +50,9 @@ export default function CoachPage() {
   const [messages, setMessages] = useState<CoachMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [sending, setSending] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(false);
+  const speech = useSpeechRecognition();
+  const tts = useSpeechSynthesis();
 
   const fetchLessons = async () => {
     try {
@@ -96,6 +100,7 @@ export default function CoachPage() {
       fetchPredictions();
       // Add coach's first message to the conversation
       setMessages([{ id: 'coach-1', role: 'coach', content: data.analysis, ts: Date.now() }]);
+      if (voiceMode) tts.speak(data.analysis);
     } catch {
       setError('Kon geen reflectie ophalen');
     } finally {
@@ -103,17 +108,19 @@ export default function CoachPage() {
     }
   };
 
-  const handleSend = async () => {
-    if (!inputValue.trim() || !result) return;
+  const handleSend = async (textOverride?: string) => {
+    const text = (textOverride ?? inputValue).trim();
+    if (!text || !result) return;
     const userMsg: CoachMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: inputValue.trim(),
+      content: text,
       ts: Date.now(),
     };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInputValue('');
+    speech.resetTranscript();
     setSending(true);
     try {
       const res = await fetch('/api/coach/chat', {
@@ -132,6 +139,7 @@ export default function CoachPage() {
           content: data.analysis,
           ts: Date.now(),
         }]);
+        if (voiceMode) tts.speak(data.analysis);
       }
     } catch {
       // silent
@@ -139,6 +147,21 @@ export default function CoachPage() {
       setSending(false);
     }
   };
+
+  // Houdt het tekstveld live bij tijdens het spreken.
+  useEffect(() => {
+    if (speech.listening) setInputValue(speech.transcript);
+  }, [speech.transcript, speech.listening]);
+
+  // Stuurt automatisch door zodra het spreken stopt en er iets is gezegd.
+  const wasListeningRef = useRef(false);
+  useEffect(() => {
+    if (wasListeningRef.current && !speech.listening && speech.transcript.trim()) {
+      handleSend(speech.transcript);
+    }
+    wasListeningRef.current = speech.listening;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speech.listening]);
 
   useEffect(() => {
     if (!AuthService.isAuthenticated()) { router.push('/auth/login'); return; }
@@ -195,9 +218,25 @@ export default function CoachPage() {
 
         {result && (
           <div className="rounded-[16px] border border-line p-5">
-            <span className="inline-block text-[11px] font-medium text-primary bg-primary/10 rounded-full px-2.5 py-1 mb-3">
-              {result.techniqueLabel}
-            </span>
+            <div className="flex items-center justify-between mb-3">
+              <span className="inline-block text-[11px] font-medium text-primary bg-primary/10 rounded-full px-2.5 py-1">
+                {result.techniqueLabel}
+              </span>
+              {tts.supported && (
+                <button
+                  onClick={() => {
+                    if (tts.speaking) tts.stop();
+                    setVoiceMode((v) => !v);
+                  }}
+                  className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
+                    voiceMode ? 'bg-primary/10 text-primary' : 'text-ink-soft hover:bg-surface-sunken'
+                  }`}
+                  title={voiceMode ? 'Coach leest antwoorden voor (aan)' : 'Coach leest antwoorden voor (uit)'}
+                >
+                  {voiceMode ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                </button>
+              )}
+            </div>
             <div className="space-y-4">
               {messages.map((msg) => (
                 <div key={msg.id} className={`space-y-2 ${msg.role === 'user' ? 'text-right' : ''}`}>
@@ -215,12 +254,24 @@ export default function CoachPage() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Typ je antwoord op de vraag..."
+                placeholder={speech.listening ? 'Ik luister...' : 'Typ je antwoord op de vraag...'}
                 className="flex-1 px-4 py-3 border border-line rounded-[12px] text-[14px] text-ink placeholder-ink-soft focus:outline-none focus:ring-2 focus:ring-primary/20"
-                disabled={sending}
+                disabled={sending || speech.listening}
               />
+              {speech.supported && (
+                <button
+                  onClick={() => (speech.listening ? speech.stop() : speech.start())}
+                  disabled={sending}
+                  className={`px-4 py-3 rounded-[12px] text-[14px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-transform flex items-center justify-center ${
+                    speech.listening ? 'bg-red-500 text-white animate-pulse' : 'bg-surface-sunken text-ink'
+                  }`}
+                  title={speech.listening ? 'Stop met luisteren' : 'Praat met de coach'}
+                >
+                  <Mic size={16} />
+                </button>
+              )}
               <button
-                onClick={handleSend}
+                onClick={() => handleSend()}
                 disabled={sending || !inputValue.trim()}
                 className="px-4 py-3 bg-surface-inverse text-white rounded-[12px] text-[14px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-transform flex items-center justify-center"
               >
