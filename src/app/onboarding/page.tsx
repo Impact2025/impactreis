@@ -13,10 +13,11 @@ import {
   TIME_WASTER_OPTIONS,
   AVOIDANCE_BEHAVIOR_OPTIONS,
   LEVERAGE_GOAL_OPTIONS,
+  CONSEQUENCE_PRESETS,
   type UserOnboardingProfile,
 } from '@/lib/onboarding';
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
 
 type Gender = 'male' | 'female';
 
@@ -71,6 +72,7 @@ export default function OnboardingPage() {
   const [topTimeWasters, setTopTimeWasters] = useState<string[]>([]);
   const [avoidanceBehavior, setAvoidanceBehavior] = useState<string | null>(null);
   const [leverageGoal, setLeverageGoal] = useState<string | null>(null);
+  const [painfulConsequence, setPainfulConsequence] = useState('');
   const [meditationsEnabled, setMeditationsEnabled] = useState(true);
 
   useEffect(() => {
@@ -108,12 +110,13 @@ export default function OnboardingPage() {
       case 4: return topTimeWasters.length > 0;
       case 5: return avoidanceBehavior !== null;
       case 6: return leverageGoal !== null;
+      case 7: return painfulConsequence.trim().length > 0;
       default: return false;
     }
   };
 
   const submit = async () => {
-    if (!gender || !displayName.trim() || !industry || !teamSize || !businessModel || !avoidanceBehavior || !leverageGoal) return;
+    if (!gender || !displayName.trim() || !industry || !teamSize || !businessModel || !avoidanceBehavior || !leverageGoal || !painfulConsequence.trim()) return;
     setSubmitting(true);
     setError(null);
     const goalOption = LEVERAGE_GOAL_OPTIONS.find((o) => o.value === leverageGoal);
@@ -131,6 +134,9 @@ export default function OnboardingPage() {
         topTimeWasters: topTimeWasters as UserOnboardingProfile['businessDna']['topTimeWasters'],
         avoidanceBehavior: avoidanceBehavior as UserOnboardingProfile['businessDna']['avoidanceBehavior'],
         quarterlyLeverageGoal: leverageGoal as UserOnboardingProfile['businessDna']['quarterlyLeverageGoal'],
+      },
+      consequenceModule: {
+        description: painfulConsequence.trim(),
       },
       assistantPreferences: {
         morningBriefingTime: '08:00',
@@ -318,6 +324,32 @@ export default function OnboardingPage() {
                 <CardOption key={o.value} selected={leverageGoal === o.value} onClick={() => setLeverageGoal(o.value)} title={o.label} description={o.description} />
               ))}
             </div>
+          </div>
+        )}
+
+        {step === 7 && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-[18px] font-semibold text-ink">De Pijnlijke Consequentie</h2>
+              <p className="text-[13px] text-ink-soft mt-1">
+                Een plan zonder stakes is vrijblijvend. Wat gebeurt er écht als je dit kwartaaldoel mist? Kies een voorbeeld of schrijf je eigen consequentie.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {CONSEQUENCE_PRESETS.map((preset) => (
+                <ChipButton key={preset} selected={painfulConsequence === preset} onClick={() => setPainfulConsequence(preset)}>
+                  {preset}
+                </ChipButton>
+              ))}
+            </div>
+            <textarea
+              value={painfulConsequence}
+              onChange={(e) => setPainfulConsequence(e.target.value.slice(0, 300))}
+              placeholder="Bijv: als ik dit kwartaal mijn doel mis, doneer ik €500 aan..."
+              rows={3}
+              maxLength={300}
+              className="w-full resize-none px-4 py-3 rounded-[14px] bg-surface-sunken border border-transparent text-[14px] outline-none focus:border-primary focus:bg-white transition-all"
+            />
 
             <div className="rounded-[14px] bg-surface-sunken px-4 py-3.5 flex items-center justify-between gap-4 mt-6">
               <div>

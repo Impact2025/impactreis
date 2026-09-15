@@ -47,6 +47,20 @@ export const LEVERAGE_GOAL_OPTIONS = [
   { value: 'rust_focus', label: 'Rust & Focus', description: 'Eén vaste vrije dag per week zonder e-mail of telefoon.' },
 ] as const;
 
+// Presets voor de Consequentie-Module (Martell Stap 4 — Stakes): concrete voorbeelden zodat
+// "iets pijnlijks verzinnen" niet zelf weer een vermijdbare taak wordt. Vrije tekst blijft nodig
+// (de consequentie moet persoonlijk kloppen), maar een voorbeeld tikken is sneller dan verzinnen.
+export const CONSEQUENCE_PRESETS = [
+  '€500 doneren aan een goed doel dat ik niet steun',
+  'Mijn grootste concurrent op de hoogte stellen dat ik dit kwartaal mijn doel niet haalde',
+  'Een dag onbetaald vrijwilligerswerk doen bij een organisatie die me niet aanspreekt',
+  '€250 overmaken aan mijn accountability-partner, geen vragen',
+] as const;
+
+export const consequenceModuleSchema = z.object({
+  description: z.string().min(1).max(300),
+});
+
 export const COACH_PERSONAS = {
   male: { defaultName: 'Marcus', voiceId: 'marcus_dutch_deep', description: 'Diepe, rustige, gezaghebbende toon — stoïcijns en direct.' },
   female: { defaultName: 'Sarah', voiceId: 'sarah_dutch_sharp', description: 'Heldere, scherpe, doortastende toon — no-nonsense en to the point.' },
@@ -109,11 +123,15 @@ export const onboardingProfileSchema = z.object({
   }).optional(),
   coachProfile: coachProfileSchema,
   businessDna: businessDnaSchema,
+  // Optioneel in het schema (backward-compatible met profielen van vóór de Consequentie-Module),
+  // maar de wizard zelf staat niet toe deze stap over te slaan.
+  consequenceModule: consequenceModuleSchema.optional(),
 });
 
 export type UserOnboardingProfile = z.infer<typeof onboardingProfileSchema>;
 export type CoachProfile = z.infer<typeof coachProfileSchema>;
 export type BusinessDna = z.infer<typeof businessDnaSchema>;
+export type ConsequenceModule = z.infer<typeof consequenceModuleSchema>;
 
 export function labelFor<T extends readonly { value: string; label: string }[]>(opts: T, value: string): string {
   return opts.find((o) => o.value === value)?.label ?? value;

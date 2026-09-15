@@ -99,6 +99,9 @@ export interface ChallengerProfile {
   avoidanceBehavior: string;
   avoidanceLabel: string;
   quarterlyLeverageLabel: string;
+  /** Martell Stap 4 (Stakes) — null zolang iemand de onboarding vóór de Consequentie-Module
+   *  heeft doorlopen. Geen consequentie is geen reden om de rest te blokkeren. */
+  painfulConsequence: string | null;
 }
 
 /** Haalt de Impact Coach-persona en het Bedrijfs-DNA op uit de tap-first onboarding-wizard.
@@ -117,6 +120,7 @@ export async function loadChallengerProfile(userId: string): Promise<ChallengerP
     avoidanceBehavior: businessDna.avoidanceBehavior,
     avoidanceLabel: labelFor(AVOIDANCE_BEHAVIOR_OPTIONS, businessDna.avoidanceBehavior),
     quarterlyLeverageLabel: labelFor(LEVERAGE_GOAL_OPTIONS, businessDna.quarterlyLeverageGoal),
+    painfulConsequence: profile.consequenceModule?.description ?? null,
   };
 }
 
@@ -494,6 +498,7 @@ CONTEXT VAN DEZE ONDERNEMER:
 - Primaire hefboomdoel (90 dagen): ${challenger.quarterlyLeverageLabel}.
 - Gekende valkuil: ${challenger.avoidanceLabel}.
 - Top tijdvreters: ${challenger.topTimeWasterLabels.join(', ')}.
+${challenger.painfulConsequence ? `- Eigen afgesproken consequentie bij het missen van het kwartaaldoel: "${challenger.painfulConsequence}". Gebruik dit als de ondernemer wegglijdt — herinner eraan wat er op het spel staat, dreig er niet mee als straf.` : ''}
 
 GEDRAGSREGELS:
 1. FOCUS OP DE KIKKER: vraag uitsluitend naar de moeilijkste commerciële of operationele taak van vandaag. Weiger vage antwoorden zoals 'administratie' of 'website updaten'.
@@ -519,19 +524,76 @@ Schrijf een coach-reflectie van 120-180 woorden in het Nederlands, in de jij-vor
 }
 
 
+/** Laatste bekende avond-realiteitstoets van vandaag — losstaand van loadCoachContext (die
+ *  alleen ochtend+avond van vandaag/gisteren samenvoegt voor de reflectie-prompt) omdat de
+ *  coach-chat een lichter path is dat geen hele CoachContext hoeft op te bouwen. */
+async function loadTodayEveningVerdict(userId: string): Promise<string | null> {
+  const today = new Date().toISOString().split('T')[0];
+  const rows = await sql`
+    SELECT data FROM daily_logs WHERE user_id = ${userId} AND type = 'evening' AND date_string = ${today} LIMIT 1
+  `;
+  const data = (rows as { data: any }[])[0]?.data;
+  return parseData(data)?.eveningVerdict ?? null;
+}
+
 /**
  * Build a prompt for follow-up messages in the coach chat conversation.
  * Takes the message history and constructs a prompt that continues the coaching dialogue.
  */
 export async function buildFollowUpPrompt(
   messages: { role: string; content: string }[],
-  organizationId: number | null = null
+  organizationId: number | null = null,
+  userId: string | null = null
 ): Promise<string> {
   const identity = await loadCoachIdentity(organizationId);
   const object = identity.addressName || 'de ondernemer';
   const conversation = messages
-    .map((m) => `${m.role === 'coach' ? 'Sparringpartner' : object}: ${m.content}`)
+    .map((m) => `${m.role === 'coach' ? 'Coach' : object}: ${m.content}`)
     .join('\\n\\n');
+
+  const challenger = userId ? await loadChallengerProfile(userId) : null;
+
+  // MECHANISME (Martell Stap 3) — Double-Click Root Cause Mode: als de kikker vandaag niet is
+  // afgemaakt, geeft de coach de eerste 3 beurten GEEN advies — alleen een steeds dieper
+  // doorvragende waarom-vraag, om de echte weerstand bloot te leggen vóór er iets opgelost wordt.
+  if (challenger && userId) {
+    const eveningVerdict = await loadTodayEveningVerdict(userId);
+    if (eveningVerdict === 'gevlucht_in_veiligheid') {
+      const coachTurnsSoFar = messages.filter((m) => m.role === 'coach').length;
+      const round = coachTurnsSoFar + 1;
+      if (round <= 3) {
+        return `Jij bent ${challenger.displayName}, in Root Cause Mode (doorvraag-ronde ${round} van 3).
+
+REGELS VOOR DEZE RONDE:
+- Geef GEEN advies, GEEN oplossing, GEEN geruststelling.
+- Stel exact één "waarom"-vraag die dieper gaat dan het vorige antwoord van ${object} — double-click op wat hij net zei, niet op iets nieuws.
+- Maximaal 2 zinnen. Geen inleiding.
+- Bekende valkuil van ${object}: ${challenger.avoidanceLabel}.
+
+CONVERSATIEGESCHIEDENIS:
+${conversation}
+
+Stel nu de doorvraag-vraag van ronde ${round}.`;
+      }
+      return `Jij bent ${challenger.displayName}. De 3 doorvraag-rondes zijn voorbij — de echte weerstand ligt nu op tafel.
+
+REGELS: geen nieuwe vragen meer over "waarom". Breek dit nu af tot één concrete actie die binnen 15 minuten gestart kan worden, met een expliciet moment (vandaag of morgenvroeg 09:00). ${challenger.painfulConsequence ? `Refereer kort aan de afgesproken consequentie als het nog steeds vaag blijft: "${challenger.painfulConsequence}".` : ''} Maximaal 3 zinnen.
+
+CONVERSATIEGESCHIEDENIS:
+${conversation}
+
+Reageer nu op het laatste bericht van ${object}.`;
+    }
+  }
+
+  if (challenger) {
+    return `Jij bent ${challenger.displayName}, de executive AI-challenger van ${object}. Nuchter, scherp, maximaal 2-3 zinnen, geen wellness-taal. Gebruik de jij-vorm.
+
+CONVERSATIEGESCHIEDENIS:
+${conversation}
+
+${messages.length > 0 ? `Reageer nu op het laatste bericht van ${object}.` : 'Start het gesprek.'}`;
+  }
 
   return `Je bent De Sparringpartner, ${identity.addressName ? `${identity.addressName}s` : 'de'} persoonlijke business- en welzijnscoach.
 
@@ -801,39 +863,54 @@ Geef EXACT 3 korte openingszinnen (max 20 woorden elk) die de ondernemer letterl
   };
 }
 
-export interface CommercialDensity {
-  /** Percentage van de avond-realiteitstoetsen deze week die 'waarde_verkocht' waren — 0-100,
-   *  null als er nog geen enkele avondcheck deze week is gedaan (dan is een percentage misleidend). */
-  percentage: number | null;
-  verdictsLogged: number;
-  waardeVerkocht: number;
-  gevluchtInVeiligheid: number;
+export interface ScorecardMetric {
+  key: 'kikker' | 'energie' | 'consistentie';
+  label: string;
+  /** 0-10, of null als er deze week nog niets over te zeggen valt (geen loze aanname). */
+  score: number | null;
 }
 
-/** MECHANISME 4 — Wekelijkse Data-Spiegel: berekent hoeveel van de laatste 7 avond-
- *  realiteitstoetsen 'waarde verkocht / kikker afgemaakt' waren t.o.v. 'gevlucht in veilige
- *  klussen'. Dit is de enige plek in de dagritmes waar "veilige klussen" een expliciete, eigen
- *  keuze is (focusblok-categorieën zijn allemaal legitieme werksoorten) — dus de avondkeuze is
- *  het eerlijkste signaal, geen aanname op basis van focusblok-labels. */
-export async function getCommercialDensity(userId: string): Promise<CommercialDensity> {
-  const rows = await sql`
-    SELECT data FROM daily_logs
-    WHERE user_id = ${userId} AND type = 'evening' AND date_string >= (CURRENT_DATE - INTERVAL '6 days')
-    ORDER BY date_string DESC
-  `;
-  const verdicts = (rows as { data: any }[])
-    .map((r) => parseData(r.data)?.eveningVerdict)
-    .filter((v): v is string => typeof v === 'string');
+export interface WeeklyScorecard {
+  metrics: ScorecardMetric[];
+  /** De 2 laagste met een score — dit is precies wat de Vrijdagmiddag Scorecard isoleert
+   *  voor het maandelijkse executive sparringgesprek (Martell Stap 2). */
+  lowestTwo: ScorecardMetric[];
+}
 
-  const waardeVerkocht = verdicts.filter((v) => v === 'waarde_verkocht').length;
-  const gevluchtInVeiligheid = verdicts.filter((v) => v === 'gevlucht_in_veiligheid').length;
+/** MECHANISME — Vrijdagmiddag Scorecard (Martell Stap 2): berekent de 3 non-negotiables van
+ *  Impact Coach over de laatste 7 dagen en isoleert de 2 laagste, in plaats van alles te tonen —
+ *  precies het punt van een scorecard: niet vieren wat al goed gaat, focussen op wat achterblijft. */
+export async function computeWeeklyScorecard(userId: string): Promise<WeeklyScorecard> {
+  const [morningRows, eveningRows] = await Promise.all([
+    sql`SELECT date_string, data FROM daily_logs
+        WHERE user_id = ${userId} AND type = 'morning' AND date_string >= (CURRENT_DATE - INTERVAL '6 days')`,
+    sql`SELECT data FROM daily_logs
+        WHERE user_id = ${userId} AND type = 'evening' AND date_string >= (CURRENT_DATE - INTERVAL '6 days')`,
+  ]);
 
-  return {
-    percentage: verdicts.length > 0 ? Math.round((waardeVerkocht / verdicts.length) * 100) : null,
-    verdictsLogged: verdicts.length,
-    waardeVerkocht,
-    gevluchtInVeiligheid,
-  };
+  const mornings = (morningRows as { date_string: string; data: any }[]).map((r) => ({ date: r.date_string, ...parseData(r.data) }));
+  const verdicts = (eveningRows as { data: any }[]).map((r) => parseData(r.data)?.eveningVerdict).filter((v): v is string => typeof v === 'string');
+
+  const energyValues = mornings.map((m) => m.energyLevel).filter((v): v is number => typeof v === 'number');
+  const energieScore = energyValues.length > 0 ? Math.round((energyValues.reduce((a, b) => a + b, 0) / energyValues.length) * 10) / 10 : null;
+
+  const kikkerScore = verdicts.length > 0 ? Math.round((verdicts.filter((v) => v === 'waarde_verkocht').length / verdicts.length) * 10 * 10) / 10 : null;
+
+  const uniqueDays = new Set(mornings.map((m) => m.date)).size;
+  const consistentieScore = Math.round((Math.min(uniqueDays, 7) / 7) * 10 * 10) / 10;
+
+  const metrics: ScorecardMetric[] = [
+    { key: 'kikker', label: 'Kikker afgemaakt', score: kikkerScore },
+    { key: 'energie', label: 'Energie', score: energieScore },
+    { key: 'consistentie', label: 'Ritueel-consistentie', score: consistentieScore },
+  ];
+
+  const lowestTwo = [...metrics]
+    .filter((m) => m.score !== null)
+    .sort((a, b) => (a.score as number) - (b.score as number))
+    .slice(0, 2);
+
+  return { metrics, lowestTwo };
 }
 
 export type CoachAnalysisResult =
