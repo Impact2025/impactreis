@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   Bell, Sunrise, Moon, CalendarDays, TrendingUp,
-  Play, ChevronRight, Zap, Fingerprint, Sparkles, BookHeart, AlertCircle, X, Mountain, Flame,
+  ChevronRight, Zap, Fingerprint, Sparkles, BookHeart, AlertCircle, X, Mountain, Flame,
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -25,11 +25,6 @@ import { getRecommendedMeditation } from '@/lib/meditations/catalog';
 import { FrogButton } from '@/components/coach/frog-button';
 
 const dashboardTourSteps: TourStep[] = [
-  {
-    target: '[data-tour="golden-egg"]',
-    title: 'Golden Egg — jouw Focus van de dag',
-    content: 'Dit is het ene doel dat er vandaag het meest toe doet. Sparren kiest deze op basis van je actieve Rocks (kwartaaldoelen) — zo weet je bij twijfel altijd waar je energie heen moet.',
-  },
   {
     target: '[data-tour="leverage-tasks"]',
     title: 'Hefboom-taken (80/20)',
@@ -206,9 +201,6 @@ export default function DashboardPage() {
   // Golden Egg: een actieve Rock van dit kwartaal weegt zwaarder dan "toevallig laatst bewerkt" —
   // dat is precies het punt van Rocks (EOS-kwartaalprioriteiten). Valt terug op het oude gedrag
   // zolang er nog geen Rocks zijn gemarkeerd.
-  const currentQuarter = getCurrentQuarter(settings.timezone);
-  const focusGoal  = goals.find(g => g.isRock && g.quarter === currentQuarter) ?? goals[0];
-
   const yesterday = getDateDaysAgo(1, settings.timezone);
   const missedEveningYesterday = ritualStatuses.missedRituals.some(
     (m) => m.type === 'evening' && m.daysAgo === 1
@@ -420,50 +412,6 @@ export default function DashboardPage() {
                 <p className="text-[13px] font-semibold text-ink">Avondritueel gemist</p>
                 <p className="text-[11px] text-accent">Tik om gisteren alsnog in te vullen →</p>
               </div>
-            </Link>
-          )}
-
-          {/* ══ GOLDEN EGG — FOCUS VAN DE DAG ═══════════════════ */}
-          {focusGoal ? (
-            <div data-tour="golden-egg" className="rounded-hero bg-surface-inverse p-5 mb-6 shadow-organic-lg">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="live-dot w-2 h-2 rounded-full bg-primary-light inline-block" />
-                  <span className="text-[9px] font-bold tracking-[0.2em] text-primary-light uppercase">
-                    Golden Egg — Focus van de dag
-                  </span>
-                </div>
-                <Link href="/goals" className="text-[10px] font-semibold text-on-surface-inverse/50 hover:text-on-surface-inverse transition-colors">
-                  {goalProgressLabel(focusGoal.progress)}
-                </Link>
-              </div>
-              <h2 className="text-[19px] font-bold text-on-surface-inverse leading-snug mb-1.5">
-                {focusGoal.title}
-              </h2>
-              <p className="text-[12px] text-on-surface-inverse/50 mb-5">
-                Prioriteit: Hoog &mdash; blijf gefocust op wat écht telt.
-              </p>
-              <Link
-                href="/focus"
-                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-[14px] bg-primary text-white font-bold text-[14px] active:scale-[0.98] transition-transform shadow-[0_4px_20px_rgba(81,96,80,0.35)]"
-              >
-                <Play size={14} fill="currentColor" />
-                Start Focus Timer
-              </Link>
-            </div>
-          ) : (
-            <Link
-              href="/goals"
-              className="block rounded-hero bg-surface-inverse p-5 mb-6 shadow-organic-lg"
-            >
-              <div className="flex items-center gap-1.5 mb-3">
-                <span className="w-2 h-2 rounded-full bg-on-surface-inverse/30 inline-block" />
-                <span className="text-[9px] font-bold tracking-[0.2em] text-on-surface-inverse/50 uppercase">
-                  Geen actief doel
-                </span>
-              </div>
-              <p className="text-[16px] font-bold text-on-surface-inverse mb-1">Stel je focus in</p>
-              <p className="text-[12px] text-on-surface-inverse/50">Voeg een doel toe om te starten →</p>
             </Link>
           )}
 
@@ -929,8 +877,3 @@ export default function DashboardPage() {
   );
 }
 
-function goalProgressLabel(progress: number | undefined) {
-  const p = progress ?? 0;
-  if (p >= 100) return 'Afgerond →';
-  return `${p}% klaar →`;
-}

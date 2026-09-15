@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Flame, X, RefreshCw, Phone } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
+import { api } from '@/lib/api';
+import { getToday } from '@/lib/weekflow.service';
+import { TIME_WASTER_OPTIONS } from '@/lib/onboarding';
 
 const COUNTDOWN_SECONDS = 15 * 60;
 
@@ -22,7 +25,27 @@ export function FrogButton() {
   const [loading, setLoading] = useState(false);
   const [displayName, setDisplayName] = useState('Je coach');
   const [lines, setLines] = useState<string[]>([]);
+  const [todaysFrog, setTodaysFrog] = useState<string | null>(null);
+  const [checkedToday, setCheckedToday] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Laat vooraf zien wélke taak dit betreft — niet pas na het klikken. Zonder dit weet niemand,
+  // laat staan een nieuwe gebruiker, waar deze knop over gaat vóórdat de 15 minuten al lopen.
+  useEffect(() => {
+    const todayStr = getToday('Europe/Amsterdam');
+    api.logs.getByTypeAndDate('morning', todayStr)
+      .then((logs: any[]) => {
+        const raw = logs?.[0]?.data;
+        const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        const category = data?.kikkerCategory as string | undefined;
+        if (category) {
+          const label = TIME_WASTER_OPTIONS.find((o) => o.value === category)?.label ?? category;
+          setTodaysFrog(data?.kikkerDetail ? `${label} — ${data.kikkerDetail}` : label);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCheckedToday(true));
+  }, []);
 
   useEffect(() => {
     if (!running) return;
@@ -50,7 +73,7 @@ export function FrogButton() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${AuthService.getToken()}`,
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ task: todaysFrog }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -80,16 +103,21 @@ export function FrogButton() {
         </div>
         <div className="flex-1 min-w-0 text-left">
           <p className="text-[13px] font-bold text-white">Doorbreek Uitstel</p>
-          <p className="text-[11px] text-white/70 leading-snug">15 minuten, geen nadenken — gewoon bellen</p>
+          <p className="text-[11px] text-white/70 leading-snug truncate">
+            {!checkedToday ? '15 minuten, geen nadenken' : todaysFrog ? `Vandaag: ${todaysFrog}` : 'Nog geen kikker gekozen — vul eerst je ochtendritueel in'}
+          </p>
         </div>
       </button>
 
       {open && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-4">
           <div className="w-full max-w-md bg-white rounded-[20px] p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <p className="text-[15px] font-bold text-ink">{displayName} zegt: stop met uitstellen</p>
-              <button onClick={close} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-sunken">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[15px] font-bold text-ink">{displayName} zegt: stop met uitstellen</p>
+                {todaysFrog && <p className="text-[12px] text-ink-soft truncate mt-0.5">{todaysFrog}</p>}
+              </div>
+              <button onClick={close} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-sunken shrink-0">
                 <X size={16} className="text-ink-soft" />
               </button>
             </div>

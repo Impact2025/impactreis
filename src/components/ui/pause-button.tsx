@@ -82,20 +82,16 @@ export function PauseButton() {
       <button
         onClick={handleOpen}
         aria-label="Pauze noodknop"
-        className="fixed z-50 w-12 h-12 rounded-full bg-accent text-white shadow-organic-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+        className="fixed z-40 w-9 h-9 rounded-full bg-accent/90 text-white shadow-md flex items-center justify-center hover:scale-105 hover:bg-accent active:scale-95 transition-all"
         style={{
-          bottom: 'calc(5.5rem + env(safe-area-inset-bottom))',
-          right: '1rem',
-          animation: 'pausePulse 3s ease-in-out infinite',
+          // Vlak boven de bottom-nav i.p.v. hoog boven de content — een groter/opvallender
+          // exemplaar hier overlapte eerder met full-width kaarten (bijv. de Kikker-knop) op
+          // kortere pagina's.
+          bottom: 'calc(4.75rem + env(safe-area-inset-bottom))',
+          right: '0.75rem',
         }}
       >
-        <Pause size={22} />
-        <style>{`
-          @keyframes pausePulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(83, 96, 108, 0.4); }
-            50% { box-shadow: 0 0 0 10px rgba(83, 96, 108, 0); }
-          }
-        `}</style>
+        <Pause size={16} />
       </button>
     );
   }
