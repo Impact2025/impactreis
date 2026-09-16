@@ -16,8 +16,9 @@ import {
   type UserOnboardingProfile,
 } from './onboarding';
 import { normalizeNextActions } from './goal-actions';
-import { getCurrentQuarter } from './weekflow.service';
+import { getCurrentQuarter, getDayType } from './weekflow.service';
 import { isCalendarConfiguredFor, listTodayEvents } from './google-calendar';
+import { getRitualStatus } from './ritual-status.service';
 
 export type Technique =
   | 'grow'
@@ -1109,10 +1110,13 @@ export async function runCoachAnalysis(userId: string, organizationId: number | 
 export type NextStepKey =
   | 'geen-ochtendritueel'
   | 'proactief-signaal'
+  | 'weekstart-open'
   | 'kikker-open'
   | 'hefboomtaak-open'
   | 'drukke-dag'
   | 'zwakke-scorecard'
+  | 'weekreview-open'
+  | 'verdieping-suggestie'
   | 'streak-fallback';
 
 export interface NextStepCandidate {
@@ -1128,11 +1132,16 @@ export interface NextStepCandidate {
 export interface NextStepInput {
   hasMorningRitual: boolean;
   proactiveSignal: ProactiveSignal;
+  weeklyStartOpen: boolean;
   frogLabel: string | null;
   frogDone: boolean;
   leverageTask: { goalTitle: string; actionText: string } | null;
   meetingMinutes: number;
   scorecard: WeeklyScorecard;
+  weeklyReviewOpen: boolean;
+  /** Al kant-en-klaar bepaald door determineToolSuggestion — zie daar voor de "welke tool is
+   *  het langst niet gebruikt"-logica. Hier alleen nog de prioriteit t.o.v. de andere kandidaten. */
+  toolSuggestion: NextStepCandidate | null;
   streak: number;
 }
 
@@ -1155,6 +1164,15 @@ export function determineNextStepCandidate(input: NextStepInput): NextStepCandid
       factLine: input.proactiveSignal.message,
       ctaLabel: 'Bespreek met Sparren',
       ctaHref: '/coach',
+    };
+  }
+  if (input.weeklyStartOpen) {
+    return {
+      key: 'weekstart-open',
+      headline: 'Start je week',
+      factLine: 'Er is deze week nog geen weekstart gedaan — zonder gekozen focus voor de week stuurt de rest van de dagen op toeval.',
+      ctaLabel: 'Start je week',
+      ctaHref: '/weekly-start',
     };
   }
   if (input.frogLabel && !input.frogDone) {
@@ -1194,12 +1212,78 @@ export function determineNextStepCandidate(input: NextStepInput): NextStepCandid
       ctaHref: '/coach',
     };
   }
+  if (input.weeklyReviewOpen) {
+    return {
+      key: 'weekreview-open',
+      headline: 'Sluit je week af',
+      factLine: 'Deze week is nog niet afgesloten met een Week Review — reflectie is wat een week tot leerstof maakt in plaats van alleen tijd die voorbijging.',
+      ctaLabel: 'Naar Week Review',
+      ctaHref: '/weekly-review',
+    };
+  }
+  if (input.toolSuggestion) {
+    return input.toolSuggestion;
+  }
   return {
     key: 'streak-fallback',
     headline: 'Hou de lijn vast',
     factLine: `Streak van ${input.streak} dag${input.streak !== 1 ? 'en' : ''}, geen acute knelpunten — de kans om verder te bouwen.`,
     ctaLabel: 'Naar doelen',
     ctaHref: '/goals',
+  };
+}
+
+const STALE_DAGBOEK_DAYS = 10;
+const STALE_CIRKEL_DAYS = 21;
+
+export interface ToolSuggestionInput {
+  /** Nog geen enkele identiteitsverklaring vastgelegd. */
+  identityEmpty: boolean;
+  /** null = nog nooit gebruikt. */
+  daysSinceDagboek: number | null;
+  daysSinceControleCirkel: number | null;
+}
+
+/** Kiest, buiten de kern-rituelen om, welke "verdiepings"-tool (Identiteit, Dagboek, Controle
+ *  Cirkel) het langst is blijven liggen — puur functioneel, zelfde stijl als
+ *  determineNextStepCandidate. Identiteit weegt zwaarst (fundament), daarna wint de tool met de
+ *  langste stilte (nooit gebruikt = oneindig stil). Geeft null als niets stil genoeg staat. */
+export function determineToolSuggestion(input: ToolSuggestionInput): NextStepCandidate | null {
+  if (input.identityEmpty) {
+    return {
+      key: 'verdieping-suggestie',
+      headline: 'Nog niet verkend: Identiteit',
+      factLine: 'Er is nog geen enkele identiteitsverklaring vastgelegd — de tool waarmee je claimt wie je wil zijn.',
+      ctaLabel: 'Naar Identiteit',
+      ctaHref: '/identity',
+    };
+  }
+
+  const dagboekStale = input.daysSinceDagboek === null || input.daysSinceDagboek >= STALE_DAGBOEK_DAYS;
+  const cirkelStale = input.daysSinceControleCirkel === null || input.daysSinceControleCirkel >= STALE_CIRKEL_DAYS;
+  if (!dagboekStale && !cirkelStale) return null;
+
+  const dagboekAge = input.daysSinceDagboek ?? Infinity;
+  const cirkelAge = input.daysSinceControleCirkel ?? Infinity;
+  if (dagboekStale && (!cirkelStale || dagboekAge >= cirkelAge)) {
+    return {
+      key: 'verdieping-suggestie',
+      headline: 'Nog niet verkend: Dagboek',
+      factLine: input.daysSinceDagboek === null
+        ? 'Het Dagboek is nog nooit gebruikt om bij te houden hoe het gaat.'
+        : `De laatste dagboek-notitie is ${input.daysSinceDagboek} dagen geleden.`,
+      ctaLabel: 'Open Dagboek',
+      ctaHref: '/dagboek',
+    };
+  }
+  return {
+    key: 'verdieping-suggestie',
+    headline: 'Nog niet verkend: Controle Cirkel',
+    factLine: input.daysSinceControleCirkel === null
+      ? 'De Controle Cirkel-oefening is nog nooit gebruikt om iets los te laten.'
+      : `De laatste Controle Cirkel-oefening is ${input.daysSinceControleCirkel} dagen geleden.`,
+    ctaLabel: 'Open Controle Cirkel',
+    ctaHref: '/controle-cirkel',
   };
 }
 
@@ -1232,10 +1316,14 @@ export type NextStepResult =
 export async function runNextStepAnalysis(userId: string, organizationId: number | null): Promise<NextStepResult> {
   const today = new Date().toISOString().split('T')[0];
 
-  const [ctx, recentMorningEnergy, goalRows] = await Promise.all([
+  const [ctx, recentMorningEnergy, goalRows, ritualStatus, identityRows, dagboekRows, cirkelRows] = await Promise.all([
     loadCoachContext(userId, organizationId),
     loadRecentMorningEnergy(userId, 5),
     sql`SELECT data FROM goals WHERE user_id = ${userId} AND organization_id = ${organizationId}`,
+    getRitualStatus(userId, organizationId),
+    sql`SELECT statements FROM identity_profiles WHERE user_id = ${userId}`,
+    sql`SELECT MAX(timestamp) AS last FROM daily_logs WHERE user_id = ${userId} AND organization_id = ${organizationId} AND type IN ('dagboek_ochtend', 'dagboek_avond')`,
+    sql`SELECT MAX(timestamp) AS last FROM daily_logs WHERE user_id = ${userId} AND organization_id = ${organizationId} AND type = 'controle_cirkel'`,
   ]);
 
   const currentQuarter = getCurrentQuarter();
@@ -1266,14 +1354,36 @@ export async function runNextStepAnalysis(userId: string, organizationId: number
     : null;
   const frogDone = (ctx.today as any).eveningVerdict === 'waarde_verkocht';
 
+  const weeklyStartOpen = !ritualStatus.weeklyStart.isComplete && ritualStatus.weeklyStart.canStillComplete;
+  const weeklyReviewOpen = getDayType(ritualStatus.settings) === 'weekend' && !ritualStatus.weeklyReview.isComplete;
+
+  const identityStatements = (identityRows as { statements: unknown }[])[0]?.statements;
+  const identityList = Array.isArray(identityStatements)
+    ? identityStatements
+    : typeof identityStatements === 'string'
+      ? (() => { try { const p = JSON.parse(identityStatements); return Array.isArray(p) ? p : []; } catch { return []; } })()
+      : [];
+  const daysSince = (rows: { last: string | null }[]): number | null => {
+    const last = rows[0]?.last;
+    return last ? Math.floor((Date.now() - new Date(last).getTime()) / 86400000) : null;
+  };
+  const toolSuggestion = determineToolSuggestion({
+    identityEmpty: identityList.length === 0,
+    daysSinceDagboek: daysSince(dagboekRows as { last: string | null }[]),
+    daysSinceControleCirkel: daysSince(cirkelRows as { last: string | null }[]),
+  });
+
   const candidate = determineNextStepCandidate({
     hasMorningRitual: ctx.today.energyLevel != null,
     proactiveSignal,
+    weeklyStartOpen,
     frogLabel,
     frogDone,
     leverageTask,
     meetingMinutes,
     scorecard,
+    weeklyReviewOpen,
+    toolSuggestion,
     streak: ctx.streak,
   });
 

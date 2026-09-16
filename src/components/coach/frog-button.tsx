@@ -7,7 +7,10 @@ import { api } from '@/lib/api';
 import { getToday } from '@/lib/weekflow.service';
 import { TIME_WASTER_OPTIONS } from '@/lib/onboarding';
 
-const COUNTDOWN_SECONDS = 15 * 60;
+const SELF_TIMER_SECONDS = 15 * 60;
+const MAX_CALENDAR_DEADLINE_SECONDS = 45 * 60;
+const MIN_CALENDAR_DEADLINE_SECONDS = 90;
+const CALENDAR_LOOKAHEAD_MS = 4 * 60 * 60 * 1000;
 
 function formatTime(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
@@ -15,19 +18,46 @@ function formatTime(totalSeconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+function formatClock(iso: string): string {
+  return new Date(iso).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+}
+
 /** MECHANISME 1 — De Kikker-knop: on-demand uitsteldoder. Start een 15-minuten countdown en
  *  toont 3 kant-en-klare openingszinnen, zodat het gesprek zonder nadenken begonnen kan worden.
  *  Geen audioprimer (geen voice-assets beschikbaar) — de tekst doet hetzelfde werk. */
 export function FrogButton() {
   const [open, setOpen] = useState(false);
-  const [seconds, setSeconds] = useState(COUNTDOWN_SECONDS);
+  const [seconds, setSeconds] = useState(SELF_TIMER_SECONDS);
   const [running, setRunning] = useState(false);
+  const [deadline, setDeadline] = useState<{ summary: string; at: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [displayName, setDisplayName] = useState('Je coach');
   const [lines, setLines] = useState<string[]>([]);
   const [todaysFrog, setTodaysFrog] = useState<string | null>(null);
   const [checkedToday, setCheckedToday] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [weekCount, setWeekCount] = useState<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Toon hoe vaak deze week écht gebeld is (niet hoe vaak de knop geopend is) — anders
+  // beloont de teller schijnbewegingen in plaats van het daadwerkelijk doorbreken van uitstel.
+  useEffect(() => {
+    api.logs.getAll()
+      .then((logs: any[]) => {
+        const now = new Date();
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const count = (logs ?? []).filter((l) => {
+          if (l?.type !== 'kikker') return false;
+          const raw = l?.data;
+          const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          if (!data?.called) return false;
+          const ts = new Date(l?.timestamp ?? l?.date_string ?? l?.date);
+          return ts >= weekAgo;
+        }).length;
+        setWeekCount(count);
+      })
+      .catch(() => {});
+  }, []);
 
   // Laat vooraf zien wélke taak dit betreft — niet pas na het klikken. Zonder dit weet niemand,
   // laat staan een nieuwe gebruiker, waar deze knop over gaat vóórdat de 15 minuten al lopen.
@@ -63,33 +93,83 @@ export function FrogButton() {
 
   const startSession = async () => {
     setOpen(true);
-    setSeconds(COUNTDOWN_SECONDS);
+    setDeadline(null);
     setRunning(true);
     setLoading(true);
-    try {
-      const res = await fetch('/api/coach/kikker', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${AuthService.getToken()}`,
-        },
-        body: JSON.stringify({ task: todaysFrog }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setDisplayName(data.displayName ?? 'Je coach');
-        setLines(data.lines ?? []);
-      }
-    } catch {
-      // stil — de countdown werkt ook zonder gegenereerde zinnen
-    } finally {
-      setLoading(false);
+
+    // Een echte deadline (de volgende afspraak in de agenda) is geloofwaardiger dan een vaste
+    // 15-minutenklok. Alleen gebruiken als die deadline ook echt druk oplevert (binnen 4 uur en
+    // met genoeg tijd om nog te bellen) — anders val terug op de zelfgekozen sprint.
+    const token = AuthService.getToken();
+    const findDeadline = fetch('/api/calendar/today', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { configured?: boolean; events?: { summary: string; start: string | null }[] } | null) => {
+        if (!data?.configured || !data.events?.length) return null;
+        const now = Date.now();
+        const upcoming = data.events
+          .filter((e) => e.start && new Date(e.start).getTime() > now)
+          .sort((a, b) => new Date(a.start!).getTime() - new Date(b.start!).getTime())[0];
+        if (!upcoming?.start) return null;
+        const secondsUntil = Math.floor((new Date(upcoming.start).getTime() - now) / 1000);
+        if (secondsUntil < MIN_CALENDAR_DEADLINE_SECONDS || secondsUntil > MAX_CALENDAR_DEADLINE_SECONDS) {
+          return null;
+        }
+        return { summary: upcoming.summary, at: upcoming.start, seconds: secondsUntil };
+      })
+      .catch(() => null);
+
+    const fetchLines = fetch('/api/coach/kikker', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ task: todaysFrog }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .catch(() => null);
+
+    const [deadlineResult, linesData] = await Promise.all([findDeadline, fetchLines]);
+
+    if (deadlineResult) {
+      setDeadline({ summary: deadlineResult.summary, at: deadlineResult.at });
+      setSeconds(deadlineResult.seconds);
+    } else {
+      setSeconds(SELF_TIMER_SECONDS);
     }
+    if (linesData) {
+      setDisplayName(linesData.displayName ?? 'Je coach');
+      setLines(linesData.lines ?? []);
+    }
+    setLoading(false);
   };
 
   const close = () => {
     setRunning(false);
     setOpen(false);
+    setConfirming(false);
+    setDeadline(null);
+  };
+
+  const logOutcome = async (called: boolean) => {
+    const todayStr = getToday('Europe/Amsterdam');
+    try {
+      await api.logs.create({
+        type: 'kikker',
+        date: todayStr,
+        called,
+        task: todaysFrog,
+        secondsLeft: seconds,
+        deadlineSource: deadline ? 'calendar' : 'self',
+        deadlineSummary: deadline?.summary ?? null,
+      });
+      if (called) setWeekCount((c) => (c ?? 0) + 1);
+    } catch {
+      // stil — de bevestiging is een geheugensteun, geen kritiek pad
+    }
+    close();
   };
 
   return (
@@ -104,7 +184,12 @@ export function FrogButton() {
         <div className="flex-1 min-w-0 text-left">
           <p className="text-[13px] font-bold text-white">Doorbreek Uitstel</p>
           <p className="text-[11px] text-white/70 leading-snug truncate">
-            {!checkedToday ? '15 minuten, geen nadenken' : todaysFrog ? `Vandaag: ${todaysFrog}` : 'Nog geen kikker gekozen — vul eerst je ochtendritueel in'}
+            {!checkedToday
+              ? '15 minuten, geen nadenken'
+              : todaysFrog
+              ? `Vandaag: ${todaysFrog}`
+              : 'Nog geen kikker gekozen — vul eerst je ochtendritueel in'}
+            {weekCount !== null && weekCount > 0 ? ` · ${weekCount}x deze week doorbroken` : ''}
           </p>
         </div>
       </button>
@@ -127,7 +212,11 @@ export function FrogButton() {
                 {formatTime(seconds)}
               </p>
               <p className="text-[12px] text-ink-soft mt-1">
-                {seconds === 0 ? 'Tijd om. Heb je gebeld?' : 'Telefoon pakken, nu.'}
+                {seconds === 0
+                  ? 'Tijd om. Heb je gebeld?'
+                  : deadline
+                  ? `Tot "${deadline.summary}" om ${formatClock(deadline.at)}`
+                  : 'Zelfgekozen sprint — geen excuus, geen echte deadline.'}
               </p>
             </div>
 
@@ -149,12 +238,32 @@ export function FrogButton() {
               )}
             </div>
 
-            <button
-              onClick={close}
-              className="w-full py-3 rounded-[14px] bg-primary text-white font-bold text-[14px]"
-            >
-              Ik pak nu de telefoon
-            </button>
+            {confirming ? (
+              <div className="space-y-2">
+                <p className="text-[13px] text-ink text-center font-medium">Heb je gebeld?</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => logOutcome(false)}
+                    className="flex-1 py-3 rounded-[14px] bg-surface-sunken text-ink-soft font-bold text-[14px]"
+                  >
+                    Nog niet
+                  </button>
+                  <button
+                    onClick={() => logOutcome(true)}
+                    className="flex-1 py-3 rounded-[14px] bg-primary text-white font-bold text-[14px]"
+                  >
+                    Ja, gebeld
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirming(true)}
+                className="w-full py-3 rounded-[14px] bg-primary text-white font-bold text-[14px]"
+              >
+                Ik pak nu de telefoon
+              </button>
+            )}
           </div>
         </div>
       )}
