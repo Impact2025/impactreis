@@ -38,6 +38,7 @@ export function useSpeechRecognition() {
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const finalTranscriptRef = useRef('');
 
   useEffect(() => {
     setSupported(getRecognitionCtor() !== null);
@@ -46,20 +47,20 @@ export function useSpeechRecognition() {
   const start = useCallback(() => {
     const Ctor = getRecognitionCtor();
     if (!Ctor) return;
+    finalTranscriptRef.current = '';
     setTranscript('');
     const recognition = new Ctor();
     recognition.lang = 'nl-NL';
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.onresult = (event) => {
-      let finalText = '';
       let interimText = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
-        if (result.isFinal) finalText += result[0].transcript;
+        if (result.isFinal) finalTranscriptRef.current += result[0].transcript;
         else interimText += result[0].transcript;
       }
-      setTranscript((prev) => (finalText ? `${prev}${finalText}` : prev + interimText));
+      setTranscript(finalTranscriptRef.current + interimText);
     };
     recognition.onerror = () => setListening(false);
     recognition.onend = () => setListening(false);
@@ -73,7 +74,12 @@ export function useSpeechRecognition() {
     setListening(false);
   }, []);
 
-  return { supported, listening, transcript, start, stop, resetTranscript: () => setTranscript('') };
+  const resetTranscript = useCallback(() => {
+    finalTranscriptRef.current = '';
+    setTranscript('');
+  }, []);
+
+  return { supported, listening, transcript, start, stop, resetTranscript };
 }
 
 /** Tekst-naar-spraak via de Web Speech API (nl-NL). */
