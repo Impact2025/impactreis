@@ -210,17 +210,40 @@ export default function WeeklyStartPage() {
           </div>
         )}
 
-        {/* Kwartaal-Rocks, ter herinnering — geen invoer, puur context */}
+        {/* Kwartaal-Rocks — met een knop om ze als hoofddoel over te nemen, zodat de vrije
+            weekdoelen ook echt kunnen verwijzen naar de kwartaalprioriteiten i.p.v. daar los
+            van te staan. */}
         {activeRockTitles.length > 0 && (
           <div className="rounded-[16px] border border-tertiary/20 bg-tertiary-soft p-4">
-            <div className="flex items-center gap-2 mb-1.5">
+            <div className="flex items-center gap-2 mb-2">
               <Mountain size={13} className="text-tertiary" />
               <p className="text-[12px] font-semibold text-ink uppercase tracking-wide">Dit kwartaal focus je op</p>
             </div>
-            <ul className="space-y-0.5">
-              {activeRockTitles.map((title, i) => (
-                <li key={i} className="text-[13px] text-ink">• {title}</li>
-              ))}
+            <ul className="space-y-1.5">
+              {activeRockTitles.map((title, i) => {
+                const alreadyAdded = formData.mainGoals.some((g) => g.includes(title));
+                return (
+                  <li key={i} className="flex items-center justify-between gap-2">
+                    <span className="text-[13px] text-ink">• {title}</span>
+                    <button
+                      type="button"
+                      disabled={alreadyAdded}
+                      onClick={() => {
+                        const emptyIndex = formData.mainGoals.findIndex((g) => g.trim() === '');
+                        const goalText = `Rock: ${title}`;
+                        if (emptyIndex >= 0) {
+                          updateMainGoal(emptyIndex, goalText);
+                        } else if (formData.mainGoals.length < 5) {
+                          setFormData((prev) => ({ ...prev, mainGoals: [...prev.mainGoals, goalText] }));
+                        }
+                      }}
+                      className="text-[11px] font-medium text-tertiary border border-tertiary/30 rounded-full px-2.5 py-1 hover:bg-tertiary/10 transition-colors disabled:opacity-40 disabled:hover:bg-transparent flex-shrink-0"
+                    >
+                      {alreadyAdded ? 'Toegevoegd' : '+ Als doel'}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}

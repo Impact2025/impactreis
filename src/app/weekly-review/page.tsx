@@ -21,6 +21,12 @@ import {
   Moon,
   Timer,
   Mountain,
+  Compass,
+  Circle,
+  CheckSquare,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -34,6 +40,25 @@ interface Rock {
   id: string;
   title: string;
   progress: number;
+}
+
+function DeltaBadge({ current, previous }: { current: number | null; previous: number | null }) {
+  if (current === null || previous === null) return null;
+  const diff = current - previous;
+  if (diff === 0) {
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-ink-soft">
+        <Minus size={11} /> gelijk
+      </span>
+    );
+  }
+  const up = diff > 0;
+  const Icon = up ? ArrowUpRight : ArrowDownRight;
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[11px] font-semibold ${up ? 'text-primary' : 'text-red-500'}`}>
+      <Icon size={11} /> {up ? '+' : ''}{diff}
+    </span>
+  );
 }
 
 const ROCK_STATUS_LABELS: Record<RockStatus, string> = {
@@ -59,6 +84,22 @@ interface WeeklyReviewData {
   whatLearned: string;
   howContributed: string;
   howMakeBetter: string;
+  mainGoalResults: { goal: string; done: boolean }[];
+}
+
+interface WeeklyStartData {
+  weekIntention: string;
+  mainGoals: string[];
+  successMetrics: string;
+}
+
+interface PreviousWeekComparison {
+  productivityScore: number | null;
+  energyScore: number | null;
+  winsCount: number | null;
+  morningRitualDays: number | null;
+  eveningRitualDays: number | null;
+  focusMinutes: number | null;
 }
 
 export default function WeeklyReviewPage() {
@@ -81,6 +122,8 @@ export default function WeeklyReviewPage() {
     // monday/sunday zijn UTC-noon ankers van de juiste kalenderdag — UTC-geformatteerd geeft
     // dus altijd de juiste datum, ongeacht de tijdzone van de browser die dit rendert.
     const toDateString = (d: Date) => d.toISOString().split('T')[0];
+    const prevMonday = new Date(monday.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const prevSunday = new Date(sunday.getTime() - 7 * 24 * 60 * 60 * 1000);
     return {
       weekNumber,
       weekStart: monday.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', timeZone: 'UTC' }),
@@ -89,6 +132,9 @@ export default function WeeklyReviewPage() {
       weekEndISO: sunday.toISOString(),
       weekStartDate: toDateString(monday),
       weekEndDate: toDateString(sunday),
+      prevWeekNumber: weekNumber - 1,
+      prevWeekStartDate: toDateString(prevMonday),
+      prevWeekEndDate: toDateString(prevSunday),
     };
   };
 
@@ -110,13 +156,16 @@ export default function WeeklyReviewPage() {
     whatGave: '',
     whatLearned: '',
     howContributed: '',
-    howMakeBetter: ''
+    howMakeBetter: '',
+    mainGoalResults: [],
   });
 
   const [weekSummary, setWeekSummary] = useState<Awaited<ReturnType<typeof api.weeklySummary.get>> | null>(null);
   const [isAlreadyComplete, setIsAlreadyComplete] = useState(false);
   const [rocks, setRocks] = useState<Rock[]>([]);
   const [rockStatuses, setRockStatuses] = useState<Record<string, RockStatus>>({});
+  const [weekStartData, setWeekStartData] = useState<WeeklyStartData | null>(null);
+  const [previousWeek, setPreviousWeek] = useState<PreviousWeekComparison | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -126,6 +175,26 @@ export default function WeeklyReviewPage() {
         api.weeklyReviews.getByWeekNumber(weekInfo.weekNumber)
           .then((reviews: any[]) => {
             setIsAlreadyComplete(reviews.some((r) => r?.data?.type === 'weekly-review'));
+
+            // Toon waarmee de week begon (weekIntention/mainGoals/successMetrics uit de
+            // weekstart), zodat de afsluiting teruggrijpt op wat je zelf had gepland i.p.v.
+            // los daarvan blanco te reflecteren.
+            const start = reviews.find((r) => r?.data?.type === 'weekly-start');
+            const startData = start?.data?.data;
+            if (startData) {
+              setWeekStartData({
+                weekIntention: startData.weekIntention ?? '',
+                mainGoals: (startData.mainGoals ?? []).filter((g: string) => g.trim() !== ''),
+                successMetrics: startData.successMetrics ?? '',
+              });
+              const goals = (startData.mainGoals ?? []).filter((g: string) => g.trim() !== '');
+              setFormData((prev) => ({
+                ...prev,
+                mainGoalResults: prev.mainGoalResults.length > 0
+                  ? prev.mainGoalResults
+                  : goals.map((goal: string) => ({ goal, done: false })),
+              }));
+            }
           })
           .catch(() => {});
         setLoading(false);
@@ -155,6 +224,31 @@ export default function WeeklyReviewPage() {
         });
       })
       .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // Week-op-week vergelijking: dezelfde metrics als "deze week in cijfers" en de scores uit
+    // de vorige weekreview, zodat de gebruiker ziet of hij vooruit of achteruit gaat i.p.v. de
+    // week geïsoleerd te beoordelen.
+    Promise.all([
+      api.weeklySummary.get(weekInfo.prevWeekStartDate, weekInfo.prevWeekEndDate).catch(() => null),
+      weekInfo.prevWeekNumber > 0
+        ? api.weeklyReviews.getByWeekNumber(weekInfo.prevWeekNumber).catch(() => [])
+        : Promise.resolve([]),
+    ]).then(([prevSummary, prevReviews]) => {
+      const prevReview = (prevReviews ?? []).find((r: any) => r?.data?.type === 'weekly-review');
+      const prevData = prevReview?.data;
+      if (!prevSummary && !prevData) return;
+      setPreviousWeek({
+        productivityScore: prevData?.productivityScore ?? null,
+        energyScore: prevData?.energyScore ?? null,
+        winsCount: Array.isArray(prevData?.wins) ? prevData.wins.length : null,
+        morningRitualDays: prevSummary?.morningRitualDays ?? null,
+        eveningRitualDays: prevSummary?.eveningRitualDays ?? null,
+        focusMinutes: prevSummary?.focusMinutes ?? null,
+      });
+    }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -279,27 +373,78 @@ export default function WeeklyReviewPage() {
         {/* Week in cijfers — echte data uit ochtend/avond/focus/energie, geen invoer */}
         {weekSummary && (
           <div className="rounded-[16px] border border-line bg-surface-sunken p-4 mb-5">
-            <p className="text-[12px] font-semibold text-ink uppercase tracking-wide mb-3">Deze week in cijfers</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[12px] font-semibold text-ink uppercase tracking-wide">Deze week in cijfers</p>
+              {previousWeek && <span className="text-[10px] text-ink-soft">t.o.v. vorige week</span>}
+            </div>
             <div className="grid grid-cols-3 gap-2 text-center">
               <div>
                 <Sunrise size={14} className="text-tertiary mx-auto mb-1" />
                 <p className="text-[15px] font-bold text-ink">{weekSummary.morningRitualDays}/7</p>
-                <p className="text-[10px] text-ink-soft">Ochtend</p>
+                <p className="text-[10px] text-ink-soft mb-1">Ochtend</p>
+                <DeltaBadge current={weekSummary.morningRitualDays} previous={previousWeek?.morningRitualDays ?? null} />
               </div>
               <div>
                 <Moon size={14} className="text-accent mx-auto mb-1" />
                 <p className="text-[15px] font-bold text-ink">{weekSummary.eveningRitualDays}/7</p>
-                <p className="text-[10px] text-ink-soft">Avond</p>
+                <p className="text-[10px] text-ink-soft mb-1">Avond</p>
+                <DeltaBadge current={weekSummary.eveningRitualDays} previous={previousWeek?.eveningRitualDays ?? null} />
               </div>
               <div>
                 <Timer size={14} className="text-primary mx-auto mb-1" />
                 <p className="text-[15px] font-bold text-ink">{weekSummary.focusMinutes}</p>
-                <p className="text-[10px] text-ink-soft">Focus-min</p>
+                <p className="text-[10px] text-ink-soft mb-1">Focus-min</p>
+                <DeltaBadge current={weekSummary.focusMinutes} previous={previousWeek?.focusMinutes ?? null} />
               </div>
             </div>
             {weekSummary.averageEveningEnergy !== null && (
               <p className="text-[12px] text-ink-soft text-center mt-3">
                 Gemiddelde avond-energie: <span className="font-semibold text-ink">{weekSummary.averageEveningEnergy}/10</span>
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Waar je deze week mee begon — teruggelezen uit de weekstart, met afvinkbare hoofddoelen */}
+        {weekStartData && (weekStartData.weekIntention || weekStartData.mainGoals.length > 0) && (
+          <div className="rounded-[16px] border border-line p-5 mb-5">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-[10px] bg-surface-inverse flex items-center justify-center">
+                <Compass size={15} className="text-white" />
+              </div>
+              <div>
+                <h3 className="text-[14px] font-semibold text-ink">Waar je deze week mee begon</h3>
+                <p className="text-[11px] text-ink-soft">Je eigen weekstart, niet vergeten</p>
+              </div>
+            </div>
+            {weekStartData.weekIntention && (
+              <p className="text-[13px] text-ink italic mb-3">"{weekStartData.weekIntention}"</p>
+            )}
+            {formData.mainGoalResults.length > 0 && (
+              <div className="space-y-2">
+                {formData.mainGoalResults.map((item, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setFormData((prev) => ({
+                      ...prev,
+                      mainGoalResults: prev.mainGoalResults.map((g, i) => i === index ? { ...g, done: !g.done } : g),
+                    }))}
+                    className="w-full flex items-start gap-2.5 text-left"
+                  >
+                    {item.done ? (
+                      <CheckSquare size={16} className="text-primary flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <Circle size={16} className="text-ink-soft flex-shrink-0 mt-0.5" />
+                    )}
+                    <span className={`text-[13px] ${item.done ? 'text-ink-soft line-through' : 'text-ink'}`}>{item.goal}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {weekStartData.successMetrics && (
+              <p className="text-[12px] text-ink-soft mt-3 border-t border-line pt-3">
+                Je succesmaatstaf was: <span className="text-ink">{weekStartData.successMetrics}</span>
               </p>
             )}
           </div>
@@ -350,10 +495,13 @@ export default function WeeklyReviewPage() {
               <div className="w-8 h-8 rounded-[10px] bg-tertiary-soft flex items-center justify-center">
                 <Award size={15} className="text-tertiary" />
               </div>
-              <div>
+              <div className="flex-1">
                 <h3 className="text-[14px] font-semibold text-ink">Grootste Overwinningen</h3>
                 <p className="text-[11px] text-ink-soft">Wat ging er geweldig deze week?</p>
               </div>
+              {previousWeek?.winsCount !== null && previousWeek?.winsCount !== undefined && (
+                <DeltaBadge current={formData.wins.length} previous={previousWeek.winsCount} />
+              )}
             </div>
 
             <div className="flex flex-wrap gap-2 mb-3">
@@ -444,6 +592,9 @@ export default function WeeklyReviewPage() {
               <div className="text-center mb-3">
                 <span className="text-[36px] font-bold text-ink">{formData.productivityScore}</span>
                 <span className="text-[16px] text-ink-soft">/10</span>
+                {previousWeek?.productivityScore !== null && previousWeek?.productivityScore !== undefined && (
+                  <div><DeltaBadge current={formData.productivityScore} previous={previousWeek.productivityScore} /></div>
+                )}
               </div>
               <div className="relative h-2 bg-surface-sunken rounded-full">
                 <div
@@ -465,6 +616,9 @@ export default function WeeklyReviewPage() {
               <div className="text-center mb-3">
                 <span className="text-[36px] font-bold text-ink">{formData.energyScore}</span>
                 <span className="text-[16px] text-ink-soft">/10</span>
+                {previousWeek?.energyScore !== null && previousWeek?.energyScore !== undefined && (
+                  <div><DeltaBadge current={formData.energyScore} previous={previousWeek.energyScore} /></div>
+                )}
               </div>
               <div className="relative h-2 bg-surface-sunken rounded-full">
                 <div
