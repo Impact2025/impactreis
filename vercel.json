@@ -23,18 +23,6 @@
     {
       "path": "/api/email/reality-check-nurture",
       "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/email/adhd-rapport",
-      "schedule": "0 18 7 6 *"
-    },
-    {
-      "path": "/api/email/adhd-rapport",
-      "schedule": "0 18 14 6 *"
-    },
-    {
-      "path": "/api/email/adhd-rapport",
-      "schedule": "0 18 17 6 *"
     }
   ]
 }

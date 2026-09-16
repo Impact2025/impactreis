@@ -68,23 +68,6 @@ export default function WeeklyStartPage() {
     createdAt: new Date().toISOString(),
   });
 
-  const loadContentTemplate = () => {
-    setFormData(prev => ({
-      ...prev,
-      weekIntention: '7 dagen consistent content posten - geen uitzonderingen. Marketing > nieuwe ideeën.',
-      mainGoals: [
-        'Ma: Instagram Story + Post (08:00) - Motivatie & Mindset',
-        'Di: LinkedIn + Nieuwsbrief (10:00) - Autoriteit & Leads',
-        'Wo: TikTok/Reel (19:30) - Viraal & Herkenbaar',
-      ],
-      focusAreas: { work: 8, health: 6, relationships: 4, personal: 5 },
-      learningGoal: 'Welke content formats werken het best voor leads? Test & meet!',
-      supportNetwork: 'Accountability buddy voor dagelijkse content check-ins',
-      obstacles: 'Verveling, nieuwe ideeën, perfectionism. Reminder: Done > Perfect',
-      successMetrics: '7/7 dagen gepost, 5+ nieuwe leads, 1 klantgesprek',
-    }));
-  };
-
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -288,13 +271,6 @@ export default function WeeklyStartPage() {
                 <p className="text-[11px] text-ink-soft">3-5 concrete doelen</p>
               </div>
             </div>
-            <button
-              onClick={loadContentTemplate}
-              className="text-[11px] font-medium text-primary border border-primary/30 rounded-full px-3 py-1.5 hover:bg-primary/5 transition-colors flex items-center gap-1"
-            >
-              <Rocket size={11} />
-              Content template
-            </button>
           </div>
           <div className="space-y-2.5">
             {formData.mainGoals.map((goal, index) => (

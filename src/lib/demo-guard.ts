@@ -1,5 +1,5 @@
 /**
- * Demo-guard: bepaalde functies (ACA Herstelpad, ADHD Klachten, Cursussen) zijn alleen
+ * Demo-guard: bepaalde functies (ACA Herstelpad, Cursussen) zijn alleen
  * zichtbaar voor het demo-account van Vincent (v.munster@weareimpact.nl).
  * Andere accounts zien deze niet in het menu of op het dashboard.
  *
@@ -12,7 +12,7 @@
 const DEMO_ACCOUNT_EMAIL = 'v.munster@weareimpact.nl';
 
 // Routes die alleen zichtbaar zijn voor het demo-account
-export const DEMO_RESTRICTED_PATHS = ['/aca', '/adhd', '/courses'];
+export const DEMO_RESTRICTED_PATHS = ['/aca', '/courses'];
 
 /**
  * Controleer of de huidige ingelogde gebruiker toegang heeft tot demo-functies.

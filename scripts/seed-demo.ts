@@ -67,7 +67,7 @@ void (async () => {
   }
   console.log('✓ habits');
 
-  // ---- 6. Dagboek: 90x ochtend + 90x avond + 45x adhd + 13x controle_cirkel + 13x feiten_verhalen ----
+  // ---- 6. Dagboek: 90x ochtend + 90x avond + 13x controle_cirkel + 13x feiten_verhalen ----
   const today = new Date();
   let totalLogs = 0;
 
@@ -96,18 +96,6 @@ void (async () => {
       })}, NOW())
     `;
     totalLogs++;
-
-    // ADHD (elke 2 dagen)
-    if (d % 2 === 0) {
-      await sql`
-        INSERT INTO daily_logs (organization_id, user_id, type, date_string, data, timestamp)
-        VALUES (${orgId}, ${uuid}, 'adhd', ${dateStr}, ${JSON.stringify({
-          scores: { focus: rand(2, 8), organisatie: rand(2, 8), impulsiviteit: rand(2, 8) },
-          notes: `ADHD-scORE dag ${dagNummer}: rustig gestart, piek na lunch.`
-        })}, NOW())
-      `;
-      totalLogs++;
-    }
   }
 
   // Controle-cirkel: wekelijks (13x)
@@ -145,7 +133,7 @@ void (async () => {
     totalLogs++;
   }
 
-  console.log(`✓ ${totalLogs} dagboek-rijen (ochtend+avond+adhd+controle_cirkel+reflectie)`);
+  console.log(`✓ ${totalLogs} dagboek-rijen (ochtend+avond+controle_cirkel+reflectie)`);
 
   // ---- 7. Wins: 26 over 90 dagen ----
   const winCategories = ['business', 'personal', 'health', 'learning'] as const;

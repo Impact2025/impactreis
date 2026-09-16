@@ -16,7 +16,7 @@
 
 **Kernflow (dagelijks gebruik)**: `/dashboard`, `/morning`, `/evening`, `/focus`, `/coach`, `/wins`, `/goals`.
 **Weekritme**: `/weekly-start`, `/weekly-review`, `/insights`.
-**Verdieping / minder frequent**: `/identity`, `/dagboek`, `/controle-cirkel`, `/reflectie`, `/aca` (7-weken herstelpad), `/adhd` (symptoomtracker), `/courses` (+ `[slug]`, `[slug]/lesson/[lessonId]`).
+**Verdieping / minder frequent**: `/identity`, `/dagboek`, `/controle-cirkel`, `/reflectie`, `/aca` (7-weken herstelpad), `/courses` (+ `[slug]`, `[slug]/lesson/[lessonId]`).
 **Systeem**: `/settings`, `/share`, `/offline`, `/onboarding`, `/auth/*` (login/register/forgot-password/reset-password/check-email).
 
 Geen van deze routes is een lege stub — de zwakte zit niet in onvolledigheid maar in navigatie-hiërarchie (zie Workstream 4 in het bijbehorende plan).

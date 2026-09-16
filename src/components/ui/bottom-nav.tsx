@@ -6,11 +6,11 @@ import { usePathname } from 'next/navigation';
 import {
   CalendarCheck, Target, Trophy, Sparkles, Menu as MenuIcon, X,
   Sunrise, Moon, CalendarDays, BookOpen, TrendingUp, Fingerprint,
-  BookHeart, Compass, HeartHandshake, Brain, GraduationCap, Settings,
+  BookHeart, Compass, HeartHandshake, GraduationCap, Settings,
   ChevronRight,
 } from 'lucide-react';
 
-// Demo-guard: ACA, ADHD en Cursussen alleen zichtbaar voor demo-account (v.munster@weareimpact.nl)
+// Demo-guard: ACA en Cursussen alleen zichtbaar voor demo-account (v.munster@weareimpact.nl)
 const DEMO_ACCOUNT_EMAIL = 'v.munster@weareimpact.nl';
 
 export function useDemoAccess(): boolean {
@@ -71,7 +71,7 @@ const DAILY_GROUPS: MenuGroup[] = [
 ];
 
 /** Onderste helft van het menu: minder frequente verdieping + systeem.
- *  ACA Herstelpad, ADHD Klachten en Cursussen zijn demo-restricted (alleen voor v.munster@weareimpact.nl). */
+ *  ACA Herstelpad en Cursussen zijn demo-restricted (alleen voor v.munster@weareimpact.nl). */
 const ALL_SECONDARY_GROUPS: MenuGroup[] = [
   {
     title: 'Verdieping',
@@ -81,7 +81,6 @@ const ALL_SECONDARY_GROUPS: MenuGroup[] = [
       { href: '/controle-cirkel', icon: Compass,        label: 'Controle Cirkel', description: 'Energie-oefening' },
       // Demo-only: alleen zichtbaar voor v.munster@weareimpact.nl
       { href: '/aca',             icon: HeartHandshake, label: 'ACA Herstelpad',  description: '7 weken naar de Liefdevolle Ouder', demoOnly: true },
-      { href: '/adhd',            icon: Brain,          label: 'ADHD Klachten',   description: 'Meting voor medicatiestart', demoOnly: true },
       { href: '/courses',         icon: GraduationCap,  label: 'Cursussen',       description: 'Unleash Your Power', demoOnly: true },
     ],
   },

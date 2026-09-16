@@ -17,7 +17,7 @@ import {
 } from '@/lib/notifications.service';
 import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { DEFAULT_RITUAL_SETTINGS, formatHour, type RitualSettings } from '@/lib/weekflow.service';
-import { BottomNav, useDemoAccess } from '@/components/ui/bottom-nav';
+import { BottomNav } from '@/components/ui/bottom-nav';
 import { ChipButton, CardOption, CheckRow } from '@/components/ui/dna-controls';
 import {
   INDUSTRY_OPTIONS,
@@ -73,7 +73,6 @@ const EMAIL_PREF_LABELS: { key: keyof EmailPreferences; title: string; desc: str
 
 export default function SettingsPage() {
   const router = useRouter();
-  const canAccessDemo = useDemoAccess();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [notifSupported, setNotifSupported] = useState(false);
@@ -87,7 +86,7 @@ export default function SettingsPage() {
     createBeforeConsumeEnabled: true,
   });
   const { streak: streakData } = useRitualStatus();
-  const [emailSending, setEmailSending] = useState<'weekrapport' | 'adhd' | null>(null);
+  const [emailSending, setEmailSending] = useState<'weekrapport' | null>(null);
   const [emailResult, setEmailResult] = useState<{ type: string; ok: boolean } | null>(null);
   const [emailPrefs, setEmailPrefs] = useState<EmailPreferences | null>(null);
   const [emailPrefsSaving, setEmailPrefsSaving] = useState<keyof EmailPreferences | null>(null);
@@ -171,12 +170,12 @@ export default function SettingsPage() {
     if (preferences.enabled && notifPermission === 'granted') scheduleAllNotifications();
   };
 
-  const handleSendEmail = async (type: 'weekrapport' | 'adhd') => {
+  const handleSendEmail = async (type: 'weekrapport') => {
     setEmailSending(type);
     setEmailResult(null);
     try {
       const token = localStorage.getItem('token');
-      const url = type === 'weekrapport' ? '/api/email/weekrapport' : '/api/email/adhd-rapport';
+      const url = '/api/email/weekrapport';
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -662,28 +661,10 @@ export default function SettingsPage() {
                 Stuur nu
               </button>
             </div>
-            {canAccessDemo && (
-              <div className="px-5 py-4 flex items-center justify-between">
-                <div>
-                  <p className="text-[14px] font-medium text-ink">ADHD Rapport</p>
-                  <p className="text-[12px] text-ink-soft mt-0.5">Klachtenmeting van de huidige week</p>
-                </div>
-                <button
-                  onClick={() => handleSendEmail('adhd')}
-                  disabled={emailSending !== null}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-tertiary text-white text-[13px] font-semibold rounded-[10px] active:scale-95 transition-transform disabled:opacity-50"
-                >
-                  {emailSending === 'adhd'
-                    ? <Loader2 size={14} className="animate-spin" />
-                    : <Mail size={14} />}
-                  Stuur nu
-                </button>
-              </div>
-            )}
             {emailResult && (
               <div className={`px-5 py-3 text-[13px] font-medium ${emailResult.ok ? 'text-primary' : 'text-red-500'}`}>
                 {emailResult.ok
-                  ? `✓ ${emailResult.type === 'weekrapport' ? 'Weekrapport' : 'ADHD rapport'} verstuurd naar je inbox`
+                  ? `✓ Weekrapport verstuurd naar je inbox`
                   : `✗ Versturen mislukt — check Vercel logs`}
               </div>
             )}
