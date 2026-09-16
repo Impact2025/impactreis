@@ -13,6 +13,7 @@ import { MovementBreakMini } from '@/components/robbins/movement-break';
 import { Celebration } from '@/components/robbins/celebration';
 import { BottomNav } from '@/components/ui/bottom-nav';
 import { FOCUS_BLOCK_SLOTS, focusCategoryLabel, isWithinBlock } from '@/lib/focus-blocks';
+import { getToday, DEFAULT_RITUAL_SETTINGS } from '@/lib/weekflow.service';
 
 interface PlannedFocusBlock {
   start: string;
@@ -88,7 +89,7 @@ export default function FocusPage() {
         // focusblokken (tijd + categorie + taaknaam) komen hier terug, i.p.v. een leeg
         // invoerveld en blokken die na het invullen nooit meer worden getoond.
         try {
-          const today = new Date().toISOString().split('T')[0];
+          const today = getToday(DEFAULT_RITUAL_SETTINGS.timezone);
           const logs = await api.logs.getByTypeAndDate('morning', today);
           const rawData = logs?.[0]?.data;
           const parsedData = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
@@ -158,7 +159,7 @@ export default function FocusPage() {
 
       // Schrijf ook echt naar focus_sessions in de DB (was tot nu toe alleen localStorage),
       // zodat avond/week deze sessie kunnen terugzien. localStorage blijft de instant-UI-cache.
-      const today = new Date().toISOString().split('T')[0];
+      const today = getToday(DEFAULT_RITUAL_SETTINGS.timezone);
       api.focus.create({
         date: today,
         startTime: new Date(Date.now() - workMinutes * 60 * 1000).toTimeString().slice(0, 8),
