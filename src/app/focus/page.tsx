@@ -12,6 +12,14 @@ import { api } from '@/lib/api';
 import { MovementBreakMini } from '@/components/robbins/movement-break';
 import { Celebration } from '@/components/robbins/celebration';
 import { BottomNav } from '@/components/ui/bottom-nav';
+import { FOCUS_BLOCK_SLOTS, focusCategoryLabel, isWithinBlock } from '@/lib/focus-blocks';
+
+interface PlannedFocusBlock {
+  start: string;
+  end: string;
+  categoryLabel: string;
+  taaknaam: string;
+}
 
 interface FocusSession {
   id: string;
@@ -53,6 +61,7 @@ export default function FocusPage() {
   const [showGoalInput, setShowGoalInput] = useState(true);
   const [goalFromCoach, setGoalFromCoach] = useState(false);
   const [dayType, setDayType] = useState<'focus' | 'buffer' | 'free' | null>(null);
+  const [plannedBlocks, setPlannedBlocks] = useState<PlannedFocusBlock[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
@@ -75,8 +84,9 @@ export default function FocusPage() {
           // geen profiel of onboarding nog niet gedaan — gewoon de standaard 25 min
         }
 
-        // Synergie coach ↔ PA: de #1-prioriteit die vanochtend is gezet (ochtendritueel)
-        // wordt het voorgestelde focus-sessiedoel, i.p.v. een leeg invoerveld.
+        // Synergie ochtendritueel ↔ Focus: de #1-prioriteit (Kikker) én de twee geplande
+        // focusblokken (tijd + categorie + taaknaam) komen hier terug, i.p.v. een leeg
+        // invoerveld en blokken die na het invullen nooit meer worden getoond.
         try {
           const today = new Date().toISOString().split('T')[0];
           const logs = await api.logs.getByTypeAndDate('morning', today);
@@ -89,6 +99,23 @@ export default function FocusPage() {
           }
           if (['focus', 'buffer', 'free'].includes(parsedData?.dayType)) {
             setDayType(parsedData.dayType);
+          }
+
+          const blocks: PlannedFocusBlock[] = FOCUS_BLOCK_SLOTS.map((slot): PlannedFocusBlock | null => {
+            const blok = parsedData?.[slot.key];
+            const categoryLabel = focusCategoryLabel(blok?.category);
+            if (!categoryLabel) return null;
+            return { start: slot.start, end: slot.end, categoryLabel, taaknaam: blok?.taaknaam || '' };
+          }).filter((b): b is PlannedFocusBlock => b !== null);
+          setPlannedBlocks(blocks);
+
+          // Zit je nú in een gepland blok? Dan wint dat van de algemene Kikker-intentie —
+          // het is specifieker (tijd + categorie) én is wat je vanochtend voor dít moment koos.
+          const now = new Date();
+          const activeBlock = blocks.find((b) => isWithinBlock(now, b.start, b.end));
+          if (activeBlock) {
+            setSessionGoal(activeBlock.taaknaam || activeBlock.categoryLabel);
+            setGoalFromCoach(true);
           }
         } catch {
           // geen ochtendritueel vandaag — gewoon een leeg invoerveld
@@ -366,6 +393,25 @@ export default function FocusPage() {
               placeholder="Bijv: Hoofdstuk 3 schrijven, emails beantwoorden..."
               className="w-full bg-surface-sunken border border-transparent focus:border-primary outline-none rounded-[14px] px-4 py-3.5 text-[14px] text-ink placeholder:text-ink-soft transition-colors"
             />
+            {plannedBlocks.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {plannedBlocks.map((b) => (
+                  <button
+                    key={b.start}
+                    type="button"
+                    onClick={() => {
+                      setSessionGoal(b.taaknaam || b.categoryLabel);
+                      setGoalFromCoach(true);
+                    }}
+                    className="flex items-center gap-1.5 text-[12px] px-3 py-1.5 rounded-full border border-line hover:border-primary/50 text-ink transition-colors"
+                  >
+                    <span className="font-semibold text-primary">{b.start}–{b.end}</span>
+                    <span className="text-ink-soft">·</span>
+                    <span>{b.taaknaam || b.categoryLabel}</span>
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="mt-4">
               <div className="flex items-center justify-between text-[12px] mb-2">
                 <span className="text-ink-soft">Energie nu</span>

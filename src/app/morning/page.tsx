@@ -13,12 +13,7 @@ import { MeditationPlayer } from '@/components/meditations/MeditationPlayer';
 import { getMeditationsByCategory } from '@/lib/meditations/catalog';
 import { useSpeechRecognition } from '@/hooks/use-speech';
 import { TIME_WASTER_OPTIONS } from '@/lib/onboarding';
-
-const FOCUS_CATEGORY_OPTIONS = [
-  { value: 'commercie', label: 'Commercie / Sales' },
-  { value: 'proces', label: 'Proces & Automatisering' },
-  { value: 'klantwerk', label: 'Klantwerk / Uitvoering' },
-] as const;
+import { FOCUS_CATEGORY_OPTIONS } from '@/lib/focus-blocks';
 
 type Step = 'dagtype' | 'centering' | 'intentie' | 'focusblokken' | 'status' | 'dankbaarheid' | 'affirmatie' | 'done';
 type DayType = 'focus' | 'buffer' | 'free';
