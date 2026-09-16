@@ -73,9 +73,16 @@ export interface RitualStatusPayload {
   settings: RitualSettings;
 }
 
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function isValidDuration(n: unknown): n is number {
+  return Number.isInteger(n) && (n as number) >= 15 && (n as number) <= 240;
+}
+
 async function getRitualSettingsFor(userId: string): Promise<RitualSettings> {
   const rows = await sql`
-    SELECT timezone, work_days, evening_ritual_opens_hour, week_start_deadline_weekday, meditations_enabled
+    SELECT timezone, work_days, evening_ritual_opens_hour, week_start_deadline_weekday, meditations_enabled,
+           focus_block_1_start, focus_block_1_duration_min, focus_block_2_start, focus_block_2_duration_min
     FROM ritual_settings WHERE user_id = ${userId}
   `;
   const row = rows[0] as
@@ -85,6 +92,10 @@ async function getRitualSettingsFor(userId: string): Promise<RitualSettings> {
         evening_ritual_opens_hour: number;
         week_start_deadline_weekday: number;
         meditations_enabled: boolean | null;
+        focus_block_1_start: string | null;
+        focus_block_1_duration_min: number | null;
+        focus_block_2_start: string | null;
+        focus_block_2_duration_min: number | null;
       }
     | undefined;
   if (!row) return DEFAULT_RITUAL_SETTINGS;
@@ -108,6 +119,14 @@ async function getRitualSettingsFor(userId: string): Promise<RitualSettings> {
     eveningRitualOpensHour: row.evening_ritual_opens_hour ?? DEFAULT_RITUAL_SETTINGS.eveningRitualOpensHour,
     weekStartDeadlineWeekday: row.week_start_deadline_weekday ?? DEFAULT_RITUAL_SETTINGS.weekStartDeadlineWeekday,
     meditationsEnabled: row.meditations_enabled ?? DEFAULT_RITUAL_SETTINGS.meditationsEnabled,
+    focusBlock1Start: row.focus_block_1_start && TIME_RE.test(row.focus_block_1_start)
+      ? row.focus_block_1_start : DEFAULT_RITUAL_SETTINGS.focusBlock1Start,
+    focusBlock1DurationMin: isValidDuration(row.focus_block_1_duration_min)
+      ? row.focus_block_1_duration_min : DEFAULT_RITUAL_SETTINGS.focusBlock1DurationMin,
+    focusBlock2Start: row.focus_block_2_start && TIME_RE.test(row.focus_block_2_start)
+      ? row.focus_block_2_start : DEFAULT_RITUAL_SETTINGS.focusBlock2Start,
+    focusBlock2DurationMin: isValidDuration(row.focus_block_2_duration_min)
+      ? row.focus_block_2_duration_min : DEFAULT_RITUAL_SETTINGS.focusBlock2DurationMin,
   };
 }
 

@@ -12,12 +12,22 @@ import { DEFAULT_RITUAL_SETTINGS, type RitualSettings } from '@/lib/weekflow.ser
  * DEFAULT_RITUAL_SETTINGS (= het oorspronkelijke, vaste ma-vr/17:00/t-m-wo Amsterdam-gedrag).
  */
 
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function isValidDuration(n: unknown): n is number {
+  return Number.isInteger(n) && (n as number) >= 15 && (n as number) <= 240;
+}
+
 function toRitualSettings(row: {
   timezone: string;
   work_days: unknown;
   evening_ritual_opens_hour: number;
   week_start_deadline_weekday: number;
   meditations_enabled: boolean | null;
+  focus_block_1_start: string | null;
+  focus_block_1_duration_min: number | null;
+  focus_block_2_start: string | null;
+  focus_block_2_duration_min: number | null;
 }): RitualSettings {
   let workDays: unknown = row.work_days;
   if (typeof workDays === 'string') {
@@ -33,6 +43,14 @@ function toRitualSettings(row: {
     eveningRitualOpensHour: row.evening_ritual_opens_hour ?? DEFAULT_RITUAL_SETTINGS.eveningRitualOpensHour,
     weekStartDeadlineWeekday: row.week_start_deadline_weekday ?? DEFAULT_RITUAL_SETTINGS.weekStartDeadlineWeekday,
     meditationsEnabled: row.meditations_enabled ?? DEFAULT_RITUAL_SETTINGS.meditationsEnabled,
+    focusBlock1Start: row.focus_block_1_start && TIME_RE.test(row.focus_block_1_start)
+      ? row.focus_block_1_start : DEFAULT_RITUAL_SETTINGS.focusBlock1Start,
+    focusBlock1DurationMin: isValidDuration(row.focus_block_1_duration_min)
+      ? row.focus_block_1_duration_min : DEFAULT_RITUAL_SETTINGS.focusBlock1DurationMin,
+    focusBlock2Start: row.focus_block_2_start && TIME_RE.test(row.focus_block_2_start)
+      ? row.focus_block_2_start : DEFAULT_RITUAL_SETTINGS.focusBlock2Start,
+    focusBlock2DurationMin: isValidDuration(row.focus_block_2_duration_min)
+      ? row.focus_block_2_duration_min : DEFAULT_RITUAL_SETTINGS.focusBlock2DurationMin,
   };
 }
 
@@ -42,11 +60,16 @@ export async function GET(request: NextRequest) {
     if (!authCtx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const rows = await sql`
-      SELECT timezone, work_days, evening_ritual_opens_hour, week_start_deadline_weekday, meditations_enabled
+      SELECT timezone, work_days, evening_ritual_opens_hour, week_start_deadline_weekday, meditations_enabled,
+             focus_block_1_start, focus_block_1_duration_min, focus_block_2_start, focus_block_2_duration_min
       FROM ritual_settings WHERE user_id = ${String(authCtx.userId)}
     `;
     const row = rows[0] as
-      | { timezone: string; work_days: unknown; evening_ritual_opens_hour: number; week_start_deadline_weekday: number; meditations_enabled: boolean | null }
+      | {
+          timezone: string; work_days: unknown; evening_ritual_opens_hour: number; week_start_deadline_weekday: number;
+          meditations_enabled: boolean | null; focus_block_1_start: string | null; focus_block_1_duration_min: number | null;
+          focus_block_2_start: string | null; focus_block_2_duration_min: number | null;
+        }
       | undefined;
 
     return NextResponse.json(row ? toRitualSettings(row) : DEFAULT_RITUAL_SETTINGS);
@@ -95,20 +118,44 @@ export async function PATCH(request: NextRequest) {
     const meditationsEnabled =
       typeof body.meditationsEnabled === 'boolean' ? body.meditationsEnabled : DEFAULT_RITUAL_SETTINGS.meditationsEnabled;
 
+    const focusBlock1Start =
+      typeof body.focusBlock1Start === 'string' && TIME_RE.test(body.focusBlock1Start)
+        ? body.focusBlock1Start : DEFAULT_RITUAL_SETTINGS.focusBlock1Start;
+    const focusBlock1DurationMin =
+      isValidDuration(body.focusBlock1DurationMin) ? body.focusBlock1DurationMin : DEFAULT_RITUAL_SETTINGS.focusBlock1DurationMin;
+    const focusBlock2Start =
+      typeof body.focusBlock2Start === 'string' && TIME_RE.test(body.focusBlock2Start)
+        ? body.focusBlock2Start : DEFAULT_RITUAL_SETTINGS.focusBlock2Start;
+    const focusBlock2DurationMin =
+      isValidDuration(body.focusBlock2DurationMin) ? body.focusBlock2DurationMin : DEFAULT_RITUAL_SETTINGS.focusBlock2DurationMin;
+
     const userId = String(authCtx.userId);
     await sql`
-      INSERT INTO ritual_settings (user_id, organization_id, timezone, work_days, evening_ritual_opens_hour, week_start_deadline_weekday, meditations_enabled, updated_at)
-      VALUES (${userId}, ${authCtx.organizationId}, ${timezone}, ${JSON.stringify(workDays)}, ${eveningRitualOpensHour}, ${weekStartDeadlineWeekday}, ${meditationsEnabled}, NOW())
+      INSERT INTO ritual_settings (
+        user_id, organization_id, timezone, work_days, evening_ritual_opens_hour, week_start_deadline_weekday, meditations_enabled,
+        focus_block_1_start, focus_block_1_duration_min, focus_block_2_start, focus_block_2_duration_min, updated_at
+      )
+      VALUES (
+        ${userId}, ${authCtx.organizationId}, ${timezone}, ${JSON.stringify(workDays)}, ${eveningRitualOpensHour}, ${weekStartDeadlineWeekday}, ${meditationsEnabled},
+        ${focusBlock1Start}, ${focusBlock1DurationMin}, ${focusBlock2Start}, ${focusBlock2DurationMin}, NOW()
+      )
       ON CONFLICT (user_id) DO UPDATE SET
         timezone = EXCLUDED.timezone,
         work_days = EXCLUDED.work_days,
         evening_ritual_opens_hour = EXCLUDED.evening_ritual_opens_hour,
         week_start_deadline_weekday = EXCLUDED.week_start_deadline_weekday,
         meditations_enabled = EXCLUDED.meditations_enabled,
+        focus_block_1_start = EXCLUDED.focus_block_1_start,
+        focus_block_1_duration_min = EXCLUDED.focus_block_1_duration_min,
+        focus_block_2_start = EXCLUDED.focus_block_2_start,
+        focus_block_2_duration_min = EXCLUDED.focus_block_2_duration_min,
         updated_at = NOW()
     `;
 
-    return NextResponse.json({ timezone, workDays, eveningRitualOpensHour, weekStartDeadlineWeekday, meditationsEnabled });
+    return NextResponse.json({
+      timezone, workDays, eveningRitualOpensHour, weekStartDeadlineWeekday, meditationsEnabled,
+      focusBlock1Start, focusBlock1DurationMin, focusBlock2Start, focusBlock2DurationMin,
+    });
   } catch (error) {
     console.error('Update ritual settings error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

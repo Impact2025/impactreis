@@ -13,7 +13,7 @@ import { MeditationPlayer } from '@/components/meditations/MeditationPlayer';
 import { getMeditationsByCategory } from '@/lib/meditations/catalog';
 import { useSpeechRecognition } from '@/hooks/use-speech';
 import { TIME_WASTER_OPTIONS } from '@/lib/onboarding';
-import { FOCUS_CATEGORY_OPTIONS } from '@/lib/focus-blocks';
+import { FOCUS_CATEGORY_OPTIONS, getFocusBlockSlots } from '@/lib/focus-blocks';
 
 type Step = 'dagtype' | 'centering' | 'intentie' | 'focusblokken' | 'status' | 'dankbaarheid' | 'affirmatie' | 'done';
 type DayType = 'focus' | 'buffer' | 'free';
@@ -111,6 +111,7 @@ export default function MorningPage() {
   const [mode, setMode] = useState<Mode>('full');
   const router = useRouter();
   const { settings } = useRitualStatus();
+  const [focusBlockSlot1, focusBlockSlot2] = getFocusBlockSlots(settings);
 
   const baseSteps = mode === 'quick' ? QUICK_STEPS : FULL_STEPS;
   // Meditaties zijn optioneel (zie Instellingen / onboarding) — sla de centering-stap over
@@ -347,7 +348,7 @@ export default function MorningPage() {
                   <p className="text-[11px] text-ink-soft uppercase tracking-widest mb-2">Focus Blokken</p>
                   {formData.focusBlok1?.category ? (
                     <div className="flex items-start gap-3 bg-surface-sunken rounded-[12px] p-3">
-                      <span className="text-[11px] font-bold text-primary bg-primary-muted px-2 py-0.5 rounded-md shrink-0">08:30</span>
+                      <span className="text-[11px] font-bold text-primary bg-primary-muted px-2 py-0.5 rounded-md shrink-0">{focusBlockSlot1.start}</span>
                       <div>
                         <p className="text-[13px] font-semibold text-ink">{FOCUS_CATEGORY_OPTIONS.find((o) => o.value === formData.focusBlok1.category)?.label}</p>
                         {formData.focusBlok1.taaknaam ? <p className="text-[12px] text-ink-soft mt-0.5">{formData.focusBlok1.taaknaam}</p> : null}
@@ -356,7 +357,7 @@ export default function MorningPage() {
                   ) : null}
                   {formData.focusBlok2?.category ? (
                     <div className="flex items-start gap-3 bg-surface-sunken rounded-[12px] p-3">
-                      <span className="text-[11px] font-bold text-primary bg-primary-muted px-2 py-0.5 rounded-md shrink-0">12:30</span>
+                      <span className="text-[11px] font-bold text-primary bg-primary-muted px-2 py-0.5 rounded-md shrink-0">{focusBlockSlot2.start}</span>
                       <div>
                         <p className="text-[13px] font-semibold text-ink">{FOCUS_CATEGORY_OPTIONS.find((o) => o.value === formData.focusBlok2.category)?.label}</p>
                         {formData.focusBlok2.taaknaam ? <p className="text-[12px] text-ink-soft mt-0.5">{formData.focusBlok2.taaknaam}</p> : null}
@@ -664,7 +665,7 @@ export default function MorningPage() {
                   <span className="text-[14px] font-semibold text-ink">Focusblok 1</span>
                 </div>
                 <span className="text-[12px] font-semibold text-primary bg-primary-muted px-3 py-1 rounded-full">
-                  08:30 – 10:00
+                  {focusBlockSlot1.start} – {focusBlockSlot1.end}
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -705,7 +706,7 @@ export default function MorningPage() {
                   <span className="text-[14px] font-semibold text-ink">Focusblok 2</span>
                 </div>
                 <span className="text-[12px] font-semibold text-primary bg-primary-muted px-3 py-1 rounded-full">
-                  12:30 – 14:00
+                  {focusBlockSlot2.start} – {focusBlockSlot2.end}
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">

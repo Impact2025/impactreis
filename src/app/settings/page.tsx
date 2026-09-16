@@ -536,6 +536,37 @@ export default function SettingsPage() {
                 ))}
               </select>
             </div>
+            <div className="px-5 py-4 space-y-3">
+              <p className="text-[14px] font-medium text-ink">Focusblokken</p>
+              {([
+                { key: 'focusBlock1Start' as const, durationKey: 'focusBlock1DurationMin' as const, label: 'Blok 1' },
+                { key: 'focusBlock2Start' as const, durationKey: 'focusBlock2DurationMin' as const, label: 'Blok 2' },
+              ]).map(({ key, durationKey, label }) => (
+                <div key={key} className="flex items-center justify-between gap-3">
+                  <span className="text-[13px] text-ink-soft">{label}</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="time"
+                      value={ritualSettings[key]}
+                      onChange={(e) => handleSaveRitualSettings({ ...ritualSettings, [key]: e.target.value })}
+                      className="bg-surface-sunken rounded-[10px] px-3 py-1.5 text-[13px] text-ink border-none outline-none"
+                    />
+                    <select
+                      value={ritualSettings[durationKey]}
+                      onChange={(e) => handleSaveRitualSettings({ ...ritualSettings, [durationKey]: Number(e.target.value) })}
+                      className="bg-surface-sunken rounded-[10px] px-3 py-1.5 text-[13px] text-ink border-none outline-none"
+                    >
+                      {[15, 30, 45, 60, 90, 120].map((min) => (
+                        <option key={min} value={min}>{min} min</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ))}
+              <p className="text-[12px] text-ink-soft">
+                Tijdvakken die in het Ochtend Ritueel worden aangeboden om te plannen.
+              </p>
+            </div>
             <div className="px-5 py-4 flex items-center justify-between gap-4">
               <div>
                 <p className="text-[14px] font-medium text-ink">Meditaties</p>

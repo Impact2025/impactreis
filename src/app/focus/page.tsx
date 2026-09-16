@@ -12,7 +12,7 @@ import { api } from '@/lib/api';
 import { MovementBreakMini } from '@/components/robbins/movement-break';
 import { Celebration } from '@/components/robbins/celebration';
 import { BottomNav } from '@/components/ui/bottom-nav';
-import { FOCUS_BLOCK_SLOTS, focusCategoryLabel, isWithinBlock } from '@/lib/focus-blocks';
+import { getFocusBlockSlots, focusCategoryLabel, isWithinBlock } from '@/lib/focus-blocks';
 import { getToday, DEFAULT_RITUAL_SETTINGS } from '@/lib/weekflow.service';
 
 interface PlannedFocusBlock {
@@ -89,7 +89,8 @@ export default function FocusPage() {
         // focusblokken (tijd + categorie + taaknaam) komen hier terug, i.p.v. een leeg
         // invoerveld en blokken die na het invullen nooit meer worden getoond.
         try {
-          const today = getToday(DEFAULT_RITUAL_SETTINGS.timezone);
+          const ritualSettings = await api.ritualSettings.get().catch(() => DEFAULT_RITUAL_SETTINGS);
+          const today = getToday(ritualSettings.timezone);
           const logs = await api.logs.getByTypeAndDate('morning', today);
           const rawData = logs?.[0]?.data;
           const parsedData = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
@@ -102,7 +103,7 @@ export default function FocusPage() {
             setDayType(parsedData.dayType);
           }
 
-          const blocks: PlannedFocusBlock[] = FOCUS_BLOCK_SLOTS.map((slot): PlannedFocusBlock | null => {
+          const blocks: PlannedFocusBlock[] = getFocusBlockSlots(ritualSettings).map((slot): PlannedFocusBlock | null => {
             const blok = parsedData?.[slot.key];
             const categoryLabel = focusCategoryLabel(blok?.category);
             if (!categoryLabel) return null;

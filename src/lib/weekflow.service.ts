@@ -31,6 +31,14 @@ export interface RitualSettings {
   weekStartDeadlineWeekday: number;
   /** Meditaties zijn optioneel — uit te zetten in onboarding of instellingen. */
   meditationsEnabled: boolean;
+  /** Starttijd (HH:MM) van het eerste focusblok in het Ochtend Ritueel. */
+  focusBlock1Start: string;
+  /** Duur in minuten van het eerste focusblok. */
+  focusBlock1DurationMin: number;
+  /** Starttijd (HH:MM) van het tweede focusblok in het Ochtend Ritueel. */
+  focusBlock2Start: string;
+  /** Duur in minuten van het tweede focusblok. */
+  focusBlock2DurationMin: number;
 }
 
 export const DEFAULT_RITUAL_SETTINGS: RitualSettings = {
@@ -39,7 +47,25 @@ export const DEFAULT_RITUAL_SETTINGS: RitualSettings = {
   eveningRitualOpensHour: 17,
   weekStartDeadlineWeekday: 3,
   meditationsEnabled: true,
+  focusBlock1Start: '08:30',
+  focusBlock1DurationMin: 90,
+  focusBlock2Start: '12:30',
+  focusBlock2DurationMin: 90,
 };
+
+/**
+ * Telt `minutes` op bij een "HH:MM"-tijd op en formatteert het resultaat weer als "HH:MM".
+ * Gebruikt voor het afleiden van een blok-eindtijd uit starttijd + duur (focus-blocks.ts).
+ * Klopt niet bedoeld voor dag-overschrijdende blokken (bv. 23:30 + 90 min) — focusblokken
+ * vallen altijd binnen één dag.
+ */
+export function addMinutesToTime(hhmm: string, minutes: number): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  const total = (h * 60 + m + minutes + 24 * 60) % (24 * 60);
+  const outH = Math.floor(total / 60);
+  const outM = total % 60;
+  return `${String(outH).padStart(2, '0')}:${String(outM).padStart(2, '0')}`;
+}
 
 interface TzParts {
   year: number;
