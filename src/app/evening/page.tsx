@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Moon, Lightbulb, TrendingDown, Calendar, Heart, ArrowLeft, CheckCircle, Brain, Zap, AlertTriangle } from 'lucide-react';
+import { Moon, Lightbulb, TrendingDown, Calendar, Heart, ArrowLeft, CheckCircle, Zap, AlertTriangle } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { TimeGateScreen } from '@/components/weekflow/time-gate-screen';
@@ -12,37 +12,10 @@ import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { buildRecoveryProposalUrl } from '@/lib/calendar-proposal';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
-const SYMPTOMS = [
-  'Moeite met concentratie',
-  'Vergeetachtigheid',
-  'Hyperfocus',
-  'Onrust in hoofd',
-  'Onrust in lichaam',
-  'Beweeglijkheid',
-  'Snel praten',
-  'Prikkelbaarheid',
-  'Somberheid',
-  'Stemmingswisselingen',
-  'Impulsiviteit',
-  'Agressiviteit',
-  'Suïcidaliteit',
-  'Vreetbuien',
-];
-
-const SCORE_COLORS: Record<number, { selected: string; text: string }> = {
-  0: { selected: 'bg-line text-ink', text: 'geen' },
-  1: { selected: 'bg-tertiary-soft text-tertiary', text: 'soms' },
-  2: { selected: 'bg-tertiary-soft text-tertiary', text: 'vaak' },
-  3: { selected: 'bg-error-soft text-error', text: 'continu' },
-};
-
-const defaultAdhdScores = () =>
-  Object.fromEntries(SYMPTOMS.map((s) => [s, 0])) as Record<string, number>;
-
 type EveningVerdict = 'waarde_verkocht' | 'gered_door_operatie' | 'gevlucht_in_veiligheid';
 
 const VERDICT_OPTIONS: { value: EveningVerdict; label: string }[] = [
-  { value: 'waarde_verkocht', label: 'Waarde Verkocht / Kikker Afgemaakt' },
+  { value: 'waarde_verkocht', label: 'Waarde Verkocht / Belangrijkste Taak Afgemaakt' },
   { value: 'gered_door_operatie', label: 'Gered door Operatie' },
   { value: 'gevlucht_in_veiligheid', label: 'Gevlucht in Veilige Klussen' },
 ];
@@ -68,7 +41,6 @@ function EveningContent() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [adhdScores, setAdhdScores] = useState<Record<string, number>>(defaultAdhdScores());
   const [recoveryHabit, setRecoveryHabit] = useState<string | null>(null);
   const [morningIntentie, setMorningIntentie] = useState<string | null>(null);
   const [focusSummary, setFocusSummary] = useState<{ completed: number; total: number; minutes: number } | null>(null);
@@ -118,10 +90,6 @@ function EveningContent() {
             setIsAlreadyComplete(true);
           }
         }).catch(() => {});
-        const savedAdhd = localStorage.getItem(`adhdLog_${targetDate}`);
-        if (savedAdhd) {
-          try { setAdhdScores(JSON.parse(savedAdhd)); } catch { /* ignore */ }
-        }
 
         // Sluit de cirkel met de ochtend: toon wat vanochtend als intentie is gezet en hoeveel
         // van de focus-sessies die dag echt zijn afgerond. Puur informatief, blokkeert niets.
@@ -152,14 +120,6 @@ function EveningContent() {
     checkAuth();
   }, [router, targetDate]);
 
-  const setScore = (symptom: string, score: number) => {
-    setAdhdScores((prev) => {
-      const updated = { ...prev, [symptom]: score };
-      localStorage.setItem(`adhdLog_${targetDate}`, JSON.stringify(updated));
-      return updated;
-    });
-  };
-
   const updateTop3Item = (index: number, value: string) => {
     const newTop3 = [...formData.tomorrowTop3];
     newTop3[index] = value;
@@ -172,7 +132,6 @@ function EveningContent() {
     setSaving(true);
     setSaveError(null);
     try {
-      localStorage.setItem(`adhdLog_${targetDate}`, JSON.stringify(adhdScores));
       await api.logs.create({
         type: 'evening',
         date: targetDate,
@@ -180,12 +139,6 @@ function EveningContent() {
       });
       const token = localStorage.getItem('token');
       if (token) {
-        fetch('/api/adhd-logs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ date: targetDate, scores: adhdScores }),
-        }).catch(() => {});
-
         const gains = formData.energyGains.split('\n').map((s) => s.trim()).filter(Boolean);
         const costs = formData.energyCosts.split('\n').map((s) => s.trim()).filter(Boolean);
         const entries = [
@@ -203,8 +156,6 @@ function EveningContent() {
       setShowSuccess(true);
       setTimeout(() => { router.push('/dashboard'); }, 2000);
     } catch (error) {
-      // Niet als succes tonen: dit raakt ook de ADHD-meting die voor de medicatiestart wordt
-      // bijgehouden — die data mag nooit stil verdwijnen zonder dat de gebruiker het weet.
       console.error('Failed to save evening ritual:', error);
       setSaveError('Opslaan is mislukt — je avondritueel is niet bewaard. Controleer je verbinding en probeer opnieuw.');
     } finally {
@@ -323,7 +274,7 @@ function EveningContent() {
               </div>
               <div>
                 <label className="block text-[14px] font-semibold text-ink">Realiteitstoets</label>
-                <p className="text-[11px] text-ink-soft">Wat is er vandaag écht gebeurd met je kikker?</p>
+                <p className="text-[11px] text-ink-soft">Wat is er vandaag écht gebeurd met je belangrijkste taak?</p>
               </div>
             </div>
             <div className="space-y-2">
@@ -607,54 +558,6 @@ function EveningContent() {
               placeholder="Waar ben je vandaag dankbaar voor?"
               required
             />
-          </div>
-
-          {/* ADHD Klachten */}
-          <div className="rounded-[16px] border border-line overflow-hidden">
-            <div className="bg-surface-inverse p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <Brain size={18} className="text-tertiary" />
-                <span className="text-[11px] text-white/40 uppercase tracking-widest">Dagelijkse meting</span>
-              </div>
-              <p className="text-[17px] text-white font-semibold">ADHD Klachten</p>
-              <p className="text-[13px] text-white/50 mt-1">Hoe was je vandaag?</p>
-              <div className="flex gap-3 mt-3">
-                {([0, 1, 2, 3] as const).map((n) => (
-                  <div key={n} className="flex items-center gap-1.5">
-                    <span className={`w-6 h-6 rounded-[6px] text-[11px] font-bold flex items-center justify-center ${SCORE_COLORS[n].selected}`}>{n}</span>
-                    <span className="text-[10px] text-white/40">{SCORE_COLORS[n].text}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="p-4">
-              <div className="space-y-0.5">
-                {SYMPTOMS.map((symptom) => (
-                  <div key={symptom} className="flex items-center justify-between py-2.5 border-b border-surface-sunken last:border-0">
-                    <span className="text-[13px] text-ink flex-1 pr-3 leading-tight">{symptom}</span>
-                    <div className="flex gap-1.5 flex-shrink-0">
-                      {([0, 1, 2, 3] as const).map((score) => (
-                        <button
-                          key={score}
-                          type="button"
-                          onClick={() => setScore(symptom, score)}
-                          className={`w-10 h-10 rounded-[10px] text-[13px] font-bold transition-all active:scale-95 ${
-                            adhdScores[symptom] === score
-                              ? SCORE_COLORS[score].selected
-                              : 'bg-surface-sunken text-on-surface-inverse/50'
-                          }`}
-                        >
-                          {score}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[11px] text-ink-soft text-center mt-4">
-                Deze meting wordt 14 dagen bijgehouden voor de start van medicatie.
-              </p>
-            </div>
           </div>
 
           {saveError && (

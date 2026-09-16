@@ -60,7 +60,7 @@ function getDailyGratitudePresets(dateKey: string, count = 6): string[] {
 const STEP_LABELS: Record<Step, string> = {
   dagtype: 'Dagtype',
   centering: 'Centering',
-  intentie: 'De Kikker',
+  intentie: 'Je Belangrijkste Taak',
   focusblokken: 'Focus Blokken',
   status: 'Status',
   dankbaarheid: 'Dankbaarheid',
@@ -340,7 +340,7 @@ export default function MorningPage() {
                 </div>
               )}
               <div>
-                <p className="text-[11px] text-ink-soft uppercase tracking-widest mb-1">De Kikker</p>
+                <p className="text-[11px] text-ink-soft uppercase tracking-widest mb-1">Je Belangrijkste Taak</p>
                 <p className="text-[14px] text-ink leading-relaxed">{formData.intentie}</p>
               </div>
               {(formData.focusBlok1?.category || formData.focusBlok2?.category) ? (
@@ -577,7 +577,7 @@ export default function MorningPage() {
                   {dayName}, {dateStr}
                 </span>
               </div>
-              <p className="text-[17px] text-white font-semibold">Wat is je kikker vandaag?</p>
+              <p className="text-[17px] text-white font-semibold">Wat is je belangrijkste taak vandaag?</p>
               <p className="text-[13px] text-white/50 mt-1">De moeilijkste commerciële of operationele taak — kies 'm nu, geen uitstel.</p>
             </div>
             <div className="rounded-[16px] border border-line p-5">

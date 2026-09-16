@@ -16,7 +16,7 @@ import {
   type UserOnboardingProfile,
 } from './onboarding';
 import { normalizeNextActions } from './goal-actions';
-import { getCurrentQuarter, getDayType } from './weekflow.service';
+import { getCurrentQuarter, getDayType, getDateDaysAgo } from './weekflow.service';
 import { isCalendarConfiguredFor, listTodayEvents } from './google-calendar';
 import { getRitualStatus } from './ritual-status.service';
 
@@ -41,7 +41,7 @@ export const TECHNIQUE_LABELS: Record<Technique, string> = {
 
 interface DailyLogRow {
   date_string: string;
-  type: 'morning' | 'evening' | 'dagboek_ochtend' | 'dagboek_avond' | 'controle_cirkel' | 'adhd' | string;
+  type: 'morning' | 'evening' | 'dagboek_ochtend' | 'dagboek_avond' | 'controle_cirkel' | string;
   data: any;
 }
 
@@ -110,11 +110,7 @@ export interface CoachContext {
   focusMinutesToday: number;
   /** Dagboek- en Controle Cirkel-entries van vandaag. Deze data werd al opgehaald (in de oude
    *  `last7Days`-query) maar nergens gebruikt door een `.find()` die alleen op type 'morning'/
-   *  'evening' matchte — dagboek/controle-cirkel/ADHD-rijen werden zo stilzwijgend genegeerd.
-   *  ADHD-scores blijven bewust buiten de coach-prompt (zie loadCoachContext): dat is Vincents
-   *  eigen medicatietraject-tracker, niet iets waar een generieke reflectie-coach medisch
-   *  commentaar op moet geven — de bestaande "diagnosticeert nooit"-grens in de prompt is voor
-   *  vage vermoeidheidssignalen, niet voor het becommentariëren van klinische scores. */
+   *  'evening' matchte — dagboek/controle-cirkel-rijen werden zo stilzwijgend genegeerd. */
   todayJournal: { moment: 'ochtend' | 'avond'; stemming: string; tekst: string }[];
   todayControleCirkel: { probleem: string; gekozenActie: string; losgelaten: boolean }[];
 }
@@ -164,7 +160,7 @@ function detectChallengerTrigger(ctx: CoachContext): string | null {
   // een keyword-gok in vrije tekst, en gebruikt de exacte vraag uit het bouwplan.
   if ((ctx.today as any).eveningVerdict === 'gevlucht_in_veiligheid') {
     const detail = (ctx.today as any).eveningVerdictDetail;
-    return `CHALLENGER_MODE_ACTIVE: de ondernemer geeft zelf aan vandaag gevlucht te zijn in veilige klussen in plaats van de kikker af te maken${detail ? ` ("${detail}")` : ''}. Vraag: "Welke veilige taak heeft je afgeleid, en staat deze taak morgen om 09:00 uur ingepland?" — accepteer geen ontwijkend antwoord.`;
+    return `CHALLENGER_MODE_ACTIVE: de ondernemer geeft zelf aan vandaag gevlucht te zijn in veilige klussen in plaats van de belangrijkste taak af te maken${detail ? ` ("${detail}")` : ''}. Vraag: "Welke veilige taak heeft je afgeleid, en staat deze taak morgen om 09:00 uur ingepland?" — accepteer geen ontwijkend antwoord.`;
   }
 
   const textFields = [
@@ -573,8 +569,7 @@ export function buildCoachPrompt(ctx: CoachContext, technique: Technique): strin
     : '';
 
   // Doelen/wins/focus/dagboek/controle-cirkel — voorheen zag geen enkele coach-functie dit,
-  // ondanks dat het dashboard het wél toont. Zie CoachContext-commentaar voor waarom ADHD-scores
-  // hier bewust buiten blijven.
+  // ondanks dat het dashboard het wél toont.
   const activityParts: string[] = [];
   if (ctx.openLeverageTask) {
     activityParts.push(`- Openstaande 80/20-hefboomtaak dit kwartaal: "${ctx.openLeverageTask.actionText}" (bij doel "${ctx.openLeverageTask.goalTitle}")${ctx.openRocksCount > 1 ? `, nog ${ctx.openRocksCount - 1} andere kwartaaldoelen open` : ''}.`);
@@ -1015,11 +1010,16 @@ export interface WeeklyScorecard {
  *  Impact Coach over de laatste 7 dagen en isoleert de 2 laagste, in plaats van alles te tonen —
  *  precies het punt van een scorecard: niet vieren wat al goed gaat, focussen op wat achterblijft. */
 export async function computeWeeklyScorecard(userId: string): Promise<WeeklyScorecard> {
+  // date_string is een text-kolom (ISO "YYYY-MM-DD"), dus vergelijken tegen een SQL date/interval
+  // ("(CURRENT_DATE - INTERVAL '6 days')") faalt met "operator does not exist: text >= timestamp"
+  // — vandaar hier dezelfde aanpak als elders (bv. ritual-status.service.ts): de grens als
+  // ISO-stringparameter meegeven i.p.v. in SQL uit te rekenen.
+  const since = getDateDaysAgo(6);
   const [morningRows, eveningRows] = await Promise.all([
     sql`SELECT date_string, data FROM daily_logs
-        WHERE user_id = ${userId} AND type = 'morning' AND date_string >= (CURRENT_DATE - INTERVAL '6 days')`,
+        WHERE user_id = ${userId} AND type = 'morning' AND date_string >= ${since}`,
     sql`SELECT data FROM daily_logs
-        WHERE user_id = ${userId} AND type = 'evening' AND date_string >= (CURRENT_DATE - INTERVAL '6 days')`,
+        WHERE user_id = ${userId} AND type = 'evening' AND date_string >= ${since}`,
   ]);
 
   const mornings = (morningRows as { date_string: string; data: any }[]).map((r) => ({ date: r.date_string, ...parseData(r.data) }));
@@ -1034,7 +1034,7 @@ export async function computeWeeklyScorecard(userId: string): Promise<WeeklyScor
   const consistentieScore = Math.round((Math.min(uniqueDays, 7) / 7) * 10 * 10) / 10;
 
   const metrics: ScorecardMetric[] = [
-    { key: 'kikker', label: 'Kikker afgemaakt', score: kikkerScore },
+    { key: 'kikker', label: 'Belangrijkste taak afgemaakt', score: kikkerScore },
     { key: 'energie', label: 'Energie', score: energieScore },
     { key: 'consistentie', label: 'Ritueel-consistentie', score: consistentieScore },
   ];
@@ -1178,8 +1178,8 @@ export function determineNextStepCandidate(input: NextStepInput): NextStepCandid
   if (input.frogLabel && !input.frogDone) {
     return {
       key: 'kikker-open',
-      headline: 'Maak eerst je kikker af',
-      factLine: `De kikker van vandaag ("${input.frogLabel}") is nog niet afgerond.`,
+      headline: 'Maak eerst je belangrijkste taak af',
+      factLine: `Je belangrijkste taak van vandaag ("${input.frogLabel}") is nog niet afgerond.`,
       ctaLabel: 'Doorbreek uitstel',
       ctaHref: '/dashboard',
     };

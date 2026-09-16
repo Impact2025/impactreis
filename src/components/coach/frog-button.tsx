@@ -188,7 +188,7 @@ export function FrogButton() {
               ? '15 minuten, geen nadenken'
               : todaysFrog
               ? `Vandaag: ${todaysFrog}`
-              : 'Nog geen kikker gekozen — vul eerst je ochtendritueel in'}
+              : 'Nog geen belangrijkste taak gekozen — vul eerst je ochtendritueel in'}
             {weekCount !== null && weekCount > 0 ? ` · ${weekCount}x deze week doorbroken` : ''}
           </p>
         </div>
