@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import {
   COACH_PERSONAS,
@@ -14,48 +14,14 @@ import {
   AVOIDANCE_BEHAVIOR_OPTIONS,
   LEVERAGE_GOAL_OPTIONS,
   CONSEQUENCE_PRESETS,
+  labelFor,
   type UserOnboardingProfile,
 } from '@/lib/onboarding';
+import { ChipButton, CardOption, CheckRow } from '@/components/ui/dna-controls';
 
 const TOTAL_STEPS = 7;
 
 type Gender = 'male' | 'female';
-
-function ChipButton({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`text-[13px] px-3.5 py-2 rounded-full border transition-colors text-left ${
-        selected
-          ? 'border-primary bg-primary-muted text-primary font-medium'
-          : 'border-line text-ink hover:border-primary/50'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function CardOption({ selected, onClick, title, description }: { selected: boolean; onClick: () => void; title: string; description?: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full text-left rounded-[14px] border p-4 transition-colors ${
-        selected ? 'border-primary bg-primary-muted' : 'border-line bg-surface-sunken hover:border-primary/40'
-      }`}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className={`text-[14px] font-semibold ${selected ? 'text-primary' : 'text-ink'}`}>{title}</p>
-          {description && <p className="text-[12px] text-ink-soft mt-1">{description}</p>}
-        </div>
-        {selected && <Check size={18} className="text-primary shrink-0" />}
-      </div>
-    </button>
-  );
-}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -74,6 +40,99 @@ export default function OnboardingPage() {
   const [leverageGoal, setLeverageGoal] = useState<string | null>(null);
   const [painfulConsequence, setPainfulConsequence] = useState('');
   const [meditationsEnabled, setMeditationsEnabled] = useState(true);
+
+  // Coach-verdieping op de consequentie (stap 7): optioneel, max 2 vragen. Volledig additief —
+  // blokkeert nooit "Activeer mijn werkruimte", dat blijft alleen aan painfulConsequence hangen.
+  type DeepeningMessage = { role: 'user' | 'assistant'; content: string };
+  const [deepeningActive, setDeepeningActive] = useState(false);
+  const [deepeningSkipped, setDeepeningSkipped] = useState(false);
+  const [deepeningMessages, setDeepeningMessages] = useState<DeepeningMessage[]>([]);
+  const [deepeningLoading, setDeepeningLoading] = useState(false);
+  const [deepeningAnswer, setDeepeningAnswer] = useState('');
+  const [deepeningClosed, setDeepeningClosed] = useState(false);
+
+  const questionCount = deepeningMessages.filter((m) => m.role === 'assistant').length;
+  const showAnswerInput = deepeningActive && !deepeningClosed && !deepeningLoading && deepeningMessages[deepeningMessages.length - 1]?.role === 'assistant';
+
+  function buildDeepeningSystemPrompt(turn: 1 | 2): string {
+    const name = displayName.trim() || (gender ? COACH_PERSONAS[gender].defaultName : 'Coach');
+    const industryLabel = industry ? labelFor(INDUSTRY_OPTIONS, industry) : 'onbekende sector';
+    const goalLabel = LEVERAGE_GOAL_OPTIONS.find((o) => o.value === leverageGoal)?.label ?? 'onbekend doel';
+    const base = `Je bent ${name}, een ${gender === 'female' ? 'vrouwelijke' : 'mannelijke'} business-challenger-coach met een directe, scherpe, no-nonsense toon. Je coacht een ondernemer in ${industryLabel}, kwartaaldoel: ${goalLabel}.\n\nDe ondernemer noemt deze consequentie als die het kwartaaldoel mist:\n"${painfulConsequence.trim()}"\n\n`;
+    if (turn === 1) {
+      return base + 'Stel EXACT 1 scherpe, doorvragende vraag (max 2 zinnen) die de ondernemer dwingt concreter te worden over waarom dit pijn doet of wie het zou merken. Geen advies, geen samenvatting, geen inleiding — begin direct met de vraag.';
+    }
+    return base + 'Dit is je laatste kans om door te vragen. Als het antwoord van de ondernemer hierboven al scherp en concreet is, sluit af met een korte bevestiging (max 1 zin, zonder vraagteken, geen advies, geen vervolgvraag). Alleen als het antwoord nog vaag is, stel dan 1 laatste scherpe vraag (max 2 zinnen).';
+  }
+
+  async function streamCoachReply(messages: DeepeningMessage[], systemPrompt: string): Promise<string> {
+    const res = await fetch('/api/onboarding/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${AuthService.getToken()}` },
+      body: JSON.stringify({ messages, systemPrompt }),
+    });
+    if (!res.ok || !res.body) throw new Error('Kon geen antwoord ophalen');
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let text = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      text += decoder.decode(value, { stream: true });
+    }
+    return text.trim();
+  }
+
+  const startDeepening = async () => {
+    if (!painfulConsequence.trim()) return;
+    setDeepeningActive(true);
+    setDeepeningLoading(true);
+    const opening: DeepeningMessage[] = [{ role: 'user', content: painfulConsequence.trim() }];
+    setDeepeningMessages(opening);
+    try {
+      const reply = await streamCoachReply(opening, buildDeepeningSystemPrompt(1));
+      setDeepeningMessages([...opening, { role: 'assistant', content: reply }]);
+    } catch {
+      setDeepeningActive(false);
+    } finally {
+      setDeepeningLoading(false);
+    }
+  };
+
+  const submitDeepeningAnswer = async () => {
+    if (!deepeningAnswer.trim()) return;
+    const answer = deepeningAnswer.trim();
+    const withAnswer = [...deepeningMessages, { role: 'user' as const, content: answer }];
+    setDeepeningMessages(withAnswer);
+    setDeepeningAnswer('');
+
+    if (questionCount >= 2) {
+      // Harde cap: na 2 vragen sluiten we lokaal af, geen 3e model-call.
+      setDeepeningClosed(true);
+      return;
+    }
+
+    setDeepeningLoading(true);
+    try {
+      const reply = await streamCoachReply(withAnswer, buildDeepeningSystemPrompt(2));
+      setDeepeningMessages([...withAnswer, { role: 'assistant', content: reply }]);
+      if (!reply.trim().endsWith('?')) setDeepeningClosed(true);
+    } catch {
+      setDeepeningClosed(true);
+    } finally {
+      setDeepeningLoading(false);
+    }
+  };
+
+  const deepeningForProfile = () => {
+    const pairs: { question: string; answer: string }[] = [];
+    for (let i = 1; i < deepeningMessages.length; i += 1) {
+      const msg = deepeningMessages[i];
+      const prev = deepeningMessages[i - 1];
+      if (msg.role === 'user' && prev.role === 'assistant') pairs.push({ question: prev.content, answer: msg.content });
+    }
+    return pairs.length > 0 ? pairs : undefined;
+  };
 
   useEffect(() => {
     if (!AuthService.isAuthenticated()) { router.push('/auth/login'); return; }
@@ -137,6 +196,7 @@ export default function OnboardingPage() {
       },
       consequenceModule: {
         description: painfulConsequence.trim(),
+        deepening: deepeningForProfile(),
       },
       assistantPreferences: {
         morningBriefingTime: '08:00',
@@ -185,9 +245,9 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-white flex flex-col">
       <div className="sticky top-0 z-10 bg-white border-b border-line px-5 py-4">
         <div className="max-w-lg mx-auto flex items-center gap-3">
-          <Image src="/logo.png" alt="Impact Coach logo" width={36} height={36} className="rounded-full" priority />
+          <Image src="/logo.png" alt="Sparren.app logo" width={36} height={36} className="rounded-full" priority />
           <div className="flex-1">
-            <p className="text-[14px] font-semibold text-ink">Impact Coach</p>
+            <p className="text-[14px] font-semibold text-ink">Sparren.app</p>
             <p className="text-[11px] text-ink-soft">Stap {step} van {TOTAL_STEPS} — je Bedrijfs-DNA</p>
           </div>
         </div>
@@ -279,20 +339,9 @@ export default function OnboardingPage() {
               {TIME_WASTER_OPTIONS.map((o) => {
                 const selected = topTimeWasters.includes(o.value);
                 return (
-                  <button
-                    key={o.value}
-                    type="button"
-                    onClick={() => toggleTimeWaster(o.value)}
-                    disabled={!selected && topTimeWasters.length >= 3}
-                    className={`w-full flex items-center gap-3 rounded-[14px] px-4 py-3 text-left transition-colors disabled:opacity-40 ${
-                      selected ? 'bg-primary-muted text-primary' : 'bg-surface-sunken text-ink'
-                    }`}
-                  >
-                    <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${selected ? 'border-primary bg-primary' : 'border-line'}`}>
-                      {selected && <Check size={12} className="text-white" />}
-                    </span>
-                    <span className="text-[13px]">{o.label}</span>
-                  </button>
+                  <CheckRow key={o.value} selected={selected} onClick={() => toggleTimeWaster(o.value)} disabled={!selected && topTimeWasters.length >= 3}>
+                    {o.label}
+                  </CheckRow>
                 );
               })}
             </div>
@@ -350,6 +399,66 @@ export default function OnboardingPage() {
               maxLength={300}
               className="w-full resize-none px-4 py-3 rounded-[14px] bg-surface-sunken border border-transparent text-[14px] outline-none focus:border-primary focus:bg-white transition-all"
             />
+
+            {!deepeningActive && !deepeningSkipped && painfulConsequence.trim().length > 0 && (
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={startDeepening}
+                  className="px-4 py-2.5 rounded-[14px] bg-primary-muted text-primary text-[13px] font-medium"
+                >
+                  Deel dit met {displayName.trim() || (gender ? COACH_PERSONAS[gender].defaultName : 'je coach')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeepeningSkipped(true)}
+                  className="text-[12px] text-ink-soft underline underline-offset-2"
+                >
+                  Overslaan
+                </button>
+              </div>
+            )}
+
+            {deepeningActive && (
+              <div className="space-y-3 rounded-[14px] border border-line p-4">
+                {deepeningMessages.slice(1).map((m, i) => (
+                  <div
+                    key={i}
+                    className={`text-[13px] rounded-[12px] px-3.5 py-2.5 max-w-[90%] ${
+                      m.role === 'assistant' ? 'bg-primary-muted text-ink mr-auto' : 'bg-surface-sunken text-ink ml-auto'
+                    }`}
+                  >
+                    {m.content}
+                  </div>
+                ))}
+                {deepeningLoading && (
+                  <div className="text-[13px] rounded-[12px] px-3.5 py-2.5 max-w-[90%] bg-primary-muted text-ink-soft mr-auto">
+                    Even denken...
+                  </div>
+                )}
+                {showAnswerInput && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={deepeningAnswer}
+                      onChange={(e) => setDeepeningAnswer(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') submitDeepeningAnswer(); }}
+                      placeholder="Je antwoord..."
+                      className="flex-1 px-3.5 py-2.5 rounded-[12px] bg-surface-sunken border border-transparent text-[13px] outline-none focus:border-primary focus:bg-white transition-all"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={submitDeepeningAnswer}
+                      disabled={!deepeningAnswer.trim()}
+                      className="px-3.5 py-2.5 rounded-[12px] bg-primary text-white text-[13px] font-medium disabled:opacity-40"
+                    >
+                      Stuur
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="rounded-[14px] bg-surface-sunken px-4 py-3.5 flex items-center justify-between gap-4 mt-6">
               <div>

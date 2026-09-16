@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isValidAdminSessionToken } from '@/lib/admin-session';
+import { isValidVerifiedGateToken, TURNSTILE_GATE_COOKIE } from '@/lib/verified-gate';
 
 const protectedPaths = ['/admin'];
 const publicAdminPaths = ['/admin/login'];
@@ -8,8 +9,29 @@ const publicAdminPaths = ['/admin/login'];
 const protectedApiPrefix = '/api/admin';
 const publicApiPaths = ['/api/admin/auth'];
 
+// Auth.js' eigen POST-endpoint dat de magic-linkmail daadwerkelijk verstuurt (Resend-provider).
+// De client belde altijd al /api/turnstile/verify vóór signIn('resend', ...), maar niets
+// server-side hield de client daaraan — wie deze route rechtstreeks post, sloeg de captcha over
+// en kon het Resend-quotum leegtrekken. Zie src/lib/verified-gate.ts voor de cookie die dit dicht.
+const MAGIC_LINK_SEND_PATH = '/api/auth/signin/resend';
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (pathname === MAGIC_LINK_SEND_PATH && request.method === 'POST') {
+    // Alleen afdwingen als Turnstile daadwerkelijk geconfigureerd is — anders zou dit iedere
+    // login/registratie blokkeren in omgevingen zonder Turnstile-secret (bv. lokale dev).
+    if (process.env.TURNSTILE_SECRET_KEY) {
+      const gateCookie = request.cookies.get(TURNSTILE_GATE_COOKIE)?.value;
+      if (!(await isValidVerifiedGateToken(gateCookie))) {
+        return NextResponse.json(
+          { error: 'Verificatie ontbreekt of is verlopen. Vernieuw de pagina en probeer opnieuw.' },
+          { status: 403 },
+        );
+      }
+    }
+    return NextResponse.next();
+  }
 
   const isProtectedPage = protectedPaths.some(
     (path) => pathname.startsWith(path) && !publicAdminPaths.includes(pathname),
@@ -40,5 +62,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*'],
+  matcher: ['/admin/:path*', '/api/admin/:path*', '/api/auth/signin/resend'],
 };

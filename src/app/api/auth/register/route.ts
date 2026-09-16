@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
+import { ZodError } from 'zod';
 import { sql } from '@/lib/db';
 import { registerSchema } from '@/lib/schemas/auth.schema';
 import { generateToken } from '@/lib/auth';
 import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { welcomeEmail } from '@/lib/email-templates';
 import { ensurePreferences } from '@/lib/email-recipients';
+import { clientIp, rateLimitResponse } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
+    const limited = await rateLimitResponse(`register:${clientIp(request)}`, 5, 60);
+    if (limited) return limited;
+
     const body = await request.json();
     const { email, password } = registerSchema.parse(body);
 
@@ -18,7 +23,7 @@ export async function POST(request: NextRequest) {
     `;
 
     if (existingUsers.length > 0) {
-      return NextResponse.json({ error: 'Email already registered' }, { status: 400 });
+      return NextResponse.json({ error: 'Dit e-mailadres is al geregistreerd' }, { status: 400 });
     }
 
     // Hash password
@@ -51,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     // Best-effort: een mislukte welkomstmail mag de registratie nooit laten falen.
     try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://reis.weareimpact.nl';
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://sparren.app';
       const { subject, html } = welcomeEmail(appUrl);
       await getResend().emails.send({ from: FROM_EMAIL, to: user.email as string, subject, html });
     } catch (err) {
@@ -70,6 +75,9 @@ export async function POST(request: NextRequest) {
       token,
     }, { status: 201 });
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
+    }
     console.error('Register error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

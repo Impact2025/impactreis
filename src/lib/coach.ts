@@ -15,6 +15,9 @@ import {
   labelFor,
   type UserOnboardingProfile,
 } from './onboarding';
+import { normalizeNextActions } from './goal-actions';
+import { getCurrentQuarter } from './weekflow.service';
+import { isCalendarConfiguredFor, listTodayEvents } from './google-calendar';
 
 export type Technique =
   | 'grow'
@@ -37,7 +40,7 @@ export const TECHNIQUE_LABELS: Record<Technique, string> = {
 
 interface DailyLogRow {
   date_string: string;
-  type: 'morning' | 'evening';
+  type: 'morning' | 'evening' | 'dagboek_ochtend' | 'dagboek_avond' | 'controle_cirkel' | 'adhd' | string;
   data: any;
 }
 
@@ -85,10 +88,34 @@ export interface CoachContext {
    *  Nooit blokkerend: de coachreflectie moet ook werken als ImpactOS niet draait. */
   holding: HoldingContext | null;
   identity: CoachIdentity;
+  /** Actieve identiteitsstatements + bewijs-cijfers uit de /identity-pagina, leeg als iemand die
+   *  feature niet gebruikt — zie loadActiveIdentityStatements(). */
+  identityStatements: ActiveIdentityStatement[];
   /** Impact Coach-persona + Bedrijfs-DNA uit de tap-first onboarding — null zolang iemand nog de
    *  oude AIPA-intake heeft (of nooit `coachProfile.toneSeverity: 'high_challenger'` koos), dan
    *  valt de prompt terug op de bestaande "Sparringpartner"-persona hieronder. */
   challenger: ChallengerProfile | null;
+  /** Openstaande 80/20-hefboomtaak van dit kwartaal — zelfde bron/logica als runNextStepAnalysis
+   *  (zie sql-query daar), maar nu ook zichtbaar voor de reflectie-analyse en de chat, die dit
+   *  voorheen niet zagen ondanks dat het dashboard het wél toont. */
+  openLeverageTask: { goalTitle: string; actionText: string } | null;
+  openRocksCount: number;
+  /** Laatste wins + hoeveel er deze week gelogd zijn — de coach wist hier voorheen niets van. */
+  recentWins: { title: string; category: string; date: string }[];
+  winsThisWeek: number;
+  /** Focus-sessies van vandaag — telt mee als "heb ik überhaupt gewerkt aan mijn hefboomtaak",
+   *  niet alleen "wat zei ik in het ochtendritueel". */
+  focusSessionsToday: number;
+  focusMinutesToday: number;
+  /** Dagboek- en Controle Cirkel-entries van vandaag. Deze data werd al opgehaald (in de oude
+   *  `last7Days`-query) maar nergens gebruikt door een `.find()` die alleen op type 'morning'/
+   *  'evening' matchte — dagboek/controle-cirkel/ADHD-rijen werden zo stilzwijgend genegeerd.
+   *  ADHD-scores blijven bewust buiten de coach-prompt (zie loadCoachContext): dat is Vincents
+   *  eigen medicatietraject-tracker, niet iets waar een generieke reflectie-coach medisch
+   *  commentaar op moet geven — de bestaande "diagnosticeert nooit"-grens in de prompt is voor
+   *  vage vermoeidheidssignalen, niet voor het becommentariëren van klinische scores. */
+  todayJournal: { moment: 'ochtend' | 'avond'; stemming: string; tekst: string }[];
+  todayControleCirkel: { probleem: string; gekozenActie: string; losgelaten: boolean }[];
 }
 
 export interface ChallengerProfile {
@@ -246,7 +273,13 @@ export async function loadCoachContext(userId: string, organizationId: number | 
   const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
   const identity = await loadCoachIdentity(organizationId);
 
-  const [morningRows, allMorningDates, energyRows, lessonRows, contextRows, holding, challenger] = await Promise.all([
+  const currentQuarter = getCurrentQuarter();
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+
+  const [
+    morningRows, allMorningDates, energyRows, lessonRows, contextRows, holding, challenger, identityStatements,
+    goalRows, winRows, winsThisWeekRows, focusRows,
+  ] = await Promise.all([
     sql`SELECT date_string, type, data FROM daily_logs
         WHERE user_id = ${userId} AND date_string IN (${today}, ${yesterday})`,
     sql`SELECT date_string FROM daily_logs
@@ -263,11 +296,49 @@ export async function loadCoachContext(userId: string, organizationId: number | 
     // organisatie als DatingAssistent heeft geen holding en mag die call nooit triggeren.
     identity.isFounder ? fetchHoldingContext() : Promise.resolve(null),
     loadChallengerProfile(userId),
+    loadActiveIdentityStatements(userId),
+    // Zelfde bron als runNextStepAnalysis (zie sql-query daar) — nu ook zichtbaar voor de
+    // reflectie-analyse en de chat, die dit voorheen niet zagen.
+    sql`SELECT data FROM goals WHERE user_id = ${userId} AND organization_id = ${organizationId}`,
+    sql`SELECT title, category, date FROM wins WHERE user_id = ${userId}
+        ORDER BY date DESC LIMIT 3`,
+    sql`SELECT COUNT(*)::int AS count FROM wins WHERE user_id = ${userId} AND date >= ${sevenDaysAgo}`,
+    sql`SELECT duration_minutes FROM focus_sessions
+        WHERE user_id = ${userId} AND date = ${today} AND completed = TRUE`,
   ]);
 
   const todayMorning = (morningRows as DailyLogRow[]).find((r) => r.date_string === today && r.type === 'morning');
   const yesterdayMorning = (morningRows as DailyLogRow[]).find((r) => r.date_string === yesterday && r.type === 'morning');
   const todayEvening = (morningRows as DailyLogRow[]).find((r) => r.date_string === today && r.type === 'evening');
+
+  // Dagboek/Controle Cirkel: was al opgehaald via bovenstaande query (geen type-filter), maar
+  // werd nergens uitgelezen — zie het commentaar bij CoachContext.todayJournal hierboven.
+  const todayJournal = (morningRows as DailyLogRow[])
+    .filter((r) => r.date_string === today && (r.type === 'dagboek_ochtend' || r.type === 'dagboek_avond'))
+    .map((r) => {
+      const d = parseData(r.data) as { stemming?: string; tekst?: string } | undefined;
+      return { moment: (r.type === 'dagboek_ochtend' ? 'ochtend' : 'avond') as 'ochtend' | 'avond', stemming: d?.stemming ?? '', tekst: d?.tekst ?? '' };
+    });
+  const todayControleCirkel = (morningRows as DailyLogRow[])
+    .filter((r) => r.date_string === today && r.type === 'controle_cirkel')
+    .map((r) => {
+      const d = parseData(r.data) as { probleem?: string; gekozen_actie?: string; losgelaten?: boolean } | undefined;
+      return { probleem: d?.probleem ?? '', gekozenActie: d?.gekozen_actie ?? '', losgelaten: !!d?.losgelaten };
+    });
+
+  const openLeverageTask = (goalRows as { data: any }[])
+    .map((r) => r.data)
+    .filter((g) => !g.completed && g.isRock && g.quarter === currentQuarter)
+    .flatMap((g) => normalizeNextActions(g.nextActions)
+      .filter((a) => a.leverage && !a.completed)
+      .map((a) => ({ goalTitle: g.title as string, actionText: a.text })))[0] ?? null;
+  const openRocksCount = (goalRows as { data: any }[])
+    .map((r) => r.data)
+    .filter((g) => !g.completed && g.isRock && g.quarter === currentQuarter).length;
+
+  const focusSessionsToday = (focusRows as { duration_minutes: number | null }[]).length;
+  const focusMinutesToday = (focusRows as { duration_minutes: number | null }[])
+    .reduce((sum, r) => sum + (r.duration_minutes ?? 0), 0);
 
   const streak = getCurrentStreak((allMorningDates as { date_string: string }[]).map((r) => r.date_string));
 
@@ -292,8 +363,35 @@ export async function loadCoachContext(userId: string, organizationId: number | 
     userContext: uc,
     holding: holding as HoldingContext | null,
     identity,
+    identityStatements: identityStatements as ActiveIdentityStatement[],
     challenger: challenger as ChallengerProfile | null,
+    openLeverageTask,
+    openRocksCount,
+    recentWins: (winRows as { title: string; category: string; date: string }[]),
+    winsThisWeek: (winsThisWeekRows as { count: number }[])[0]?.count ?? 0,
+    focusSessionsToday,
+    focusMinutesToday,
+    todayJournal,
+    todayControleCirkel,
   };
+}
+
+export interface ActiveIdentityStatement {
+  statement: string;
+  proofCount: number;
+  streak: number;
+}
+
+/** Actieve identiteitsstatements uit de /identity-pagina (zie identity_profiles) — de coach
+ *  gebruikt dit als extra laag naast de gemeten cijfers: niet "wat is er gebeurd" maar "wie
+ *  probeert deze ondernemer te zijn", zodat de reflectie daar ook op kan spiegelen. Uitgeschakelde
+ *  statements (isActive: false) tellen niet mee, net als op de pagina zelf. */
+export async function loadActiveIdentityStatements(userId: string): Promise<ActiveIdentityStatement[]> {
+  const rows = await sql`SELECT statements FROM identity_profiles WHERE user_id = ${userId} LIMIT 1`;
+  const statements = (rows[0]?.statements as any[] | undefined) ?? [];
+  return statements
+    .filter((s) => s?.isActive)
+    .map((s) => ({ statement: String(s.statement ?? ''), proofCount: Number(s.proofCount ?? 0), streak: Number(s.streak ?? 0) }));
 }
 
 /** Laatste N dagen ochtend-energie, meest recent eerst — los van `loadCoachContext` (die
@@ -465,6 +563,41 @@ export function buildCoachPrompt(ctx: CoachContext, technique: Technique): strin
   const possessive = identity.addressName ? 'zijn' : 'hun';
   const instructions = techniqueInstructions(identity);
 
+  // Wie ${object} probeert te zijn (niet wat er gemeten is) — alleen aanwezig als iemand de
+  // /identity-pagina daadwerkelijk gebruikt, dus mag zonder blok ook prima ontbreken.
+  const identityBlock = ctx.identityStatements.length
+    ? `\nGEKOZEN IDENTITEIT (waar ${object} zichzelf op wil aanspreken, gebruik dit om te spiegelen — niet elke sessie herhalen):\n${ctx.identityStatements
+        .map((s) => `- "${s.statement}" (${s.proofCount} bewijzen verzameld${s.streak > 0 ? `, ${s.streak} dag streak` : ''})`)
+        .join('\n')}\n`
+    : '';
+
+  // Doelen/wins/focus/dagboek/controle-cirkel — voorheen zag geen enkele coach-functie dit,
+  // ondanks dat het dashboard het wél toont. Zie CoachContext-commentaar voor waarom ADHD-scores
+  // hier bewust buiten blijven.
+  const activityParts: string[] = [];
+  if (ctx.openLeverageTask) {
+    activityParts.push(`- Openstaande 80/20-hefboomtaak dit kwartaal: "${ctx.openLeverageTask.actionText}" (bij doel "${ctx.openLeverageTask.goalTitle}")${ctx.openRocksCount > 1 ? `, nog ${ctx.openRocksCount - 1} andere kwartaaldoelen open` : ''}.`);
+  } else if (ctx.openRocksCount > 0) {
+    activityParts.push(`- ${ctx.openRocksCount} kwartaaldoel(en) actief, geen hefboomtaak specifiek als 80/20 gemarkeerd.`);
+  }
+  activityParts.push(
+    ctx.focusSessionsToday > 0
+      ? `- Vandaag al ${ctx.focusSessionsToday} focussessie(s) afgerond (${ctx.focusMinutesToday} minuten).`
+      : '- Nog geen focussessie afgerond vandaag.'
+  );
+  if (ctx.recentWins.length > 0) {
+    activityParts.push(`- Recente wins: ${ctx.recentWins.map((w) => `"${w.title}" (${w.category})`).join(', ')}${ctx.winsThisWeek > ctx.recentWins.length ? ` — ${ctx.winsThisWeek} deze week` : ''}.`);
+  } else {
+    activityParts.push('- Nog geen wins gelogd deze week.');
+  }
+  ctx.todayJournal.forEach((j) => {
+    if (j.tekst.trim()) activityParts.push(`- Dagboek (${j.moment}, stemming: ${j.stemming}): "${j.tekst.slice(0, 200)}${j.tekst.length > 200 ? '…' : ''}"`);
+  });
+  ctx.todayControleCirkel.forEach((c) => {
+    activityParts.push(`- Controle Cirkel: "${c.probleem}"${c.gekozenActie ? ` → gekozen actie: "${c.gekozenActie}"` : ''}${c.losgelaten ? ' (losgelaten)' : ''}.`);
+  });
+  const activityBlock = `\nWAT ${object.toUpperCase()} VERDER DOET IN DE APP (gebruik dit om je vraag te aarden in wat er echt speelt, niet alleen in de ochtendmeting):\n${activityParts.join('\n')}\n`;
+
   const sessionBlock = `SESSIE VAN VANDAAG (${todayDate}, ${dayName}):
 - Energie: ${ctx.today.energyLevel ?? 'onbekend'}/10
 - Slaap: ${ctx.today.sleepQuality ?? 'onbekend'}/10
@@ -476,10 +609,10 @@ ${ctx.yesterday ? `GISTEREN: energie ${ctx.yesterday.energyLevel}/10, slaap ${ct
 
 RECENTE ENERGIE-ATTRIBUTIE (wat gaf/kostte energie):
 ${energyBlock}
-
+${activityBlock}
 GELEERDE PATRONEN OVER ${identity.addressName ? identity.addressName.toUpperCase() : 'DEZE ONDERNEMER'} (gebruik deze, herhaal ze niet letterlijk):
 ${lessonsBlock}
-${holdingBlock(ctx.holding)}`;
+${identityBlock}${holdingBlock(ctx.holding)}`;
 
   if (challenger) {
     const trigger = detectChallengerTrigger(ctx);
@@ -705,7 +838,7 @@ async function applyPredictionOutcome(lessonId: number | null, outcome: 'correct
  *  vergelijkt met de baseline, en stroomt het resultaat terug naar de gekoppelde les. Aangeroepen
  *  als eerste stap van runCoachAnalysis() — geen aparte cron nodig, de dagelijkse ochtendflow is
  *  al frequent genoeg om predicties binnen een dag na hun due_date te toetsen. */
-export async function resolveDuePredictions(userId: string, organizationId: number | null) {
+export async function resolveDuePredictions(userId: string, _organizationId: number | null) {
   const due = await sql`
     SELECT id, lesson_id, metric, baseline FROM coach_predictions
     WHERE user_id = ${userId} AND outcome IS NULL AND due_date <= CURRENT_DATE
@@ -964,4 +1097,214 @@ export async function runCoachAnalysis(userId: string, organizationId: number | 
     analysis,
     streak: ctx.streak,
   };
+}
+
+// ═══ "BESTE VOLGENDE STAP" — /api/coach/next-step ═══════════════════════════════════════
+//
+// Het dashboard stapelt ~10 gelijkwaardige kaarten (rituelen, hefboomtaken, agenda, scorecard,
+// ...). Deze kaart pikt daar één winnaar uit met vaste, deterministische prioriteit — zelfde
+// "cijfers eerst" filosofie als chooseTechnique/detectProactiveSignal — en laat de LLM alleen
+// de FORMULERING doen, nooit de keuze zelf.
+
+export type NextStepKey =
+  | 'geen-ochtendritueel'
+  | 'proactief-signaal'
+  | 'kikker-open'
+  | 'hefboomtaak-open'
+  | 'drukke-dag'
+  | 'zwakke-scorecard'
+  | 'streak-fallback';
+
+export interface NextStepCandidate {
+  key: NextStepKey;
+  headline: string;
+  /** Het meetbare feit, puur uit de data — dit is wat de prompt aan de LLM meegeeft, de LLM
+   *  mag dit nooit zelf verzinnen. */
+  factLine: string;
+  ctaLabel: string;
+  ctaHref: string;
+}
+
+export interface NextStepInput {
+  hasMorningRitual: boolean;
+  proactiveSignal: ProactiveSignal;
+  frogLabel: string | null;
+  frogDone: boolean;
+  leverageTask: { goalTitle: string; actionText: string } | null;
+  meetingMinutes: number;
+  scorecard: WeeklyScorecard;
+  streak: number;
+}
+
+/** Puur functioneel en dus triviaal te testen zonder database — zelfde stijl als
+ *  detectProactiveSignal. Eerste match wint, altijd een geldig eindpunt (nooit null). */
+export function determineNextStepCandidate(input: NextStepInput): NextStepCandidate {
+  if (!input.hasMorningRitual) {
+    return {
+      key: 'geen-ochtendritueel',
+      headline: 'Begin met je ochtendritueel',
+      factLine: 'Er is vandaag nog geen ochtendritueel ingevuld — zonder die meting heeft geen enkele andere aanbeveling houvast.',
+      ctaLabel: 'Start ochtendritueel',
+      ctaHref: '/morning',
+    };
+  }
+  if (input.proactiveSignal.signal) {
+    return {
+      key: 'proactief-signaal',
+      headline: 'Sparren signaleert een patroon',
+      factLine: input.proactiveSignal.message,
+      ctaLabel: 'Bespreek met Sparren',
+      ctaHref: '/coach',
+    };
+  }
+  if (input.frogLabel && !input.frogDone) {
+    return {
+      key: 'kikker-open',
+      headline: 'Maak eerst je kikker af',
+      factLine: `De kikker van vandaag ("${input.frogLabel}") is nog niet afgerond.`,
+      ctaLabel: 'Doorbreek uitstel',
+      ctaHref: '/dashboard',
+    };
+  }
+  if (input.leverageTask) {
+    return {
+      key: 'hefboomtaak-open',
+      headline: 'Hefboomtaak wacht',
+      factLine: `Openstaande 80/20-hefboomtaak "${input.leverageTask.actionText}" bij het doel "${input.leverageTask.goalTitle}".`,
+      ctaLabel: 'Naar doelen',
+      ctaHref: '/goals',
+    };
+  }
+  if (input.meetingMinutes >= 300) {
+    return {
+      key: 'drukke-dag',
+      headline: 'Bouw hersteltijd in',
+      factLine: `Vandaag staat er ${Math.round((input.meetingMinutes / 60) * 10) / 10} uur aan afspraken gepland — een drukke dag zonder ingepland herstel.`,
+      ctaLabel: 'Bekijk agenda',
+      ctaHref: '/dashboard',
+    };
+  }
+  const weakest = input.scorecard.lowestTwo[0];
+  if (weakest && weakest.score !== null && weakest.score < 6) {
+    return {
+      key: 'zwakke-scorecard',
+      headline: 'Zwakste punt deze week',
+      factLine: `"${weakest.label}" staat deze week op ${weakest.score}/10 — de zwakste van de drie non-negotiables.`,
+      ctaLabel: 'Bespreek met Sparren',
+      ctaHref: '/coach',
+    };
+  }
+  return {
+    key: 'streak-fallback',
+    headline: 'Hou de lijn vast',
+    factLine: `Streak van ${input.streak} dag${input.streak !== 1 ? 'en' : ''}, geen acute knelpunten — de kans om verder te bouwen.`,
+    ctaLabel: 'Naar doelen',
+    ctaHref: '/goals',
+  };
+}
+
+/** Korte, aparte prompt-variant t.o.v. buildCoachPrompt: geen hele reflectie, alleen de
+ *  gekozen kandidaat in 1-2 zinnen formuleren in de bestaande persona. De feiten staan al vast
+ *  (candidate.factLine) — de LLM mag ze herformuleren, niet aanvullen. */
+function buildNextStepPrompt(ctx: CoachContext, candidate: NextStepCandidate): string {
+  const { identity, challenger } = ctx;
+  const object = identity.addressName || 'deze ondernemer';
+  const persona = challenger
+    ? `Jij bent ${challenger.displayName}, de nuchtere, scherpe executive-challenger van ${object}. Kort, direct, geen wollige inleiding, geen wellness-taal.`
+    : `Je bent De Sparringpartner, ${identity.addressName ? `${identity.addressName}s` : 'de'} persoonlijke business- en welzijnscoach. Warm maar scherp.`;
+
+  return `${persona}
+
+FEIT (al vastgesteld door het systeem — verzin niets extra's, gebruik alleen dit):
+${candidate.factLine}
+
+Schrijf in het Nederlands, in de jij-vorm, maximaal 2 zinnen: leg in één zin uit waarom dit nu de beste volgende stap is voor ${object}, en eindig met een korte, directe aansporing om de actie te nemen ("${candidate.ctaLabel}"). Geen inleiding, geen bullet points, geen aanhalingstekens om je antwoord.`;
+}
+
+export type NextStepResult =
+  | { ok: true; key: NextStepKey; headline: string; message: string; ctaLabel: string; ctaHref: string }
+  | { ok: false; status: number; error: string };
+
+/** Bepaalt en formuleert de "beste volgende stap" voor het dashboard. Cachet het resultaat per
+ *  (user, dag) in coach_next_steps zodat een pagina-refresh niet telkens een nieuwe LLM-call
+ *  kost — alleen als de gekozen kandidaat wijzigt (patternKey anders dan de cache) wordt er
+ *  opnieuw geformuleerd, zodat het advies wel vers blijft als de situatie verandert. */
+export async function runNextStepAnalysis(userId: string, organizationId: number | null): Promise<NextStepResult> {
+  const today = new Date().toISOString().split('T')[0];
+
+  const [ctx, recentMorningEnergy, goalRows] = await Promise.all([
+    loadCoachContext(userId, organizationId),
+    loadRecentMorningEnergy(userId, 5),
+    sql`SELECT data FROM goals WHERE user_id = ${userId} AND organization_id = ${organizationId}`,
+  ]);
+
+  const currentQuarter = getCurrentQuarter();
+  const leverageTask = (goalRows as { data: any }[])
+    .map((r) => r.data)
+    .filter((g) => !g.completed && g.isRock && g.quarter === currentQuarter)
+    .flatMap((g) => normalizeNextActions(g.nextActions)
+      .filter((a) => a.leverage && !a.completed)
+      .map((a) => ({ goalTitle: g.title as string, actionText: a.text })))[0] ?? null;
+
+  let meetingMinutes = 0;
+  if (isCalendarConfiguredFor(organizationId)) {
+    try {
+      const events = await listTodayEvents(organizationId);
+      meetingMinutes = events.reduce((sum, ev) => {
+        if (ev.isAllDay || !ev.start || !ev.end) return sum;
+        return sum + Math.max(0, (new Date(ev.end).getTime() - new Date(ev.start).getTime()) / 60000);
+      }, 0);
+    } catch {
+      meetingMinutes = 0; // agenda-uitval mag deze kaart nooit blokkeren
+    }
+  }
+
+  const scorecard = await computeWeeklyScorecard(userId);
+  const proactiveSignal = detectProactiveSignal(recentMorningEnergy, ctx.recentEnergyLog);
+  const frogLabel = (ctx.today as any).kikkerCategory
+    ? ((ctx.today as any).kikkerDetail ? `${(ctx.today as any).kikkerCategory} — ${(ctx.today as any).kikkerDetail}` : String((ctx.today as any).kikkerCategory))
+    : null;
+  const frogDone = (ctx.today as any).eveningVerdict === 'waarde_verkocht';
+
+  const candidate = determineNextStepCandidate({
+    hasMorningRitual: ctx.today.energyLevel != null,
+    proactiveSignal,
+    frogLabel,
+    frogDone,
+    leverageTask,
+    meetingMinutes,
+    scorecard,
+    streak: ctx.streak,
+  });
+
+  const cachedRows = await sql`
+    SELECT pattern_key, headline, message, cta_label, cta_href FROM coach_next_steps
+    WHERE user_id = ${userId} AND date = ${today} LIMIT 1
+  `;
+  const cached = (cachedRows as any[])[0];
+  if (cached && cached.pattern_key === candidate.key) {
+    return { ok: true, key: candidate.key, headline: cached.headline, message: cached.message, ctaLabel: cached.cta_label, ctaHref: cached.cta_href };
+  }
+
+  let message: string;
+  if (candidate.key === 'geen-ochtendritueel') {
+    message = `${candidate.factLine} Dat is de beste volgende stap nu — de rest van de dag bouwt hierop voort.`;
+  } else {
+    try {
+      message = (await openRouterChat(buildNextStepPrompt(ctx, candidate), 150)).trim();
+    } catch (err) {
+      console.error('Next-step LLM error:', err);
+      message = candidate.factLine;
+    }
+  }
+
+  await sql`
+    INSERT INTO coach_next_steps (user_id, organization_id, date, pattern_key, headline, message, cta_label, cta_href)
+    VALUES (${userId}, ${organizationId}, ${today}, ${candidate.key}, ${candidate.headline}, ${message}, ${candidate.ctaLabel}, ${candidate.ctaHref})
+    ON CONFLICT (user_id, date) DO UPDATE SET
+      pattern_key = EXCLUDED.pattern_key, headline = EXCLUDED.headline, message = EXCLUDED.message,
+      cta_label = EXCLUDED.cta_label, cta_href = EXCLUDED.cta_href, created_at = NOW()
+  `;
+
+  return { ok: true, key: candidate.key, headline: candidate.headline, message, ctaLabel: candidate.ctaLabel, ctaHref: candidate.ctaHref };
 }

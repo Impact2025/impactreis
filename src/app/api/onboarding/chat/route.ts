@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext } from '@/lib/auth-context';
 import { ONBOARDING_SYSTEM_PROMPT } from '@/lib/onboarding';
+import { rateLimitResponse } from '@/lib/rate-limit';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -18,7 +19,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { messages: ChatMessage[] };
+  const limited = await rateLimitResponse(`onboarding-chat:${authCtx.userId}`, 30, 60);
+  if (limited) return limited;
+
+  let body: { messages: ChatMessage[]; systemPrompt?: string };
   try {
     body = await request.json();
   } catch {
@@ -29,19 +33,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'messages is verplicht' }, { status: 400 });
   }
 
+  const systemPrompt = typeof body.systemPrompt === 'string' ? body.systemPrompt : ONBOARDING_SYSTEM_PROMPT;
+
   const upstream = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://reis.weareimpact.nl',
+      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://sparren.app',
     },
     body: JSON.stringify({
       model: 'anthropic/claude-sonnet-5',
       max_tokens: 4096,
       stream: true,
       messages: [
-        { role: 'system', content: ONBOARDING_SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt },
         ...body.messages,
       ],
     }),

@@ -13,7 +13,7 @@ import {
 // Demo-guard: ACA, ADHD en Cursussen alleen zichtbaar voor demo-account (v.munster@weareimpact.nl)
 const DEMO_ACCOUNT_EMAIL = 'v.munster@weareimpact.nl';
 
-function useDemoAccess(): boolean {
+export function useDemoAccess(): boolean {
   const [canAccess, setCanAccess] = useState(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;

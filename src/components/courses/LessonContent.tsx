@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { LessonContent as LessonContentType, LessonSection, ReflectionQuestion } from '@/types';
 import { Quote, AlertCircle, Lightbulb, CheckCircle, Info } from 'lucide-react';
 

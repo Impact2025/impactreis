@@ -353,6 +353,33 @@ export const emailSends = pgTable('email_sends', {
   userTypeIdx: index('idx_email_sends_user_type').on(t.userId, t.emailType, t.sentAt),
 }));
 
+// Leads uit de publieke "Executive Reality Check"-diagnostic (/reality-check) — bewust los van
+// `users`/`organizations`: dit zijn prospects die nog geen account hebben, niet ingelogde
+// gebruikers. Zie src/lib/reality-check.ts voor de scoringslogica.
+export const realityCheckLeads = pgTable('reality_check_leads', {
+  id: serial('id').primaryKey(),
+  email: text('email').notNull(),
+  name: text('name'),
+  level: text('level').notNull(),
+  answers: jsonb('answers').notNull(),
+  score: integer('score').notNull(),
+  profileKey: text('profile_key').notNull(),
+  weeklyHoursLost: real('weekly_hours_lost').notNull(),
+  monthlyHoursLost: real('monthly_hours_lost').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  // 4-dagen nurture-reeks (zie src/app/api/email/reality-check-nurture/route.ts) — elke
+  // *_sent_at is zowel de dedupe-check als het verzendlog, geen aparte email_sends-rij nodig
+  // voor dit vaste aantal stappen.
+  unsubscribeToken: text('unsubscribe_token'),
+  unsubscribed: boolean('unsubscribed').notNull().default(false),
+  email1SentAt: timestamp('email1_sent_at'),
+  email2SentAt: timestamp('email2_sent_at'),
+  email3SentAt: timestamp('email3_sent_at'),
+  email4SentAt: timestamp('email4_sent_at'),
+}, (t) => ({
+  emailIdx: index('idx_reality_check_leads_email').on(t.email),
+}));
+
 // --- Auth.js adaptertabellen ---
 //
 // Bewust GESCHEIDEN van de bestaande `users`-tabel (die heeft een integer id en geen

@@ -59,6 +59,9 @@ export const CONSEQUENCE_PRESETS = [
 
 export const consequenceModuleSchema = z.object({
   description: z.string().min(1).max(300),
+  // Optionele verdiepingsvragen die de coach tijdens de intake stelt (max 2) om de consequentie
+  // concreter/persoonlijker te maken. Ontbreekt als de ondernemer dit heeft overgeslagen.
+  deepening: z.array(z.object({ question: z.string(), answer: z.string() })).max(2).optional(),
 });
 
 export const COACH_PERSONAS = {

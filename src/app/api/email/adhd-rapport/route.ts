@@ -130,7 +130,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const authCtx = await getAuthContext(request);
   const userId = authCtx?.userId ?? null;
-  const organizationId = authCtx?.organizationId ?? null;
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const users = await sql`SELECT email FROM users WHERE id = ${userId} LIMIT 1`;

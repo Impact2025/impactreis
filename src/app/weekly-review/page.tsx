@@ -113,12 +113,6 @@ export default function WeeklyReviewPage() {
     howMakeBetter: ''
   });
 
-  const [stats, setStats] = useState({
-    averageProductivity: 0,
-    averageEnergy: 0,
-    totalReviews: 0
-  });
-
   const [weekSummary, setWeekSummary] = useState<Awaited<ReturnType<typeof api.weeklySummary.get>> | null>(null);
   const [isAlreadyComplete, setIsAlreadyComplete] = useState(false);
   const [rocks, setRocks] = useState<Rock[]>([]);
@@ -135,7 +129,7 @@ export default function WeeklyReviewPage() {
           })
           .catch(() => {});
         setLoading(false);
-      } catch (err) {
+      } catch {
         router.push('/auth/login');
       }
     };

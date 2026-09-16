@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Brain, ChevronLeft, Flame, BookOpen, Trophy, Sparkles } from 'lucide-react';
+import { ChevronLeft, Flame, BookOpen, Trophy, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
 import { AuthService } from '@/lib/auth';
 import { Course } from '@/types';

@@ -124,6 +124,23 @@ export interface ApprovalQueueItem {
   created_at: string;
 }
 
+export interface IdentityStatement {
+  id: string;
+  statement: string;
+  createdAt: string;
+  isActive: boolean;
+  proofCount: number;
+  lastProofDate?: string;
+  streak: number;
+}
+
+export interface IdentityProof {
+  id: string;
+  identityId: string;
+  proof: string;
+  date: string;
+}
+
 export interface Win {
   id: number;
   user_id: string;

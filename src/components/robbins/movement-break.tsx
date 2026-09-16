@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Flame, Dumbbell, Wind, Zap, Check, Play, SkipForward } from 'lucide-react';
+import { Flame, Dumbbell, Wind, Zap, Check, SkipForward } from 'lucide-react';
 
 interface MovementBreakProps {
   onComplete: () => void;

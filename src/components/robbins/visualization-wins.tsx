@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Target, Eye, Sparkles, Check } from 'lucide-react';
+import { Eye, Sparkles, Check } from 'lucide-react';
 
 interface VisualizationWinsProps {
   values: string[];

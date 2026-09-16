@@ -44,6 +44,7 @@ export default function WeeklyStartPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [carryForward, setCarryForward] = useState<string | null>(null);
   const [isAlreadyComplete, setIsAlreadyComplete] = useState(false);
   const [activeRockTitles, setActiveRockTitles] = useState<string[]>([]);
@@ -108,7 +109,7 @@ export default function WeeklyStartPage() {
             if (review?.data?.carryForward) setCarryForward(review.data.carryForward);
           })
           .catch(() => {});
-      } catch (err) {
+      } catch {
         router.push('/auth/login');
       } finally {
         setLoading(false);
@@ -130,17 +131,14 @@ export default function WeeklyStartPage() {
   const handleSave = async () => {
     setSaving(true);
     setSaved(false);
+    setSaveError(null);
     try {
-      try {
-        await api.weeklyReviews.create({
-          type: 'weekly-start',
-          weekNumber: currentWeek,
-          year: currentYear,
-          data: formData,
-        });
-      } catch (apiError) {
-        console.error('Failed to save to backend:', apiError);
-      }
+      await api.weeklyReviews.create({
+        type: 'weekly-start',
+        weekNumber: currentWeek,
+        year: currentYear,
+        data: formData,
+      });
       setSaved(true);
       // Redirect to dashboard after a brief success confirmation
       setTimeout(() => {
@@ -148,6 +146,7 @@ export default function WeeklyStartPage() {
       }, 1500);
     } catch (error) {
       console.error('Error saving weekly start:', error);
+      setSaveError('Opslaan is mislukt — je weekstart is niet bewaard. Controleer je verbinding en probeer opnieuw.');
     } finally {
       setSaving(false);
     }
@@ -405,6 +404,13 @@ export default function WeeklyStartPage() {
             className="w-full px-4 py-3 bg-surface-sunken border border-line rounded-[12px] text-[14px] text-ink placeholder-ink-soft outline-none focus:border-primary transition-colors"
           />
         </div>
+
+        {saveError && (
+          <div className="flex items-start gap-2.5 rounded-[12px] bg-red-50 border border-red-200 px-4 py-3">
+            <AlertCircle size={15} className="text-red-600 shrink-0 mt-0.5" />
+            <p className="text-[13px] text-red-700 leading-relaxed">{saveError}</p>
+          </div>
+        )}
 
         {/* Submit */}
         <button

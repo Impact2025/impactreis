@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Zap, TrendingUp, ArrowRight } from 'lucide-react';
 
 interface StateCheckProps {

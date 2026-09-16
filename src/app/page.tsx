@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import {
   ArrowRight, ChevronDown, Check, Plus, Minus,
-  Sunrise, Target, Shield, Timer, Trophy, RefreshCw, LogIn,
+  Sunrise, Target, Sparkles, Timer, Trophy, RefreshCw, LogIn,
 } from 'lucide-react';
 
 /* ─── Data ─────────────────────────────────────────────────── */
@@ -36,13 +36,13 @@ const FEATURES = [
   },
   {
     Icon: Target,
-    title: "Het 'Gouden Ei' & Micro-Acties",
-    desc: 'Sloop uitstelgedrag. De app kiest jouw belangrijkste prioriteit en splitst complexe taken direct op in behapbare stapjes van 2 tot 5 minuten.',
+    title: 'Hefboom-taken (80/20)',
+    desc: 'Sloop uitstelgedrag. Vanuit je actieve kwartaaldoelen toont de app elke dag maximaal 5 hefboom-taken — geen eindeloze lijst, wél de acties die het meeste verschil maken.',
   },
   {
-    Icon: Shield,
-    title: 'Smart Boundary Shielding',
-    desc: 'Bescherm je kostbare tijd. Krijg met één klik professionele, vriendelijke templates om niet-urgente verzoeken en vrijblijvende meetings beleefd af te wijzen.',
+    Icon: Sparkles,
+    title: 'AI-Reflectiecoach',
+    desc: 'Chat dagelijks met je persoonlijke coach. Hij herkent patronen in je gedrag, legt jouw inzichten vast en checkt of eerdere voorspellingen uitkwamen — zodat je elke dag scherper wordt.',
   },
   {
     Icon: Trophy,
@@ -51,13 +51,13 @@ const FEATURES = [
   },
   {
     Icon: Timer,
-    title: 'Micro-Acties in Focusblokken',
-    desc: 'Werk gestructureerd aan je Gouden Ei met korte, behapbare focussessies — zo bouw je elke dag zichtbare voortgang op je belangrijkste doel.',
+    title: 'Focusblokken met Timer',
+    desc: 'Werk gestructureerd aan je hefboom-taken met korte, afgebakende focussessies en een ingebouwde timer — zo bouw je elke dag zichtbare voortgang op.',
   },
   {
     Icon: RefreshCw,
-    title: 'Strategische Spiegel',
-    desc: 'Optionele maandelijkse check-in om te reflecteren op je energielekken, doelen bij te sturen en scherp te blijven op wat echt waarde oplevert.',
+    title: 'Week Start & Week Review',
+    desc: 'Plan je week bewust vooruit en kijk terug op wat er speelde, zodat je nooit de aansluiting met je kwartaaldoelen verliest.',
   },
 ];
 
@@ -172,10 +172,10 @@ export default function SalesPage() {
               <LogIn size={16} />
             </Link>
             <Link
-              href="/auth/register"
+              href="/reality-check"
               className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-full bg-surface-inverse text-white text-[12px] sm:text-[13px] font-semibold hover:bg-accent-dark transition-colors whitespace-nowrap"
             >
-              Gratis kennismaking
+              Reality Check
               <ArrowRight size={13} />
             </Link>
           </div>
@@ -207,10 +207,10 @@ export default function SalesPage() {
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
           <Link
-            href="/auth/register"
+            href="/reality-check"
             className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-primary text-white font-bold text-[15px] shadow-[0_4px_24px_rgba(81,96,80,0.35)] hover:bg-primary-dark active:scale-[0.98] transition-all"
           >
-            Boek een gratis kennismaking (20 min)
+            Doe de 2-Minuten Executive Reality Check
             <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
           </Link>
           <a
@@ -221,6 +221,9 @@ export default function SalesPage() {
             <ChevronDown size={15} />
           </a>
         </div>
+        <p className="text-[12px] text-ink-soft mt-5">
+          Ingevuld door meer dan 180 directeuren, bestuurders en serie-ondernemers. Direct inzicht in je tijdlek.
+        </p>
       </div>
       </section>
 
@@ -315,7 +318,7 @@ export default function SalesPage() {
                 title: 'Jouw Dagelijkse Copiloot',
                 sub: 'De app',
                 meta: 'Dagelijks · 10 minuten',
-                desc: 'Sparren.app leeft op je telefoon en desktop. Elke ochtend helpt de wizard je focussen op maximaal 1 strategisch hoofddoel en breekt grote projecten op in behapbare micro-acties.',
+                desc: 'Sparren.app leeft op je telefoon en desktop. Elke ochtend helpt de wizard je focussen op je hefboom-taken van dat kwartaal en je AI-coach reflecteert dagelijks met je mee.',
                 dark: false,
                 accent: true,
               },
@@ -448,7 +451,7 @@ export default function SalesPage() {
                 'Ochtend- & avondrituelen',
                 'Focus- & habit-tracking',
                 'Wall of Wins & offline modus (PWA)',
-                "Slimme 'Nee-zeg' templates",
+                'Dagelijkse AI-reflectiecoach',
               ].map(f => (
                 <div key={f} className="flex items-center gap-2.5">
                   <Check size={13} className="text-primary shrink-0" strokeWidth={2.5} />
@@ -481,7 +484,7 @@ export default function SalesPage() {
                 'Persoonlijke inrichting van jouw systeem',
                 '3 maanden volledige app-toegang',
                 '2× 1-op-1 coaching sessies (1 uur)',
-                'Directe WhatsApp hulplijn voor support',
+                'Proactieve coach-signalen via WhatsApp',
               ].map(f => (
                 <div key={f} className="flex items-center gap-2.5">
                   <Check size={13} className="text-primary shrink-0" strokeWidth={2.5} />
@@ -580,14 +583,14 @@ export default function SalesPage() {
             Start vandaag met jouw persoonlijke copiloot
           </h2>
           <p className="text-[15px] text-on-surface-inverse/75 max-w-md mx-auto mb-10 leading-relaxed">
-            Plan een vrijblijvend adviesgesprek van 20 minuten om te ontdekken wat Sparren.app voor jouw werkdag doet.
+            Doe eerst de 2-minuten Reality Check en ontdek precies waar je regie kwijtraakt — daarna bespreken we je uitslag in een Strategische Debrief Call.
           </p>
 
           <Link
-            href="/auth/register"
+            href="/reality-check"
             className="group inline-flex items-center gap-2 px-8 py-4 rounded-full bg-primary text-white font-bold text-[15px] shadow-[0_4px_24px_rgba(81,96,80,0.35)] hover:bg-primary-dark active:scale-[0.98] transition-all"
           >
-            Boek jouw gratis kennismaking
+            Doe de Executive Reality Check
             <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
           </Link>
 

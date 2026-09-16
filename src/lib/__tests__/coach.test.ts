@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { chooseTechnique, detectProactiveSignal, type CoachContext } from '../coach';
+import { chooseTechnique, detectProactiveSignal, determineNextStepCandidate, type CoachContext, type NextStepInput } from '../coach';
 
 function baseContext(overrides: Partial<CoachContext> = {}): CoachContext {
   return {
@@ -18,7 +18,16 @@ function baseContext(overrides: Partial<CoachContext> = {}): CoachContext {
     },
     holding: null,
     identity: { isFounder: true, orgName: 'WeAreImpact', addressName: 'Vincent', businessContext: 'een ondernemer met een holding' },
+    identityStatements: [],
     challenger: null,
+    openLeverageTask: null,
+    openRocksCount: 0,
+    recentWins: [],
+    winsThisWeek: 0,
+    focusSessionsToday: 0,
+    focusMinutesToday: 0,
+    todayJournal: [],
+    todayControleCirkel: [],
     ...overrides,
   };
 }
@@ -124,5 +133,85 @@ describe('detectProactiveSignal', () => {
     ];
     const result = detectProactiveSignal([6, 6, 6], log);
     expect(result.signal).toBe(false);
+  });
+});
+
+describe('determineNextStepCandidate', () => {
+  function baseInput(overrides: Partial<NextStepInput> = {}): NextStepInput {
+    return {
+      hasMorningRitual: true,
+      proactiveSignal: { signal: false, patternKey: '', message: '' },
+      frogLabel: null,
+      frogDone: false,
+      leverageTask: null,
+      meetingMinutes: 0,
+      scorecard: { metrics: [], lowestTwo: [] },
+      streak: 4,
+      ...overrides,
+    };
+  }
+
+  it('wijst naar het ochtendritueel als dat nog niet is ingevuld, ongeacht andere signalen', () => {
+    const result = determineNextStepCandidate(baseInput({
+      hasMorningRitual: false,
+      proactiveSignal: { signal: true, patternKey: 'cgt:x', message: 'iets' },
+    }));
+    expect(result.key).toBe('geen-ochtendritueel');
+    expect(result.ctaHref).toBe('/morning');
+  });
+
+  it('geeft het proactieve signaal voorrang boven de kikkertaak', () => {
+    const result = determineNextStepCandidate(baseInput({
+      proactiveSignal: { signal: true, patternKey: 'mi:x', message: 'Energie kost meer dan het geeft.' },
+      frogLabel: 'Bellen',
+      frogDone: false,
+    }));
+    expect(result.key).toBe('proactief-signaal');
+    expect(result.factLine).toBe('Energie kost meer dan het geeft.');
+  });
+
+  it('wijst naar de open kikkertaak als er geen signaal is', () => {
+    const result = determineNextStepCandidate(baseInput({ frogLabel: 'Bellen — moeilijk gesprek', frogDone: false }));
+    expect(result.key).toBe('kikker-open');
+  });
+
+  it('slaat de kikker over als die al is afgemaakt', () => {
+    const result = determineNextStepCandidate(baseInput({
+      frogLabel: 'Bellen',
+      frogDone: true,
+      leverageTask: { goalTitle: 'Nieuwe klanten', actionText: 'Offerte versturen' },
+    }));
+    expect(result.key).toBe('hefboomtaak-open');
+  });
+
+  it('wijst naar een open hefboomtaak', () => {
+    const result = determineNextStepCandidate(baseInput({
+      leverageTask: { goalTitle: 'Nieuwe klanten', actionText: 'Offerte versturen' },
+    }));
+    expect(result.key).toBe('hefboomtaak-open');
+    expect(result.factLine).toContain('Offerte versturen');
+  });
+
+  it('signaleert een drukke dag zonder hersteltijd', () => {
+    const result = determineNextStepCandidate(baseInput({ meetingMinutes: 320 }));
+    expect(result.key).toBe('drukke-dag');
+  });
+
+  it('wijst naar de zwakste scorecard-metric onder de 6', () => {
+    const result = determineNextStepCandidate(baseInput({
+      scorecard: {
+        metrics: [],
+        lowestTwo: [{ key: 'energie', label: 'Energie', score: 4 }, { key: 'kikker', label: 'Kikker afgemaakt', score: 5 }],
+      },
+    }));
+    expect(result.key).toBe('zwakke-scorecard');
+    expect(result.factLine).toContain('Energie');
+  });
+
+  it('valt terug op de streak-aanmoediging als er geen sterk signaal is', () => {
+    const result = determineNextStepCandidate(baseInput({
+      scorecard: { metrics: [], lowestTwo: [{ key: 'energie', label: 'Energie', score: 8 }] },
+    }));
+    expect(result.key).toBe('streak-fallback');
   });
 });

@@ -27,7 +27,7 @@ Het sterkste onderdeel van de app. Geen "chatbot met system prompt":
 
 - **Deterministische techniekkeuze** (`chooseTechnique`) uit 7 coachingmethodes (GROW, MI, oplossingsgericht, CGT, ACT, systemisch, strengths-based) op basis van harde cijfers (energietrend, streak, stressniveau) — niet aan het LLM overgelaten.
 - **Lerend geheugen**: `coach_lessons` met Laplace-smoothed confidence die groeit/krimpt op bewijs.
-- **Falsifieerbare voorspellingen**: `coach_predictions`-tabel bestaat in het schema, maar wordt momenteel **nergens gelezen of geschreven** in de code — dit is een dode tabel, geen actief mechanisme (bekend gat).
+- **Falsifieerbare voorspellingen**: `coach_predictions` is een actief mechanisme (niet langer een dode tabel — zie `src/lib/coach.ts:704-764`): bij een nieuwe les wordt een toetsbare voorspelling vastgelegd (metric, baseline, richting, horizon), en na afloop van de horizon wordt die tegen de daadwerkelijke data geëvalueerd (`outcome`/`resolved_at`). Zie ook `/api/coach/predictions` en `src/lib/__tests__/coach-predictions.test.ts`.
 - **Proactieve signalering** (`detectProactiveSignal`): puur functioneel, herkent 3-dagen-lage-energie of energie-kost-groter-dan-geeft-patronen. Wordt aangeroepen door zowel de server-to-server bridge-route (`/api/coach/signal`, voor ImpactOS's WhatsApp-job) als de JWT-authed `/api/coach/proactive-signal` — die laatste voedt sinds 2026-09-01 een dismissable signaalkaart bovenaan het eigen dashboard.
 - **Model**: `anthropic/claude-haiku-4-5` via OpenRouter, met fallback naar een lokale LLM-gateway.
 - Coach-chat (`/api/coach/chat`) is dunner dan de asynchrone analyse (`runCoachAnalysis`) — 100 woorden max, geen sessie-geheugen buiten wat wordt meegegeven.
@@ -36,12 +36,16 @@ Het sterkste onderdeel van de app. Geen "chatbot met system prompt":
 
 `src/lib/google-calendar.ts` leest (`listEvents`/`listTodayEvents`) en kan sinds 2026-09-01 ook schrijven (`createEvent`) — maar **nooit automatisch**. Schrijven loopt via een `calendar_proposals`-tabel (multi-tenant vanaf dag 1, zie migratie `migrations/manual/0004_calendar_proposals.sql`) en vier routes (`GET/POST /api/calendar/proposals`, `POST .../[id]/approve`, `POST .../[id]/reject`): de coach (of een toekomstige regel) legt een voorstel vast, en pas een expliciete klik op "Goedkeuren" in de dashboard-UI roept `createEvent()` aan. Dit volgt bewust hetzelfde review-gate-patroon als het zusterproject ImpactOS. De koppeling "coach-signaal → automatisch een voorstel aanmaken" is nog niet gebouwd — vandaag moet een voorstel handmatig of via een toekomstige uitbreiding worden aangemaakt (`POST /api/calendar/proposals`); de infrastructuur staat.
 
+## Beveiliging
+
+- **Rate limiting** (sinds 2026-09-16, `src/lib/rate-limit.ts` + `rate_limits`-tabel, Postgres-backed, geen Redis nodig): toegepast op alle LLM-aanroepende routes (`coach/chat`, `coach/analyse`, `coach/kikker`, `onboarding/chat`, `coach/bridge/analyse`), op `auth/login`/`auth/register` (brute force) en op publieke lead-gen forms (`reality-check`, `courses/seed`).
+- `/api/debug` gaf voorheen ongeauthenticeerd een `DATABASE_URL`-prefix en of `DEMO_PASSWORD` gezet was terug aan iedereen die de URL kende — gedicht (2026-09-16), retourneert nu 404 in productie.
+
 ## Bekende technische schuld
 
 1. **Schema-fragmentatie**: drie bronnen die uit elkaar lopen — `schema.sql` (verouderd, incl. een nooit-toegepaste `goals`-vorm), `src/lib/db/schema.ts` (canoniek voor Drizzle maar mist courses- en push-tabellen), en de daadwerkelijke productiedatabase (heeft alles, inclusief handmatige migraties in `migrations/manual/`). `migrations/0000_multi_tenant_foundation.sql` is drizzle-kit-gegenereerd en **niet veilig om tegen productie te draaien** (gaat uit van een lege database) — alleen de `migrations/manual/*`-bestanden zijn productie-veilig.
 2. **Courses- en push-notificatietabellen** (`courses`, `course_modules`, ..., `push_subscriptions`, `notification_preferences`, `scheduled_notifications`) hebben geen `organization_id` en staan niet in het Drizzle-schema — ze bestaan alleen via losse, niet in `package.json` opgenomen scripts (`create-push-tables.js`) of via `run-schema.js`.
-3. **Testdekking is dun**: 4 testbestanden (`coach.test.ts`, `auth-context.test.ts`, `utils.test.ts`, `button.test.tsx`), geen API-route- of E2E-tests.
-4. **`coach_predictions`** is een dode tabel (zie boven).
+3. **Testdekking is dun voor de omvang van de app**: 10 testbestanden (`coach.test.ts`, `coach-predictions.test.ts`, `auth-context.test.ts`, `rate-limit.test.ts`, `weekflow.service.test.ts`, `ritual-status.test.ts`, `goal-actions.test.ts`, `utils.test.ts`, `button.test.tsx`, `use-auth.test.ts`; 102 tests, allemaal groen) dekken de kernlogica goed, maar er zijn geen route-integratietests en slechts 5 Playwright-specs voor 27 pagina's — kritieke flows (onboarding, magic-link login) zijn onderbelicht.
 
 ## Retentie-mechanismen (werken echt, niet alleen aspirationeel)
 

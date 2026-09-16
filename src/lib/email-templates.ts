@@ -80,6 +80,12 @@ function section(label: string, content: string, color = '#f4f3f1'): string {
   </div>`;
 }
 
+// Geen emoji in mails, nooit — user-instructie. Eén consistent, monochroom vinkje i.p.v.
+// gekleurde platform-emoji (die per e-mailclient/OS anders — en vaak lomp — worden gerenderd).
+function tick(): string {
+  return `<span style="color:#7D8C7B;font-weight:700;">&#10003;</span>`;
+}
+
 function score(label: string, value: number, max = 10): string {
   const pct = Math.round((value / max) * 100);
   const color = value >= 7 ? '#7D8C7B' : value >= 5 ? '#f59e0b' : '#ef4444';
@@ -98,18 +104,18 @@ function score(label: string, value: number, max = 10): string {
 
 export function motivatieEmail(appUrl: string, isWeekend: boolean, dayName: string, unsubscribeUrl?: string): { subject: string; html: string } {
   const subject = isWeekend
-    ? `🌿 Goedemorgen ${dayName}! Tijd voor jouw week review`
-    : `🌅 Goedemorgen ${dayName}! Jouw sterkste moment begint nu`;
+    ? `Goedemorgen ${dayName}! Tijd voor jouw week review`
+    : `Goedemorgen ${dayName}! Jouw sterkste moment begint nu`;
 
   const body = isWeekend ? `
     <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Het weekend is er — en jij verdient een moment van reflectie.</p>
     <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">Een krachtige week review legt de basis voor alles wat komt. 20 minuten die je méér opleveren dan een hele dag druk zijn.</p>
 
     ${section('Dit doe je vandaag', `
-      ✅ &nbsp;Terugblikken op je mooiste wins van de week<br/>
-      ✅ &nbsp;Eerlijk zijn over wat beter kon<br/>
-      ✅ &nbsp;Intentie zetten voor de week die komt<br/>
-      ✅ &nbsp;Jezelf vieren — want dat verdien je
+      ${tick()} &nbsp;Terugblikken op je mooiste wins van de week<br/>
+      ${tick()} &nbsp;Eerlijk zijn over wat beter kon<br/>
+      ${tick()} &nbsp;Intentie zetten voor de week die komt<br/>
+      ${tick()} &nbsp;Jezelf vieren — want dat verdien je
     `)}
 
     <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 28px;">Je bent al zo ver gekomen. Elke review brengt je dichter bij de versie van jezelf die je wilt zijn.</p>
@@ -120,10 +126,10 @@ export function motivatieEmail(appUrl: string, isWeekend: boolean, dayName: stri
     <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">Jij weet dat al. Dat is waarom jij dit elke ochtend doet terwijl anderen nog slapen. Vandaag gaat het jou lukken — als leider, als mens, als ondernemer.</p>
 
     ${section('Je priming sessie van vandaag', `
-      🫁 &nbsp;Ademhaling — zet je zenuwstelsel aan<br/>
-      💛 &nbsp;3 dingen dankbaarheid — shift je focus naar wat werkt<br/>
-      🎯 &nbsp;Intentie voor de dag — weet wat je wilt bereiken<br/>
-      💪 &nbsp;Affirmatie — programmeer je identiteit
+      ${tick()} &nbsp;Ademhaling — zet je zenuwstelsel aan<br/>
+      ${tick()} &nbsp;3 dingen dankbaarheid — shift je focus naar wat werkt<br/>
+      ${tick()} &nbsp;Intentie voor de dag — weet wat je wilt bereiken<br/>
+      ${tick()} &nbsp;Affirmatie — programmeer je identiteit
     `)}
 
     <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 28px;">15 minuten. Dat is alles wat nodig is om vandaag met kracht te beginnen.</p>
@@ -141,17 +147,17 @@ export function motivatieEmail(appUrl: string, isWeekend: boolean, dayName: stri
 
 export function herinneringEmail(appUrl: string, isWeekend: boolean, unsubscribeUrl?: string): { subject: string; html: string } {
   const subject = isWeekend
-    ? `⏰ Je week review — nog niet te laat!`
-    : `⏰ Je ochtend ritual wacht nog — 5 minuten maakt het verschil`;
+    ? `Je week review — nog niet te laat!`
+    : `Je ochtend ritual wacht nog — 5 minuten maakt het verschil`;
 
   const body = isWeekend ? `
     <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Het weekend vliegt voorbij — maar dit is nog haalbaar.</p>
     <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">Je hebt je week review nog niet gedaan. Dat gevoel van 'ik had dat nog willen doen' — voorkom het nu. Een goed review nu geeft je een vliegende start volgende week.</p>
 
     ${section('Waarom nu', `
-      🏆 &nbsp;Je sluit de week bewust af<br/>
-      📈 &nbsp;Je ziet wat er écht gewerkt heeft<br/>
-      🔮 &nbsp;Je legt de basis voor een nóg betere week
+      ${tick()} &nbsp;Je sluit de week bewust af<br/>
+      ${tick()} &nbsp;Je ziet wat er écht gewerkt heeft<br/>
+      ${tick()} &nbsp;Je legt de basis voor een nóg betere week
     `, '#fff8e1')}
 
     <div style="text-align:center;margin-top:24px;">${btn('Doe nu mijn week review →', `${appUrl}/weekly-review`)}</div>
@@ -160,9 +166,9 @@ export function herinneringEmail(appUrl: string, isWeekend: boolean, unsubscribe
     <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">Mensen die consistent hun ochtend ritual doen, hebben 40% meer focus en presteren beter onder druk. Jij bent zo iemand — vandaag ook.</p>
 
     ${section('Snel beginnen', `
-      ⚡ &nbsp;Kan in 5-10 minuten als je haast hebt<br/>
-      🎯 &nbsp;Eén intentie is genoeg om het verschil te maken<br/>
-      💪 &nbsp;Je hebt het gisteren ook gedaan — vandaag ook
+      ${tick()} &nbsp;Kan in 5-10 minuten als je haast hebt<br/>
+      ${tick()} &nbsp;Eén intentie is genoeg om het verschil te maken<br/>
+      ${tick()} &nbsp;Je hebt het gisteren ook gedaan — vandaag ook
     `, '#f0fdf4')}
 
     <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 28px;">Je bent een bijzonder mens met een bijzondere missie. Geef jezelf dit cadeau.</p>
@@ -197,7 +203,7 @@ export interface SessieAnalyseData {
 }
 
 export function sessieAnalyseEmail(data: SessieAnalyseData, unsubscribeUrl?: string): { subject: string; html: string } {
-  const subject = `✨ Sessie analyse ${data.dayName} ${data.todayDate} — jij deed het weer!`;
+  const subject = `Sessie analyse ${data.dayName} ${data.todayDate} — jij deed het weer!`;
 
   const energyDiff = data.yesterday ? data.today.energyLevel - data.yesterday.energyLevel : 0;
   const sleepDiff = data.yesterday ? data.today.sleepQuality - data.yesterday.sleepQuality : 0;
@@ -210,7 +216,7 @@ export function sessieAnalyseEmail(data: SessieAnalyseData, unsubscribeUrl?: str
 
   const streakBadge = data.streak >= 3
     ? `<div style="background:#fff8e1;border-radius:10px;padding:12px 16px;text-align:center;margin-bottom:20px;">
-        <p style="margin:0;font-size:13px;color:#92400e;">🔥 <strong>${data.streak} dagen streak</strong> — je bouwt iets moois!</p>
+        <p style="margin:0;font-size:13px;color:#92400e;"><strong>${data.streak} dagen streak</strong> — je bouwt iets moois!</p>
        </div>`
     : '';
 
@@ -264,7 +270,7 @@ export function sessieAnalyseEmail(data: SessieAnalyseData, unsubscribeUrl?: str
       <div style="font-size:14px;color:#e8e8ec;line-height:1.8;">${data.aiAnalyse.replace(/\n/g, '<br/>')}</div>
     </div>
 
-    <p style="font-size:13px;color:#747872;text-align:center;margin:0;">Tot morgenochtend — je weet wat je moet doen. 💚</p>
+    <p style="font-size:13px;color:#747872;text-align:center;margin:0;">Tot morgenochtend — je weet wat je moet doen.</p>
   `;
 
   return { subject, html: base(`Sessie analyse — ${data.dayName}`, subject, body, { unsubscribeUrl }) };
@@ -285,16 +291,16 @@ export interface WeekrapportData {
 }
 
 export function weekrapportEmail(data: WeekrapportData, appUrl: string, unsubscribeUrl?: string): { subject: string; html: string } {
-  const subject = `📊 Weekrapport ${data.weekStart}–${data.weekEnd} — jouw week in één oogopslag`;
+  const subject = `Weekrapport ${data.weekStart}–${data.weekEnd} — jouw week in één oogopslag`;
 
   const ritualColor = data.ritualsCompleted >= 5 ? '#7D8C7B' : data.ritualsCompleted >= 3 ? '#f59e0b' : '#ef4444';
-  const ritualLabel = data.ritualsCompleted >= 5 ? 'Top week! 🔥' : data.ritualsCompleted >= 3 ? 'Goed bezig 👍' : 'Volgende week beter 💪';
+  const ritualLabel = data.ritualsCompleted >= 5 ? 'Top week!' : data.ritualsCompleted >= 3 ? 'Goed bezig' : 'Volgende week beter';
 
   const winsHtml = data.wins.length === 0
     ? '<p style="font-size:13px;color:#747872;margin:0;font-style:italic;">Geen wins gelogd deze week.</p>'
     : data.wins.slice(0, 5).map(w =>
         `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-          <span style="font-size:14px;">🏆</span>
+          <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#7D8C7B;flex-shrink:0;"></span>
           <span style="font-size:13px;color:#2f312f;flex:1;">${w.title}</span>
           <span style="font-size:11px;color:#f59e0b;">${'★'.repeat(w.impactLevel)}</span>
         </div>`
@@ -399,7 +405,7 @@ function adhdLabel(avg: number): string {
 }
 
 export function adhdRapportEmail(data: AdhdRapportData, appUrl: string): { subject: string; html: string } {
-  const subject = `🧠 ADHD Meting Week ${data.weekNr} — ${data.weekStart} t/m ${data.weekEnd}`;
+  const subject = `ADHD Meting Week ${data.weekNr} — ${data.weekStart} t/m ${data.weekEnd}`;
 
   const symptoms = Object.keys(data.symptomAvgs);
   const scorePercent = data.maxScore > 0 ? Math.round((data.avgDagScore / data.maxScore) * 100) : 0;
@@ -492,7 +498,7 @@ export function adhdRapportEmail(data: AdhdRapportData, appUrl: string): { subje
     </div>
 
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:20px 24px;margin-bottom:16px;">
-      <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#065f46;">📋 Neem dit mee naar je afspraak</p>
+      <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#065f46;">Neem dit mee naar je afspraak</p>
       <p style="margin:0;font-size:13px;color:#047857;line-height:1.6;">Dit is jouw ${isFirst ? 'nulmeting aan het begin van' : isLast ? 'eindmeting aan het eind van' : 'tussenmeting tijdens'} de meetperiode. Je kunt deze e-mail doorsturen naar je psychiater als referentie voor de medicatiedosering.</p>
     </div>
 
@@ -505,7 +511,7 @@ export function adhdRapportEmail(data: AdhdRapportData, appUrl: string): { subje
 // ─── Template 4: Wachtwoord reset ────────────────────────────────────────────
 
 export function resetWachtwoordEmail(resetUrl: string): { subject: string; html: string } {
-  const subject = '🔑 Wachtwoord resetten — Sparren.app';
+  const subject = 'Wachtwoord resetten — Sparren.app';
 
   const body = `
     <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Wachtwoord vergeten?</p>
@@ -542,9 +548,9 @@ export function welcomeEmail(appUrl: string): { subject: string; html: string } 
     </p>
 
     ${section('Wat je zo meteen doet', `
-      🎯 &nbsp;Je missie en belangrijkste kwartaaldoel scherp krijgen<br/>
-      🗓️ &nbsp;Je werkritme en energiepatroon delen<br/>
-      🛡️ &nbsp;Instellen hoe Sparren.app je agenda mag bewaken
+      ${tick()} &nbsp;Je missie en belangrijkste kwartaaldoel scherp krijgen<br/>
+      ${tick()} &nbsp;Je werkritme en energiepatroon delen<br/>
+      ${tick()} &nbsp;Instellen hoe Sparren.app je agenda mag bewaken
     `)}
 
     <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 28px;">Het kost ongeveer 10 minuten. Daarna begint elke ochtend met een briefing die echt op jou is toegesneden.</p>
@@ -586,7 +592,7 @@ const STREAK_COPY: Record<number, string> = {
 };
 
 export function streakMilestoneEmail(days: number, appUrl: string, unsubscribeUrl?: string): { subject: string; html: string } {
-  const subject = `🔥 ${days} dagen op rij — dat vieren we`;
+  const subject = `${days} dagen op rij — dat vieren we`;
 
   const body = `
     <div style="text-align:center;margin-bottom:24px;">
@@ -633,4 +639,132 @@ export function winbackEmail(stage: 3 | 10 | 30, appUrl: string, unsubscribeUrl?
   `;
 
   return { subject, html: base(copy.title, subject, body, { unsubscribeUrl }) };
+}
+
+// ─── Template 11-14: Executive Reality Check — 4-dagen nurture-reeks ────────
+
+export interface RealityCheckLeadEmailData {
+  name?: string | null;
+  profileLabel: string;
+  score: number;
+  maxScore: number;
+  weeklyHoursLost: number;
+  monthlyHoursLost: number;
+  resultUrl: string;
+  debriefUrl: string;
+  unsubscribeUrl?: string;
+}
+
+function greeting(name?: string | null): string {
+  return name && name.trim() ? name.trim() : 'daar';
+}
+
+// Dag 0, direct na afronding — het audit-rapport nog eens zwart-op-wit, met de scherpste
+// diagnoseregel uit het resultatenscherm als opener.
+export function realityCheckEmail1(data: RealityCheckLeadEmailData): { subject: string; html: string } {
+  const subject = `Jouw Executive Reality Check: ${data.monthlyHoursLost} uur per maand terugwinnen`;
+
+  const body = `
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Hoi ${greeting(data.name)},</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
+      Je hebt de Executive Reality Check afgerond. Score: <strong>${data.score}/${data.maxScore}</strong> —
+      profiel: <strong>${data.profileLabel}</strong>.
+    </p>
+
+    ${section('Geschat urenverlies', `<strong style="font-size:18px;color:#2f312f;">${data.weeklyHoursLost} uur per week</strong> — ongeveer ${data.monthlyHoursLost} uur per maand aan ruis, herhaling en uitgestelde knopen.`)}
+
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
+      Dit urenverlies is geen tijdmanagementprobleem. Het is het ontbreken van een executive filter — iets dat je agenda,
+      je prioriteiten en je uitstelgedrag actief bewaakt, in plaats van dat jij dat er zelf nog bij moet doen.
+    </p>
+
+    <div style="text-align:center;margin-bottom:12px;">${btn('Bekijk je volledige resultaat →', data.resultUrl)}</div>
+    <div style="text-align:center;">${btn('Bespreek je uitslag in een Strategische Debrief →', data.debriefUrl)}</div>
+  `;
+
+  return { subject, html: base('Jouw Reality Check-resultaat', subject, body, { quote: true, unsubscribeUrl: data.unsubscribeUrl }) };
+}
+
+// Dag +1 — data-onderbouwing waarom "harder rennen" niet werkt, en hoe het 10-minuten
+// ochtend/avond-ritueel dat doorbreekt.
+export function realityCheckEmail2(data: RealityCheckLeadEmailData): { subject: string; html: string } {
+  const subject = `De 34%-paradox: waarom 'nog harder rennen' je bedrijf afremt`;
+
+  const body = `
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Hoi ${greeting(data.name)},</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
+      Onderzoek onder directeuren en leidinggevenden laat zien dat ze gemiddeld <strong>31% tot 34% van hun tijd</strong>
+      kwijt zijn aan operationele registratiedruk en administratieve ruis — niet aan het werk dat er echt toe doet.
+    </p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
+      Meer uren maken lost dat niet op. Wat wél werkt: een vast, kort ritueel dat je elke dag dwingt scherp te kiezen
+      wat telt — en wat niet.
+    </p>
+
+    ${section('De 10-minuten cockpit', `
+      ${tick()} &nbsp;Ochtendintentie — één hoofddoel, niet tien<br/>
+      ${tick()} &nbsp;Focusblokken — korte, afgebakende sessies i.p.v. de hele dag "aan"<br/>
+      ${tick()} &nbsp;Avonddebriefing — bewust afsluiten, geen sluipend doorwerken
+    `)}
+
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 28px;">
+      Geen extra dashboard, geen extra tool om bij te houden — juist minder ruis, elke dag opnieuw.
+    </p>
+
+    <div style="text-align:center;">${btn('Bespreek je uitslag in een Strategische Debrief →', data.debriefUrl)}</div>
+  `;
+
+  return { subject, html: base('De 34%-paradox', subject, body, { quote: true, unsubscribeUrl: data.unsubscribeUrl }) };
+}
+
+// Dag +2 — contrast met generieke AI-tools, positioneert Sparren.app als systeem met geheugen
+// i.p.v. een chatvenster dat wacht op commando's.
+export function realityCheckEmail3(data: RealityCheckLeadEmailData): { subject: string; html: string } {
+  const subject = 'Waarom generieke AI je tijd vreet (en hoe een spiegel wél werkt)';
+
+  const body = `
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Hoi ${greeting(data.name)},</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
+      ChatGPT en generieke copilot-tools zijn ja-knikkers: ze wachten passief op een prompt en onthouden niets van
+      gisteren. Elke keer leg je opnieuw context uit — jij blijft de bottleneck van je eigen systeem.
+    </p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
+      Sparren.app werkt andersom: een vast, voorspelbaar systeem met een intern geheugen dat je doelen, je energie
+      en je patronen onthoudt — en daar proactief op signaleert, in plaats van te wachten tot jij het vraagt.
+    </p>
+
+    ${section(`Score ${data.score}/${data.maxScore}`, `Als ${data.profileLabel} betekent dat: minder tijd kwijt aan het steeds opnieuw uitleggen van context aan mensen én tools.`)}
+
+    <div style="text-align:center;">${btn('Bespreek je uitslag in een Strategische Debrief →', data.debriefUrl)}</div>
+  `;
+
+  return { subject, html: base('Een spiegel, geen ja-knikker', subject, body, { quote: true, unsubscribeUrl: data.unsubscribeUrl }) };
+}
+
+// Dag +3 — het vlaggenschipaanbod: 3-uur intake + dagelijkse copiloot + maandelijkse coaching.
+export function realityCheckEmail4(data: RealityCheckLeadEmailData): { subject: string; html: string } {
+  const subject = 'De 3-uur Strategische Reset (LEGO® Serious Play + jouw AI-copiloot)';
+
+  const body = `
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Hoi ${greeting(data.name)},</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
+      Je Reality Check-resultaat (${data.score}/${data.maxScore} — ${data.profileLabel}) is een startpunt, geen eindpunt.
+      Het Sparren.app Traject is de vlaggenschip-route om er structureel uit te komen.
+    </p>
+
+    ${section('Wat het Traject inhoudt', `
+      ${tick()} &nbsp;3 uur LSP Kick-off — je kernwaarden, doelen en knelpunten in kaart (o.a. met LEGO® Serious Play)<br/>
+      ${tick()} &nbsp;Je dagelijkse AI-copiloot — ochtend/avond-ritueel, hefboom-taken, agenda-bewaking<br/>
+      ${tick()} &nbsp;Maandelijkse Strategische Spiegel — 1-op-1 coaching om scherp te blijven
+    `)}
+
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 28px;">
+      Plan je intake-aanvraag deze week nog — dan bespreken we in de Strategische Debrief meteen hoe dat er voor
+      jouw situatie concreet uitziet.
+    </p>
+
+    <div style="text-align:center;">${btn('Plan je intake-aanvraag →', data.debriefUrl)}</div>
+  `;
+
+  return { subject, html: base('De 3-uur Strategische Reset', subject, body, { quote: true, unsubscribeUrl: data.unsubscribeUrl }) };
 }

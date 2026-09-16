@@ -45,7 +45,6 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const authCtx = await getAuthContext(request);
   const userId = authCtx?.userId ?? null;
-  const organizationId = authCtx?.organizationId ?? null;
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

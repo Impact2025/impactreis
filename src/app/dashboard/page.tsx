@@ -6,13 +6,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   Bell, Sunrise, Moon, CalendarDays, TrendingUp,
-  ChevronRight, Zap, Fingerprint, Sparkles, BookHeart, AlertCircle, X, Mountain, Flame,
+  ChevronRight, Zap, Fingerprint, Sparkles, BookHeart, AlertCircle, X, Mountain, Flame, Compass,
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { Win } from '@/types';
 import { RitualGuard } from '@/components/weekflow/ritual-guard';
-import { canAccessDemoFeatures } from '@/lib/demo-guard';
 import { getDayType, getToday, getCurrentQuarter, getCurrentHour, getDateDaysAgo } from '@/lib/weekflow.service';
 import { initializeNotifications } from '@/lib/notifications.service';
 import { buildRecoveryProposalUrl } from '@/lib/calendar-proposal';
@@ -79,10 +78,10 @@ export default function DashboardPage() {
   const [leverageGoal, setLeverageGoal] = useState<string | null>(null);
   const [scorecard, setScorecard] = useState<{ metrics: { key: string; label: string; score: number | null }[]; lowestTwo: { key: string; label: string; score: number | null }[] } | null>(null);
   const [proactiveSignal, setProactiveSignal] = useState<{ signal: boolean; patternKey: string; message: string } | null>(null);
+  const [nextStep, setNextStep] = useState<{ key: string; headline: string; message: string; ctaLabel: string; ctaHref: string } | null>(null);
   const [signalDismissed, setSignalDismissed] = useState(false);
   const [proposals, setProposals] = useState<any[]>([]);
   const [resolvingProposalId, setResolvingProposalId] = useState<string | number | null>(null);
-  const [canAccessDemo, setCanAccessDemo] = useState(false);
   const [todayDayType, setTodayDayType] = useState<'focus' | 'buffer' | 'free' | null>(null);
   const [leverageTasks, setLeverageTasks] = useState<{ goal: Goal; action: GoalAction }[]>([]);
   const [nsdrDismissed, setNsdrDismissed] = useState(false);
@@ -104,7 +103,7 @@ export default function DashboardPage() {
 
   const fetchData = async (retry = 0) => {
     try {
-      const [goalsRes, focusRes, winsRes, calendarRes, onboardingRes, signalRes, proposalsRes, morningLogRes, densityRes] = await Promise.allSettled([
+      const [goalsRes, focusRes, winsRes, calendarRes, onboardingRes, signalRes, proposalsRes, morningLogRes, densityRes, nextStepRes] = await Promise.allSettled([
         api.goals.getAll(),
         api.focus.getAll(),
         api.wins.getAll(),
@@ -114,10 +113,15 @@ export default function DashboardPage() {
         api.calendar.proposals.list(),
         api.logs.getByTypeAndDate('morning', getToday(settings.timezone)),
         fetch('/api/coach/scorecard', { headers: { Authorization: `Bearer ${AuthService.getToken()}` } }).then((r) => (r.ok ? r.json() : null)),
+        api.coach.nextStep(),
       ]);
 
       if (densityRes.status === 'fulfilled' && densityRes.value) {
         setScorecard(densityRes.value);
+      }
+
+      if (nextStepRes.status === 'fulfilled') {
+        setNextStep(nextStepRes.value);
       }
 
       if (morningLogRes.status === 'fulfilled' && Array.isArray(morningLogRes.value) && morningLogRes.value[0]) {
@@ -321,6 +325,34 @@ export default function DashboardPage() {
             )}
           </div>
 
+          {/* ══ BESTE VOLGENDE STAP (Sparren) ══════════════════════ */}
+          {nextStep && (
+            <Link
+              href={nextStep.ctaHref}
+              className="block rounded-card bg-surface-inverse p-5 mb-6 hover:opacity-95 transition-opacity shadow-organic"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-[10px] bg-on-surface-inverse/10 flex items-center justify-center flex-shrink-0">
+                  <Compass size={18} className="text-primary-light" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] font-bold tracking-[0.15em] text-primary-light uppercase mb-1.5">
+                    Jouw volgende stap
+                  </p>
+                  <p className="text-[14px] font-bold text-on-surface-inverse mb-1 leading-snug">
+                    {nextStep.headline}
+                  </p>
+                  <p className="text-[12px] text-on-surface-inverse/70 leading-relaxed mb-3">
+                    {nextStep.message}
+                  </p>
+                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-primary-light">
+                    {nextStep.ctaLabel} <ChevronRight size={13} />
+                  </span>
+                </div>
+              </div>
+            </Link>
+          )}
+
           {/* ══ MEDITATIE — RUSTMOMENT (optioneel, zie Instellingen) ══ */}
           {settings.meditationsEnabled && (
             <div className="pb-6">
@@ -463,17 +495,16 @@ export default function DashboardPage() {
                     <span className="text-[9px] font-bold text-primary bg-primary-muted px-1.5 py-0.5 rounded-full">✓ Klaar</span>
                   )}
                 </div>
-                <p className="text-[10px] text-ink-soft mb-0.5 tabular-nums">07:00 – 08:30</p>
                 <p className="text-[13px] font-bold text-ink mb-0.5">Ochtend Routine</p>
-                <p className="text-[10px] text-ink-soft mb-3 leading-snug">Meditatie, Schrijven, Sport</p>
+                <p className="text-[10px] text-ink-soft mb-3 leading-snug">Intentie, Focus, Dankbaarheid</p>
                 <div className="h-1 rounded-full bg-surface-sunken overflow-hidden">
                   <div
                     className="h-full rounded-full bg-primary transition-all duration-700"
-                    style={{ width: ritualStatuses.morning.isComplete ? '100%' : '65%' }}
+                    style={{ width: ritualStatuses.morning.isComplete ? '100%' : '0%' }}
                   />
                 </div>
                 <p className="text-[10px] text-ink-soft mt-1.5 font-medium">
-                  {ritualStatuses.morning.isComplete ? '100%' : '65%'}
+                  {ritualStatuses.morning.isComplete ? '100%' : 'Nog niet gestart'}
                 </p>
               </Link>
 
@@ -855,10 +886,6 @@ export default function DashboardPage() {
                 </div>
               </Link>
             </div>
-            <p className="text-[11px] text-ink-soft text-center mt-3">
-              Verdieping (Controle Cirkel, ACA, ADHD, Cursussen) vind je onder{' '}
-              <span className="font-semibold text-ink">Menu → Verdieping</span> hieronder.
-            </p>
           </section>
 
         </main>

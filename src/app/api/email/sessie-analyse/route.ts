@@ -52,7 +52,6 @@ function getCurrentStreak(logs: { date_string: string }[]): number {
 export async function POST(request: NextRequest) {
   const authCtx = await getAuthContext(request);
   const userId = authCtx?.userId ?? null;
-  const organizationId = authCtx?.organizationId ?? null;
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -69,7 +68,6 @@ export async function POST(request: NextRequest) {
   if (users.length === 0) return NextResponse.json({ error: 'User not found' }, { status: 404 });
   const userEmail = users[0].email as string;
 
-  const today = new Date().toISOString().split('T')[0];
   const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
   const now = new Date();
   const dayName = DAY_NAMES[now.getDay()];
@@ -171,7 +169,7 @@ Schrijf in de jij-vorm, warm en direct. Geen bullet points — gewone paragrafen
 
   // Streak-viering: los van de sessie-analyse, alleen als de nieuwe streak precies een
   // mijlpaal raakt en die mijlpaal nog niet eerder gevierd is voor deze user.
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://reis.weareimpact.nl';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://sparren.app';
   if (STREAK_MILESTONES.includes(streak)) {
     const milestoneType = `streak_milestone_${streak}`;
     const alreadyCelebrated = await wasEmailSent(userId, milestoneType);

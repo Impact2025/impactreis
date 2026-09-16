@@ -102,7 +102,7 @@ export async function ensurePreferences(userId: number): Promise<string> {
   return row[0].unsubscribe_token as string;
 }
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://reis.weareimpact.nl';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://sparren.app';
 
 export function unsubscribeUrl(token: string, category: EmailPrefColumn): string {
   return `${APP_URL}/api/email/unsubscribe?token=${encodeURIComponent(token)}&type=${encodeURIComponent(category)}`;

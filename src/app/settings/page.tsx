@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Bell, Clock, Download, Check, Mail, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, Check, Mail, Loader2, Dna } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import {
   getPreferences,
@@ -17,7 +17,17 @@ import {
 } from '@/lib/notifications.service';
 import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { DEFAULT_RITUAL_SETTINGS, formatHour, type RitualSettings } from '@/lib/weekflow.service';
-import { BottomNav } from '@/components/ui/bottom-nav';
+import { BottomNav, useDemoAccess } from '@/components/ui/bottom-nav';
+import { ChipButton, CardOption, CheckRow } from '@/components/ui/dna-controls';
+import {
+  INDUSTRY_OPTIONS,
+  TEAM_SIZE_OPTIONS,
+  BUSINESS_MODEL_OPTIONS,
+  TIME_WASTER_OPTIONS,
+  AVOIDANCE_BEHAVIOR_OPTIONS,
+  LEVERAGE_GOAL_OPTIONS,
+  type BusinessDna,
+} from '@/lib/onboarding';
 
 const COMMON_TIMEZONES = [
   'Europe/Amsterdam',
@@ -63,6 +73,7 @@ const EMAIL_PREF_LABELS: { key: keyof EmailPreferences; title: string; desc: str
 
 export default function SettingsPage() {
   const router = useRouter();
+  const canAccessDemo = useDemoAccess();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [notifSupported, setNotifSupported] = useState(false);
@@ -84,6 +95,11 @@ export default function SettingsPage() {
   const [ritualSettingsSaving, setRitualSettingsSaving] = useState(false);
   const [isPWAInstalled, setIsPWAInstalled] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [dna, setDna] = useState<BusinessDna | null>(null);
+  const [dnaOnboardingDone, setDnaOnboardingDone] = useState(true);
+  const [dnaLoading, setDnaLoading] = useState(true);
+  const [dnaSaving, setDnaSaving] = useState(false);
+  const [dnaError, setDnaError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -111,6 +127,15 @@ export default function SettingsPage() {
         .then(res => res.ok ? res.json() : null)
         .then(data => { if (data) setRitualSettings(data); })
         .catch(() => {});
+
+      fetch('/api/onboarding/profile', { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          setDnaOnboardingDone(!!data?.completed);
+          if (data?.profile?.businessDna) setDna(data.profile.businessDna);
+        })
+        .catch(() => {})
+        .finally(() => setDnaLoading(false));
     }
 
     if (window.matchMedia('(display-mode: standalone)').matches) setIsPWAInstalled(true);
@@ -211,6 +236,44 @@ export default function SettingsPage() {
     handleSaveRitualSettings({ ...ritualSettings, workDays: workDays.sort((a, b) => a - b) });
   };
 
+  const handleSaveDna = async (next: BusinessDna) => {
+    const previous = dna;
+    setDna(next);
+    setDnaSaving(true);
+    setDnaError(null);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/onboarding/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(next),
+      });
+      if (!res.ok) {
+        setDna(previous);
+        setDnaError('Opslaan mislukt. Probeer het opnieuw.');
+      }
+    } catch {
+      setDna(previous);
+      setDnaError('Opslaan mislukt. Probeer het opnieuw.');
+    } finally {
+      setDnaSaving(false);
+    }
+  };
+
+  const handleToggleDnaTimeWaster = (value: string) => {
+    if (!dna) return;
+    const has = dna.topTimeWasters.includes(value as BusinessDna['topTimeWasters'][number]);
+    let topTimeWasters: BusinessDna['topTimeWasters'];
+    if (has) {
+      if (dna.topTimeWasters.length <= 1) return; // schema vereist minstens 1
+      topTimeWasters = dna.topTimeWasters.filter((v) => v !== value) as BusinessDna['topTimeWasters'];
+    } else {
+      if (dna.topTimeWasters.length >= 3) return;
+      topTimeWasters = [...dna.topTimeWasters, value] as BusinessDna['topTimeWasters'];
+    }
+    handleSaveDna({ ...dna, topTimeWasters });
+  };
+
   const handleInstallPWA = async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
@@ -243,6 +306,97 @@ export default function SettingsPage() {
       </header>
 
       <div className="max-w-lg mx-auto px-5 py-6 space-y-7">
+        {/* Bedrijfs-DNA */}
+        <section>
+          <h2 className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-3 flex items-center gap-2">
+            <Dna size={12} />
+            Bedrijfs-DNA
+            {dnaSaving && <Loader2 size={11} className="animate-spin text-ink-soft" />}
+          </h2>
+          {dnaLoading ? (
+            <div className="rounded-[16px] border border-line bg-white px-5 py-4 text-[13px] text-ink-soft">
+              Laden...
+            </div>
+          ) : !dnaOnboardingDone || !dna ? (
+            <div className="rounded-[16px] border border-line bg-white px-5 py-4 space-y-2">
+              <p className="text-[13px] text-ink-soft">Je hebt de intake nog niet afgerond — je coach kent je bedrijf nog niet.</p>
+              <Link href="/onboarding" className="inline-block text-[13px] font-semibold text-primary">
+                Start de intake →
+              </Link>
+            </div>
+          ) : (
+            <div className="rounded-[16px] border border-line bg-white divide-y divide-line overflow-hidden">
+              <div className="px-5 py-4 space-y-4">
+                <p className="text-[12px] text-ink-soft">
+                  Dit bepaalt hoe je coach je aanspreekt en waar het ochtendritueel op focust. Wijzigingen worden direct opgeslagen.
+                </p>
+                <div>
+                  <p className="text-[12px] font-medium text-ink-soft uppercase tracking-wider mb-2">Sector</p>
+                  <div className="flex flex-wrap gap-2">
+                    {INDUSTRY_OPTIONS.map((o) => (
+                      <ChipButton key={o.value} selected={dna.industry === o.value} onClick={() => handleSaveDna({ ...dna, industry: o.value })}>
+                        {o.label}
+                      </ChipButton>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[12px] font-medium text-ink-soft uppercase tracking-wider mb-2">Teamgrootte</p>
+                  <div className="flex flex-wrap gap-2">
+                    {TEAM_SIZE_OPTIONS.map((o) => (
+                      <ChipButton key={o.value} selected={dna.teamSize === o.value} onClick={() => handleSaveDna({ ...dna, teamSize: o.value })}>
+                        {o.label}
+                      </ChipButton>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[12px] font-medium text-ink-soft uppercase tracking-wider mb-2">Verdienmodel</p>
+                  <div className="flex flex-wrap gap-2">
+                    {BUSINESS_MODEL_OPTIONS.map((o) => (
+                      <ChipButton key={o.value} selected={dna.businessModel === o.value} onClick={() => handleSaveDna({ ...dna, businessModel: o.value })}>
+                        {o.label}
+                      </ChipButton>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="px-5 py-4">
+                <p className="text-[12px] font-medium text-ink-soft uppercase tracking-wider mb-2">Top-3 tijdvreters</p>
+                <div className="space-y-2">
+                  {TIME_WASTER_OPTIONS.map((o) => {
+                    const selected = dna.topTimeWasters.includes(o.value);
+                    return (
+                      <CheckRow key={o.value} selected={selected} onClick={() => handleToggleDnaTimeWaster(o.value)} disabled={!selected && dna.topTimeWasters.length >= 3}>
+                        {o.label}
+                      </CheckRow>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="px-5 py-4">
+                <p className="text-[12px] font-medium text-ink-soft uppercase tracking-wider mb-2">Persoonlijk vluchtgedrag</p>
+                <div className="space-y-2">
+                  {AVOIDANCE_BEHAVIOR_OPTIONS.map((o) => (
+                    <CardOption key={o.value} selected={dna.avoidanceBehavior === o.value} onClick={() => handleSaveDna({ ...dna, avoidanceBehavior: o.value })} title={o.label} />
+                  ))}
+                </div>
+              </div>
+              <div className="px-5 py-4">
+                <p className="text-[12px] font-medium text-ink-soft uppercase tracking-wider mb-2">Kwartaalhefboom</p>
+                <div className="space-y-2">
+                  {LEVERAGE_GOAL_OPTIONS.map((o) => (
+                    <CardOption key={o.value} selected={dna.quarterlyLeverageGoal === o.value} onClick={() => handleSaveDna({ ...dna, quarterlyLeverageGoal: o.value })} title={o.label} description={o.description} />
+                  ))}
+                </div>
+              </div>
+              {dnaError && (
+                <div className="px-5 py-3 text-[13px] font-medium text-red-500">{dnaError}</div>
+              )}
+            </div>
+          )}
+        </section>
+
         {/* Notifications */}
         <section>
           <h2 className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-3">
@@ -477,22 +631,24 @@ export default function SettingsPage() {
                 Stuur nu
               </button>
             </div>
-            <div className="px-5 py-4 flex items-center justify-between">
-              <div>
-                <p className="text-[14px] font-medium text-ink">ADHD Rapport</p>
-                <p className="text-[12px] text-ink-soft mt-0.5">Klachtenmeting van de huidige week</p>
+            {canAccessDemo && (
+              <div className="px-5 py-4 flex items-center justify-between">
+                <div>
+                  <p className="text-[14px] font-medium text-ink">ADHD Rapport</p>
+                  <p className="text-[12px] text-ink-soft mt-0.5">Klachtenmeting van de huidige week</p>
+                </div>
+                <button
+                  onClick={() => handleSendEmail('adhd')}
+                  disabled={emailSending !== null}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-tertiary text-white text-[13px] font-semibold rounded-[10px] active:scale-95 transition-transform disabled:opacity-50"
+                >
+                  {emailSending === 'adhd'
+                    ? <Loader2 size={14} className="animate-spin" />
+                    : <Mail size={14} />}
+                  Stuur nu
+                </button>
               </div>
-              <button
-                onClick={() => handleSendEmail('adhd')}
-                disabled={emailSending !== null}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-tertiary text-white text-[13px] font-semibold rounded-[10px] active:scale-95 transition-transform disabled:opacity-50"
-              >
-                {emailSending === 'adhd'
-                  ? <Loader2 size={14} className="animate-spin" />
-                  : <Mail size={14} />}
-                Stuur nu
-              </button>
-            </div>
+            )}
             {emailResult && (
               <div className={`px-5 py-3 text-[13px] font-medium ${emailResult.ok ? 'text-primary' : 'text-red-500'}`}>
                 {emailResult.ok

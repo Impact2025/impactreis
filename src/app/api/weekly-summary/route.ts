@@ -29,51 +29,57 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    interface DailyLogRow { type: string; date_string: string; data: unknown }
+    interface FocusSessionRow { completed: boolean; duration_minutes: number | null; session_type: string | null }
+    interface EnergyDirectionRow { direction: string; count: number }
+    interface WinRow { id: number; title: string; category: string }
+
     const [logs, focusSessions, energyEntries, weekWins] = await Promise.all([
       sql`
         SELECT type, date_string, data FROM daily_logs
         WHERE user_id = ${userId} AND organization_id = ${organizationId}
           AND date_string BETWEEN ${weekStart} AND ${weekEnd}
-      `,
+      ` as unknown as DailyLogRow[],
       sql`
         SELECT completed, duration_minutes, session_type FROM focus_sessions
         WHERE user_id = ${userId} AND organization_id = ${organizationId}
           AND date BETWEEN ${weekStart} AND ${weekEnd}
-      `,
+      ` as unknown as FocusSessionRow[],
       sql`
         SELECT direction, COUNT(*)::int AS count FROM energy_log
         WHERE user_id = ${userId} AND organization_id = ${organizationId}
           AND date_string BETWEEN ${weekStart} AND ${weekEnd}
         GROUP BY direction
-      `,
+      ` as unknown as EnergyDirectionRow[],
       sql`
         SELECT id, title, category FROM wins
         WHERE user_id = ${userId} AND organization_id = ${organizationId}
           AND date BETWEEN ${weekStart} AND ${weekEnd}
         ORDER BY date ASC
-      `,
+      ` as unknown as WinRow[],
     ]);
 
-    const morningDays = new Set(logs.filter((l: any) => l.type === 'morning').map((l: any) => l.date_string));
-    const eveningLogs = logs.filter((l: any) => l.type === 'evening');
-    const eveningDays = new Set(eveningLogs.map((l: any) => l.date_string));
+    const morningDays = new Set(logs.filter((l) => l.type === 'morning').map((l) => l.date_string));
+    const eveningLogs = logs.filter((l) => l.type === 'evening');
+    const eveningDays = new Set(eveningLogs.map((l) => l.date_string));
 
     const energyLevels = eveningLogs
-      .map((l: any) => {
+      .map((l) => {
         const data = typeof l.data === 'string' ? JSON.parse(l.data) : l.data;
-        return typeof data?.energyLevel === 'number' ? data.energyLevel : null;
+        const energyLevel = (data as { energyLevel?: unknown } | null)?.energyLevel;
+        return typeof energyLevel === 'number' ? energyLevel : null;
       })
-      .filter((v: number | null): v is number => v !== null);
+      .filter((v): v is number => v !== null);
     const averageEnergy = energyLevels.length > 0
-      ? Math.round((energyLevels.reduce((a: number, b: number) => a + b, 0) / energyLevels.length) * 10) / 10
+      ? Math.round((energyLevels.reduce((a, b) => a + b, 0) / energyLevels.length) * 10) / 10
       : null;
 
-    const workSessions = focusSessions.filter((s: any) => s.session_type !== 'break');
-    const completedWorkSessions = workSessions.filter((s: any) => s.completed);
-    const focusMinutes = completedWorkSessions.reduce((sum: number, s: any) => sum + (s.duration_minutes || 0), 0);
+    const workSessions = focusSessions.filter((s) => s.session_type !== 'break');
+    const completedWorkSessions = workSessions.filter((s) => s.completed);
+    const focusMinutes = completedWorkSessions.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
 
-    const energyGains = energyEntries.find((e: any) => e.direction === 'gain')?.count ?? 0;
-    const energyCosts = energyEntries.find((e: any) => e.direction === 'cost')?.count ?? 0;
+    const energyGains = energyEntries.find((e) => e.direction === 'gain')?.count ?? 0;
+    const energyCosts = energyEntries.find((e) => e.direction === 'cost')?.count ?? 0;
 
     return NextResponse.json({
       weekStart,
@@ -85,7 +91,7 @@ export async function GET(request: NextRequest) {
       focusMinutes,
       energyGains,
       energyCosts,
-      wins: weekWins.map((w: any) => ({ id: w.id, title: w.title, category: w.category })),
+      wins: weekWins.map((w) => ({ id: w.id, title: w.title, category: w.category })),
     });
   } catch (error) {
     console.error('Get weekly summary error:', error);

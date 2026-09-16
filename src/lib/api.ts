@@ -1,5 +1,16 @@
-import { offlineDB, STORES, StoredRitual, StoredGoal, StoredWin } from './offline-db';
+import { offlineDB, STORES, StoredRitual, StoredWin } from './offline-db';
 import { queueForSync } from './sync-service';
+import type { AuthResponse, IdentityStatement, IdentityProof, Win, CreateWinData } from '@/types';
+import type { CalendarEvent } from './google-calendar';
+import type { UserOnboardingProfile } from './onboarding';
+
+// De meeste entiteiten hieronder komen 1-op-1 van `SELECT *`-routes of JSONB-kolommen (zie
+// STATUS.md "Schema-fragmentatie") -- er is geen stabiel, canoniek row-type om tegen te typen
+// zonder de bron van waarheid (productie-schema) en elke call site opnieuw te auditen. `any`
+// hier vervangen door een te-strak of gegokt type zou minder eerlijk zijn dan `any` zelf: het
+// zou compile-time garanties beloven die er niet zijn. Waar een payload puur wordt
+// doorgegeven (nooit intern gelezen), is `Record<string, unknown>` wel veilig en eerlijk.
+type JsonPayload = Record<string, unknown>;
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
@@ -98,13 +109,13 @@ class ApiClient {
   // Auth
   auth = {
     login: (email: string, password: string) =>
-      this.request<{ user: any; token: string }>('/auth/login', {
+      this.request<AuthResponse>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       }),
 
     register: (email: string, password: string) =>
-      this.request<{ user: any; token: string }>('/auth/register', {
+      this.request<AuthResponse>('/auth/register', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       }),
@@ -113,11 +124,11 @@ class ApiClient {
   // Habits
   habits = {
     getAll: () => this.request('/habits'),
-    create: (data: any) => this.request('/habits', {
+    create: (data: JsonPayload) => this.request('/habits', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-    update: (id: number, data: any) => this.request(`/habits/${id}`, {
+    update: (id: number, data: JsonPayload) => this.request(`/habits/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
@@ -169,7 +180,7 @@ class ApiClient {
       return cached.map(g => g.data);
     },
 
-    create: async (data: any) => {
+    create: async (data: JsonPayload) => {
       const tempId = `temp_${Date.now()}`;
 
       // Save to IndexedDB first
@@ -195,7 +206,7 @@ class ApiClient {
       return { ...data, id: tempId };
     },
 
-    update: async (id: string | number, data: any) => {
+    update: async (id: string | number, data: JsonPayload) => {
       // Update in IndexedDB
       await offlineDB.saveGoal(id, { ...data, id }, false);
 
@@ -267,7 +278,7 @@ class ApiClient {
       return ritual ? [{ ...ritual.data, type: ritual.type, date: ritual.date }] : [];
     },
 
-    create: async (data: any) => {
+    create: async (data: JsonPayload & { type: string; date: string }) => {
       const { type, date, ...rest } = data;
 
       // Always save to IndexedDB first
@@ -352,7 +363,7 @@ class ApiClient {
   weeklyGoals = {
     getByWeekNumber: (weekNumber: number) =>
       this.request<any>(`/weekly-goals?weekNumber=${weekNumber}`),
-    create: (data: { weekNumber: number; goals: any[] }) =>
+    create: (data: { weekNumber: number; goals: JsonPayload[] }) =>
       this.request<any>('/weekly-goals', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -361,7 +372,7 @@ class ApiClient {
 
   // Weekly Reviews
   weeklyReviews = {
-    create: (data: any) => this.request('/weekly-reviews', {
+    create: (data: JsonPayload) => this.request('/weekly-reviews', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -372,12 +383,12 @@ class ApiClient {
   // Focus Sessions
   focus = {
     getAll: () => this.request('/focus'),
-    create: (data: any) => this.request('/focus', {
+    create: (data: JsonPayload) => this.request('/focus', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
     getByDate: (date: string) => this.request(`/focus?date=${date}`),
-    update: (id: string, data: any) => this.request(`/focus/${id}`, {
+    update: (id: string, data: JsonPayload) => this.request(`/focus/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
@@ -387,9 +398,9 @@ class ApiClient {
   focusSessions = this.focus;
 
   calendar = {
-    today: () => this.request<{ configured: boolean; events: any[] }>('/calendar/today'),
+    today: () => this.request<{ configured: boolean; events: CalendarEvent[] }>('/calendar/today'),
     proposals: {
-      list: () => this.request<{ proposals: any[] }>('/calendar/proposals'),
+      list: () => this.request<{ proposals: JsonPayload[] }>('/calendar/proposals'),
       approve: (id: string | number) => this.request(`/calendar/proposals/${id}/approve`, { method: 'POST' }),
       reject: (id: string | number) => this.request(`/calendar/proposals/${id}/reject`, { method: 'POST' }),
     },
@@ -398,6 +409,8 @@ class ApiClient {
   coach = {
     proactiveSignal: () =>
       this.request<{ signal: boolean; patternKey: string; message: string }>('/coach/proactive-signal'),
+    nextStep: () =>
+      this.request<{ key: string; headline: string; message: string; ctaLabel: string; ctaHref: string }>('/coach/next-step'),
   };
 
   weeklySummary = {
@@ -417,7 +430,7 @@ class ApiClient {
   };
 
   onboarding = {
-    profile: () => this.request<{ completed: boolean; profile: any | null }>('/onboarding/profile'),
+    profile: () => this.request<{ completed: boolean; profile: UserOnboardingProfile | null }>('/onboarding/profile'),
   };
 
   // Courses
@@ -513,10 +526,10 @@ class ApiClient {
 
   // Identity (geen offline-laag — laagfrequente, niet-tijdskritische feature)
   identity = {
-    getProfile: () => this.request<{ statements: any[]; proofs: any[]; updatedAt?: string }>('/identity'),
+    getProfile: () => this.request<{ statements: IdentityStatement[]; proofs: IdentityProof[]; updatedAt?: string }>('/identity'),
 
-    updateProfile: (data: { statements: any[]; proofs: any[] }) =>
-      this.request<{ statements: any[]; proofs: any[]; updatedAt?: string }>('/identity', {
+    updateProfile: (data: { statements: IdentityStatement[]; proofs: IdentityProof[] }) =>
+      this.request<{ statements: IdentityStatement[]; proofs: IdentityProof[]; updatedAt?: string }>('/identity', {
         method: 'PUT',
         body: JSON.stringify(data),
       }),
@@ -576,7 +589,7 @@ class ApiClient {
       return cached?.data;
     },
 
-    create: async (data: any) => {
+    create: async (data: CreateWinData) => {
       const tempId = `temp_${Date.now()}`;
 
       // Save to IndexedDB first
@@ -593,12 +606,12 @@ class ApiClient {
           await offlineDB.saveWin(result.id, result, true);
           return result;
         } catch {
-          await queueForSync('create', STORES.WINS, tempId, data);
+          await queueForSync('create', STORES.WINS, tempId, data as unknown as Record<string, unknown>);
           return { ...data, id: tempId };
         }
       }
 
-      await queueForSync('create', STORES.WINS, tempId, data);
+      await queueForSync('create', STORES.WINS, tempId, data as unknown as Record<string, unknown>);
       return { ...data, id: tempId };
     },
 

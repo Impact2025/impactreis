@@ -21,7 +21,16 @@ function baseContext(overrides: Partial<CoachContext> = {}): CoachContext {
     userContext: { current_energy_level: 5, current_stress_level: 4, recent_mood: 'neutral', current_focus_area: null, coaching_style: 'balanced' },
     holding: null,
     identity: { isFounder: true, orgName: 'WeAreImpact', addressName: 'Vincent', businessContext: 'een ondernemer met een holding' },
+    identityStatements: [],
     challenger: null,
+    openLeverageTask: null,
+    openRocksCount: 0,
+    recentWins: [],
+    winsThisWeek: 0,
+    focusSessionsToday: 0,
+    focusMinutesToday: 0,
+    todayJournal: [],
+    todayControleCirkel: [],
     ...overrides,
   };
 }

@@ -7,23 +7,7 @@ import { Shield, ArrowLeft, Plus, Check, X, Flame } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { BottomNav } from '@/components/ui/bottom-nav';
-
-interface IdentityStatement {
-  id: string;
-  statement: string;
-  createdAt: string;
-  isActive: boolean;
-  proofCount: number;
-  lastProofDate?: string;
-  streak: number;
-}
-
-interface IdentityProof {
-  id: string;
-  identityId: string;
-  proof: string;
-  date: string;
-}
+import type { IdentityStatement, IdentityProof } from '@/types';
 
 const defaultIdentities = [
   'Ik ben iemand die altijd doorzet',
@@ -150,6 +134,16 @@ export default function IdentityPage() {
       </div>
 
       <div className="max-w-lg mx-auto px-5 pt-5 space-y-4">
+        {/* Uitleg */}
+        <div className="rounded-[14px] bg-surface-sunken px-4 py-3.5">
+          <p className="text-[12px] text-ink-soft leading-relaxed">
+            Kies wie je wilt <em>zijn</em> — niet wat je wilt bereiken. Elke keer dat je iets doet dat dat
+            bevestigt, log je dat als bewijs. Je coach ziet je actieve identiteiten en het aantal
+            verzamelde bewijzen mee, en gebruikt dat om zijn reflecties op te bouwen — niet alleen op
+            je cijfers, maar ook op wie je probeert te worden.
+          </p>
+        </div>
+
         {/* Add form */}
         {showAddForm && (
           <div className="rounded-[16px] bg-surface-inverse p-5">

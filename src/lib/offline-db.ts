@@ -23,7 +23,7 @@ type StoreName = (typeof STORES)[keyof typeof STORES];
 export interface StoredRitual {
   id: string;
   date: string;
-  type: 'morning' | 'evening';
+  type: string;
   data: Record<string, unknown>;
   synced: boolean;
   createdAt: string;
@@ -232,7 +232,7 @@ class OfflineDB {
 
   // Ritual-specific methods
   async saveRitual(
-    type: 'morning' | 'evening',
+    type: string,
     date: string,
     data: Record<string, unknown>,
     synced = false
@@ -256,7 +256,7 @@ class OfflineDB {
     return ritual;
   }
 
-  async getRitualByDateAndType(date: string, type: 'morning' | 'evening'): Promise<StoredRitual | undefined> {
+  async getRitualByDateAndType(date: string, type: string): Promise<StoredRitual | undefined> {
     const id = `${date}_${type}`;
     return this.get<StoredRitual>(STORES.RITUALS, id);
   }

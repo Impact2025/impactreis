@@ -36,7 +36,6 @@ export default function FocusPage() {
   const [workMinutes, setWorkMinutes] = useState(25);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
-  const [isBreak, setIsBreak] = useState(false);
   const [sessions, setSessions] = useState<FocusSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentSession, setCurrentSession] = useState<'work' | 'break'>('work');
@@ -45,7 +44,11 @@ export default function FocusPage() {
   const [showPowerQuestion, setShowPowerQuestion] = useState(false);
   const [currentPowerQuestion, setCurrentPowerQuestion] = useState('');
   const [energyBefore, setEnergyBefore] = useState(7);
-  const [energyAfter, setEnergyAfter] = useState(7);
+  // TODO(product): er is geen UI-stap die energyAfter daadwerkelijk laat invullen -- elke
+  // afgeronde sessie slaat dus altijd de default (7) op i.p.v. de werkelijke energie na afloop.
+  // Buiten scope van deze lint-opschoning; behoeft een ontwerpbeslissing over waar dat check-in
+  // moment in de flow (celebration/movement-break) hoort.
+  const [energyAfter] = useState(7);
   const [sessionGoal, setSessionGoal] = useState('');
   const [showGoalInput, setShowGoalInput] = useState(true);
   const [goalFromCoach, setGoalFromCoach] = useState(false);
@@ -153,7 +156,6 @@ export default function FocusPage() {
         setShowMovementBreak(true);
       }, 3000);
     } else {
-      setIsBreak(false);
       setCurrentSession('work');
       setTimeLeft(workMinutes * 60);
       setShowGoalInput(true);
@@ -162,7 +164,6 @@ export default function FocusPage() {
 
   const handleMovementComplete = () => {
     setShowMovementBreak(false);
-    setIsBreak(true);
     setCurrentSession('break');
     setTimeLeft(5 * 60);
   };
@@ -184,7 +185,6 @@ export default function FocusPage() {
 
   const switchToWork = () => {
     setIsActive(false);
-    setIsBreak(false);
     setCurrentSession('work');
     setTimeLeft(workMinutes * 60);
     setShowGoalInput(true);
@@ -192,7 +192,6 @@ export default function FocusPage() {
 
   const switchToBreak = () => {
     setIsActive(false);
-    setIsBreak(true);
     setCurrentSession('break');
     setTimeLeft(5 * 60);
     setShowGoalInput(false);
@@ -253,7 +252,7 @@ export default function FocusPage() {
               Bewegings Pauze
             </div>
             <h1 className="text-[22px] font-bold text-ink mb-2 leading-tight">
-              "Emotion is created by motion"
+              &ldquo;Emotion is created by motion&rdquo;
             </h1>
             <p className="text-[13px] text-ink-soft">
               Beweeg je lichaam om je energie te resetten
@@ -261,7 +260,7 @@ export default function FocusPage() {
           </div>
           <MovementBreakMini onComplete={handleMovementComplete} />
           <p className="text-center text-[12px] text-ink-soft mt-6 italic">
-            "Change your physiology, change your state" — Tony Robbins
+            &ldquo;Change your physiology, change your state&rdquo; — Tony Robbins
           </p>
         </div>
         <BottomNav />
@@ -304,7 +303,7 @@ export default function FocusPage() {
               Power Question
             </p>
             <p className="text-[17px] font-semibold text-ink mb-6 leading-snug italic">
-              "{currentPowerQuestion}"
+              &ldquo;{currentPowerQuestion}&rdquo;
             </p>
             <button
               onClick={() => setShowPowerQuestion(false)}

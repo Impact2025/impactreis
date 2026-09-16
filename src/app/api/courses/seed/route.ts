@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 import { UNLEASHED_COURSE } from '@/lib/seed-courses';
+import { clientIp, rateLimitResponse } from '@/lib/rate-limit';
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -18,6 +19,9 @@ export async function POST(request: NextRequest) {
     if (process.env.NODE_ENV === 'production' && seedKey !== process.env.SEED_KEY) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const limited = await rateLimitResponse(`courses-seed:${clientIp(request)}`, 5, 60);
+    if (limited) return limited;
 
     const course = UNLEASHED_COURSE;
 

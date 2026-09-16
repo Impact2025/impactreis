@@ -1,28 +1,54 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import { AlertCircle, ArrowRight } from 'lucide-react';
-import { AuthService } from '@/lib/auth';
+import { TurnstileWidget } from '@/components/ui/turnstile-widget';
+
+const TURNSTILE_ENABLED = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 export default function RegisterPage() {
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
-  const router                  = useRouter();
+  const [email, setEmail]                   = useState('');
+  const [loading, setLoading]               = useState(false);
+  const [error, setError]                   = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const router                              = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      await AuthService.register(email, password);
-      router.push('/onboarding');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registratie mislukt');
+      if (TURNSTILE_ENABLED) {
+        if (!turnstileToken) {
+          setError('Bevestig eerst dat je geen robot bent.');
+          setLoading(false);
+          return;
+        }
+        const verifyRes = await fetch('/api/turnstile/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: turnstileToken }),
+        });
+        if (!verifyRes.ok) {
+          setError('Verificatie mislukt. Probeer het opnieuw.');
+          setTurnstileToken(null);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const result = await signIn('resend', { email, redirectTo: '/auth/bridge?next=/onboarding', redirect: false });
+      if (result?.error) {
+        setError('Versturen van de link is mislukt. Probeer het opnieuw.');
+      } else {
+        router.push('/auth/check-email');
+      }
+    } catch {
+      setError('Versturen van de link is mislukt. Probeer het opnieuw.');
     } finally {
       setLoading(false);
     }
@@ -52,15 +78,11 @@ export default function RegisterPage() {
             required
             className="w-full px-4 py-3.5 rounded-[14px] bg-surface-sunken border border-transparent text-[14px] text-ink placeholder-ink-soft outline-none focus:border-primary focus:bg-white transition-all"
           />
-          <input
-            type="password"
-            placeholder="Wachtwoord (min. 8 tekens)"
-            minLength={8}
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            className="w-full px-4 py-3.5 rounded-[14px] bg-surface-sunken border border-transparent text-[14px] text-ink placeholder-ink-soft outline-none focus:border-primary focus:bg-white transition-all"
-          />
+          <p className="text-[12px] text-ink-soft px-1">
+            We sturen je een link per e-mail — geen wachtwoord nodig. Klik erop om je account aan te maken.
+          </p>
+
+          <TurnstileWidget onVerify={setTurnstileToken} onExpire={() => setTurnstileToken(null)} />
 
           {error && (
             <div className="flex items-center gap-2 px-3.5 py-3 rounded-[12px] bg-red-50 border border-red-100">
@@ -71,7 +93,7 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (TURNSTILE_ENABLED && !turnstileToken)}
             className="w-full py-3.5 rounded-[14px] bg-primary text-white font-bold text-[14px] flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(81,96,80,0.35)] active:scale-[0.98] transition-all disabled:opacity-60 mt-2"
           >
             {loading

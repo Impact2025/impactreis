@@ -213,7 +213,7 @@ export default function ACAPage() {
           </div>
 
           <p className="text-[11px] text-ink-soft text-center mb-5 italic leading-relaxed">
-            "Perfectie is een valkuil. Doe het liever 5 minuten<br />met aandacht dan een uur vanuit dwang."
+            &ldquo;Perfectie is een valkuil. Doe het liever 5 minuten<br />met aandacht dan een uur vanuit dwang.&rdquo;
           </p>
 
           <button

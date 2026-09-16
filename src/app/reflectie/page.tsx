@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Brain, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { BottomNav } from '@/components/ui/bottom-nav';
 

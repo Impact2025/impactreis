@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
-import { TrendChart, DonutChart, ProgressRing } from '@/components/insights/trend-chart';
+import { TrendChart } from '@/components/insights/trend-chart';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
 interface AnalyticsData {

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://reis.weareimpact.nl';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://sparren.app';
 
   const now = new Date();
   const day = now.getDay();

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext } from '@/lib/auth-context';
 import { buildFollowUpPrompt, openRouterChat } from '@/lib/coach';
+import { rateLimitResponse } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   const authCtx = await getAuthContext(request);
@@ -8,6 +9,9 @@ export async function POST(request: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const limited = await rateLimitResponse(`coach-chat:${userId}`, 20, 60);
+  if (limited) return limited;
 
   const body = await request.json();
   const { messages } = body;

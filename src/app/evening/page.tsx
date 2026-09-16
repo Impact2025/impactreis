@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Moon, Lightbulb, TrendingDown, Calendar, Heart, ArrowLeft, CheckCircle, Brain, Zap } from 'lucide-react';
+import { Moon, Lightbulb, TrendingDown, Calendar, Heart, ArrowLeft, CheckCircle, Brain, Zap, AlertTriangle } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { TimeGateScreen } from '@/components/weekflow/time-gate-screen';
@@ -66,6 +66,7 @@ function EveningContent() {
   const { settings } = useRitualStatus();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [adhdScores, setAdhdScores] = useState<Record<string, number>>(defaultAdhdScores());
   const [recoveryHabit, setRecoveryHabit] = useState<string | null>(null);
@@ -142,7 +143,7 @@ function EveningContent() {
             setFocusSummary({ completed, total: workSessions.length, minutes });
           }
         }).catch(() => {});
-      } catch (err) {
+      } catch {
         router.push('/auth/login');
       } finally {
         setLoading(false);
@@ -169,6 +170,7 @@ function EveningContent() {
     e.preventDefault();
     if (!formData.eveningVerdict) return;
     setSaving(true);
+    setSaveError(null);
     try {
       localStorage.setItem(`adhdLog_${targetDate}`, JSON.stringify(adhdScores));
       await api.logs.create({
@@ -201,9 +203,10 @@ function EveningContent() {
       setShowSuccess(true);
       setTimeout(() => { router.push('/dashboard'); }, 2000);
     } catch (error) {
+      // Niet als succes tonen: dit raakt ook de ADHD-meting die voor de medicatiestart wordt
+      // bijgehouden — die data mag nooit stil verdwijnen zonder dat de gebruiker het weet.
       console.error('Failed to save evening ritual:', error);
-      setShowSuccess(true);
-      setTimeout(() => { router.push('/dashboard'); }, 2000);
+      setSaveError('Opslaan is mislukt — je avondritueel is niet bewaard. Controleer je verbinding en probeer opnieuw.');
     } finally {
       setSaving(false);
     }
@@ -653,6 +656,13 @@ function EveningContent() {
               </p>
             </div>
           </div>
+
+          {saveError && (
+            <div className="flex items-start gap-2.5 rounded-[12px] bg-red-50 border border-red-200 px-4 py-3">
+              <AlertTriangle size={15} className="text-red-600 shrink-0 mt-0.5" />
+              <p className="text-[13px] text-red-700 leading-relaxed">{saveError}</p>
+            </div>
+          )}
 
           {/* Submit */}
           <button

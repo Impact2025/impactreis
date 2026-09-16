@@ -19,6 +19,10 @@ export async function GET(request: NextRequest) {
     cutoffDate.setDate(cutoffDate.getDate() - days);
     const cutoffDateStr = cutoffDate.toISOString();
 
+    interface DailyLogRow { type: string; date_string: string; data: unknown; timestamp: string }
+    interface WinRow { id: number; title: string; category: string; impact_level: number; date: string; created_at: string }
+    interface FocusSessionRow { date: string; start_time: string; goal: string | null; completed: boolean; created_at: string }
+
     // Get all ritual logs for the period
     const ritualLogs = await sql`
       SELECT type, date_string, data, timestamp
@@ -27,7 +31,7 @@ export async function GET(request: NextRequest) {
         AND organization_id = ${organizationId}
         AND timestamp > ${cutoffDateStr}::timestamp
       ORDER BY timestamp DESC
-    `;
+    ` as unknown as DailyLogRow[];
 
     // Get all wins for the period
     const wins = await sql`
@@ -37,16 +41,18 @@ export async function GET(request: NextRequest) {
         AND organization_id = ${organizationId}
         AND created_at > ${cutoffDateStr}::timestamp
       ORDER BY date DESC
-    `;
+    ` as unknown as WinRow[];
 
-    // Get all goals
+    // Get all goals (JSONB `data`-kolom, geen stabiele rijvorm -- zie STATUS.md "Schema-fragmentatie").
+    // Wordt hier alleen doorgegeven (`goals: goals` verderop), nooit gelezen, dus Record<string,
+    // unknown> is eerlijk en veilig; een specifieker type zou een garantie beloven die er niet is.
     const goals = await sql`
       SELECT * FROM goals
       WHERE user_id = ${userId} AND organization_id = ${organizationId}
-    `;
+    ` as unknown as Record<string, unknown>[];
 
     // Get focus sessions (wrap in try-catch since table might not exist)
-    let focusSessions: any[] = [];
+    let focusSessions: FocusSessionRow[] = [];
     try {
       focusSessions = await sql`
         SELECT date, start_time, goal, completed, created_at
@@ -55,38 +61,46 @@ export async function GET(request: NextRequest) {
           AND organization_id = ${organizationId}
           AND created_at > ${cutoffDateStr}::timestamp
         ORDER BY created_at DESC
-      `;
-    } catch (e) {
+      ` as unknown as FocusSessionRow[];
+    } catch {
       // Table might not exist, that's okay
       console.log('Focus sessions table not found, skipping');
     }
 
+    // De JSONB `data`-kolom van daily_logs heeft geen vast schema (jaren aan ritueel-varianten
+    // door elkaar) -- vandaar `Record<string, unknown>` i.p.v. any, met expliciete velden waar
+    // ze uitgelezen worden.
+    function parseLogData(raw: unknown): Record<string, unknown> {
+      const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      return (data ?? {}) as Record<string, unknown>;
+    }
+
     // Process morning rituals for energy/sleep data
     const morningData = ritualLogs
-      .filter((log: any) => log.type === 'morning')
-      .map((log: any) => {
-        const data = typeof log.data === 'string' ? JSON.parse(log.data) : log.data;
+      .filter((log) => log.type === 'morning')
+      .map((log) => {
+        const data = parseLogData(log.data);
         return {
           date: log.date_string,
-          sleepQuality: data.sleepQuality || data.sleep_quality || 0,
-          energyLevel: data.energyLevel || data.energy_level || 0,
-          wakeTime: data.wakeTime || data.wake_time || '',
-          gratitude: data.gratitude || '',
-          top3: data.todayTop3 || data.top3 || [],
+          sleepQuality: Number(data.sleepQuality ?? data.sleep_quality ?? 0),
+          energyLevel: Number(data.energyLevel ?? data.energy_level ?? 0),
+          wakeTime: String(data.wakeTime ?? data.wake_time ?? ''),
+          gratitude: String(data.gratitude ?? ''),
+          top3: (data.todayTop3 ?? data.top3 ?? []) as unknown[],
         };
       });
 
     // Process evening rituals
     const eveningData = ritualLogs
-      .filter((log: any) => log.type === 'evening')
-      .map((log: any) => {
-        const data = typeof log.data === 'string' ? JSON.parse(log.data) : log.data;
+      .filter((log) => log.type === 'evening')
+      .map((log) => {
+        const data = parseLogData(log.data);
         return {
           date: log.date_string,
-          energyLevel: data.energyLevel || data.energy_level || 0,
-          whatWentWell: data.whatWentWell || '',
-          biggestWin: data.biggestWin || '',
-          learned: data.learned || '',
+          energyLevel: Number(data.energyLevel ?? data.energy_level ?? 0),
+          whatWentWell: String(data.whatWentWell ?? ''),
+          biggestWin: String(data.biggestWin ?? ''),
+          learned: String(data.learned ?? ''),
         };
       });
 
@@ -101,24 +115,24 @@ export async function GET(request: NextRequest) {
     const lastWeekEnd = new Date(thisWeekStart);
     lastWeekEnd.setDate(lastWeekEnd.getDate() - 1);
 
-    const thisWeekMorning = morningData.filter((d: any) => new Date(d.date) >= thisWeekStart);
-    const lastWeekMorning = morningData.filter((d: any) => {
+    const thisWeekMorning = morningData.filter((d) => new Date(d.date) >= thisWeekStart);
+    const lastWeekMorning = morningData.filter((d) => {
       const date = new Date(d.date);
       return date >= lastWeekStart && date <= lastWeekEnd;
     });
 
-    const thisWeekWins = wins.filter((w: any) => new Date(w.date) >= thisWeekStart);
-    const lastWeekWins = wins.filter((w: any) => {
+    const thisWeekWins = wins.filter((w) => new Date(w.date) >= thisWeekStart);
+    const lastWeekWins = wins.filter((w) => {
       const date = new Date(w.date);
       return date >= lastWeekStart && date <= lastWeekEnd;
     });
 
     // Calculate averages
-    const calcAvg = (arr: any[], key: string) => {
+    function calcAvg<T extends object>(arr: T[], key: keyof T) {
       if (arr.length === 0) return 0;
-      const sum = arr.reduce((acc, item) => acc + (item[key] || 0), 0);
+      const sum = arr.reduce((acc, item) => acc + (Number(item[key]) || 0), 0);
       return Math.round((sum / arr.length) * 10) / 10;
-    };
+    }
 
     const thisWeekAvgEnergy = calcAvg(thisWeekMorning, 'energyLevel');
     const lastWeekAvgEnergy = calcAvg(lastWeekMorning, 'energyLevel');
@@ -126,7 +140,7 @@ export async function GET(request: NextRequest) {
     const lastWeekAvgSleep = calcAvg(lastWeekMorning, 'sleepQuality');
 
     // Calculate streaks and consistency
-    const sortedDates = [...new Set(morningData.map((d: any) => d.date))].sort();
+    const sortedDates = [...new Set(morningData.map((d) => d.date))].sort();
     let currentStreak = 0;
     let maxStreak = 0;
     let tempStreak = 0;
@@ -158,14 +172,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Win categories breakdown
-    const winsByCategory = wins.reduce((acc: any, win: any) => {
+    const winsByCategory = wins.reduce<Record<string, number>>((acc, win) => {
       acc[win.category] = (acc[win.category] || 0) + 1;
       return acc;
     }, {});
 
     // Best performing days (by energy)
     const dayPerformance: Record<string, { total: number; count: number }> = {};
-    morningData.forEach((d: any) => {
+    morningData.forEach((d) => {
       const dayName = new Date(d.date).toLocaleDateString('nl-NL', { weekday: 'long' });
       if (!dayPerformance[dayName]) {
         dayPerformance[dayName] = { total: 0, count: 0 };
@@ -183,14 +197,14 @@ export async function GET(request: NextRequest) {
 
     // Wake time analysis
     const wakeTimes = morningData
-      .filter((d: any) => d.wakeTime)
-      .map((d: any) => {
+      .filter((d) => d.wakeTime)
+      .map((d) => {
         const [hours, minutes] = d.wakeTime.split(':').map(Number);
         return { date: d.date, minutes: hours * 60 + minutes, energy: d.energyLevel };
       });
 
-    const earlyWakeEnergy = wakeTimes.filter((w: any) => w.minutes < 7 * 60);
-    const lateWakeEnergy = wakeTimes.filter((w: any) => w.minutes >= 7 * 60);
+    const earlyWakeEnergy = wakeTimes.filter((w) => w.minutes < 7 * 60);
+    const lateWakeEnergy = wakeTimes.filter((w) => w.minutes >= 7 * 60);
 
     const avgEarlyEnergy = calcAvg(earlyWakeEnergy, 'energy');
     const avgLateEnergy = calcAvg(lateWakeEnergy, 'energy');
@@ -251,11 +265,11 @@ export async function GET(request: NextRequest) {
         totalDays: sortedDates.length,
       },
       trends: {
-        energy: morningData.slice(0, 14).reverse().map((d: any) => ({
+        energy: morningData.slice(0, 14).reverse().map((d) => ({
           date: d.date,
           value: d.energyLevel,
         })),
-        sleep: morningData.slice(0, 14).reverse().map((d: any) => ({
+        sleep: morningData.slice(0, 14).reverse().map((d) => ({
           date: d.date,
           value: d.sleepQuality,
         })),
@@ -276,7 +290,7 @@ export async function GET(request: NextRequest) {
       goals: goals,
       focusSessions: {
         total: focusSessions.length,
-        completed: focusSessions.filter((s: any) => s.completed).length,
+        completed: focusSessions.filter((s) => s.completed).length,
       },
       insights,
       rawData: {

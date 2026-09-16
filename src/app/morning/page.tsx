@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Sunrise, ArrowLeft, ArrowRight, CheckCircle, Heart, Target, Zap, Brain, CalendarClock, Mountain, Coffee, Sun, GlassWater, Mic } from 'lucide-react';
+import { Sunrise, ArrowLeft, ArrowRight, CheckCircle, Heart, Target, Zap, Brain, CalendarClock, Mountain, Coffee, Sun, GlassWater, Mic, AlertTriangle } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { BottomNav } from '@/components/ui/bottom-nav';
@@ -109,6 +109,7 @@ interface MorningData {
 export default function MorningPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [step, setStep] = useState<Step>('dagtype');
   const [alVoltooid, setAlVoltooid] = useState(false);
   const [meetingCount, setMeetingCount] = useState<number | null>(null);
@@ -235,22 +236,22 @@ export default function MorningPage() {
 
   const handleComplete = async () => {
     setSaving(true);
+    setSaveError(null);
     try {
       const kikkerLabel = formData.kikkerCategory
         ? TIME_WASTER_OPTIONS.find((o) => o.value === formData.kikkerCategory)?.label ?? formData.kikkerCategory
         : '';
       const derivedIntentie = [kikkerLabel, formData.kikkerDetail].filter(Boolean).join(' — ') || formData.intentie;
-      try {
-        await api.logs.create({
-          type: 'morning',
-          date: todayStr,
-          mode,
-          ...formData,
-          intentie: derivedIntentie,
-        });
-      } catch (err) {
-        console.error('API save error:', err);
-      }
+
+      // Niet stil falen: als dit mislukt bestaat het ochtendritueel alleen in de UI-state van dit
+      // tabblad — de gebruiker moet dat weten vóór we 'm naar het "voltooid"-scherm sturen.
+      await api.logs.create({
+        type: 'morning',
+        date: todayStr,
+        mode,
+        ...formData,
+        intentie: derivedIntentie,
+      });
 
       const token = localStorage.getItem('token');
 
@@ -271,6 +272,7 @@ export default function MorningPage() {
       setTimeout(() => { router.push('/dashboard'); }, 2000);
     } catch (err) {
       console.error('Save error:', err);
+      setSaveError('Opslaan is mislukt — je ochtendritueel is niet bewaard. Controleer je verbinding en probeer opnieuw.');
     } finally {
       setSaving(false);
     }
@@ -885,6 +887,13 @@ export default function MorningPage() {
                 Tip: Schrijf in de tegenwoordige tijd. Bijv: &quot;Ik ben een krachtige, impactvolle ondernemer.&quot;
               </p>
             </div>
+          </div>
+        )}
+
+        {saveError && (
+          <div className="mt-6 flex items-start gap-2.5 rounded-[12px] bg-red-50 border border-red-200 px-4 py-3">
+            <AlertTriangle size={15} className="text-red-600 shrink-0 mt-0.5" />
+            <p className="text-[13px] text-red-700 leading-relaxed">{saveError}</p>
           </div>
         )}
 

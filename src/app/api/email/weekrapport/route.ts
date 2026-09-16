@@ -20,7 +20,7 @@ async function openRouterChat(prompt: string): Promise<string> {
       headers: {
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://reis.weareimpact.nl',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://sparren.app',
       },
       body: JSON.stringify({
         model: 'anthropic/claude-haiku-4-5',
@@ -37,7 +37,7 @@ async function openRouterChat(prompt: string): Promise<string> {
 }
 
 async function buildAndSend(userId: number, toEmail: string, unsubUrl?: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://reis.weareimpact.nl';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://sparren.app';
 
   const now = new Date();
   const weekEnd = new Date(now);
@@ -184,7 +184,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const authCtx = await getAuthContext(request);
   const userId = authCtx?.userId ?? null;
-  const organizationId = authCtx?.organizationId ?? null;
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const users = await sql`SELECT email FROM users WHERE id = ${userId} LIMIT 1`;

@@ -50,7 +50,6 @@ export function TrendChart({
 
   // Create SVG path
   const padding = 20;
-  const chartWidth = 100; // percentage
   const chartHeight = height - (showLabels ? 30 : 10);
 
   const points = validData.map((d, i) => {

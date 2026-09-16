@@ -1,194 +1,62 @@
-# ✅ Testing Results - Wereldklasse Transformatie
+# Testing Results
 
-**Datum**: 2024-12-04
-**Status**: VOLLEDIG SUCCESVOL
+**Laatst bijgewerkt**: 2026-09-16
+**Status**: zie hieronder — dit document beschrijft alleen wat daadwerkelijk gedraaid en geverifieerd is, geen aspiratie.
 
----
-
-## 🧪 Test Resultaten
-
-### Frontend Tests
-```
-✓ 3 test files passed
-✓ 34 tests passed (100%)
-Duration: 2.78s
-
-Test Files:
-- src/components/ui/__tests__/button.test.tsx (10 tests)
-- src/hooks/__tests__/use-auth.test.ts (5 tests)
-- src/lib/__tests__/utils.test.ts (19 tests)
-```
-
-### Backend Tests
-
-#### Health Endpoint
-```json
-GET /health
-Response: {"status":"ok","timestamp":"2024-12-04T12:33:58.147Z"}
-Status: ✅ WORKING
-```
-
-#### Security Features
-
-**Rate Limiting**
-```
-Auth endpoints: 5 requests / 15 minutes ✅
-Other endpoints: 100 requests / 15 minutes ✅
-Message: "Too many auth attempts" ✅
-```
-
-**Helmet Security Headers** ✅
-**CORS Configuration** ✅
-**JSON Body Parsing** ✅
-**Request Logging** ✅
-
-#### API Endpoints Structure
-```
-✅ GET  /health
-✅ POST /api/auth/register
-✅ POST /api/auth/login
-✅ GET  /api/habits (protected)
-✅ POST /api/habits (protected)
-✅ PUT  /api/habits/:id (protected)
-✅ DELETE /api/habits/:id (protected)
-✅ GET  /api/goals (protected)
-✅ POST /api/goals (protected)
-✅ PUT  /api/goals/:id (protected)
-✅ DELETE /api/goals/:id (protected)
-✅ GET  /api/logs (protected)
-✅ POST /api/logs (protected)
-✅ GET  /api/weekly-reviews (protected)
-✅ POST /api/weekly-reviews (protected)
-✅ GET  /api/focus-sessions (protected)
-✅ POST /api/focus-sessions (protected)
-```
+> De vorige versie van dit bestand (gedateerd 2024-12-04) beschreef een Express-backend
+> (`server/index.ts`, Helmet, CORS-middleware, `server/routes/`) die niet meer bestaat — de app
+> is sindsdien een Next.js App Router-applicatie. Dat document was niet meer te vertrouwen als
+> bron en is vervangen door deze, tegen de huidige code geverifieerde, versie.
 
 ---
 
-## 📦 TypeScript Compilation
+## Unit/integratietests (Vitest)
 
-```bash
-npm run type-check
-Result: ✅ NO ERRORS
+```
+npx vitest run
+Result: 102/102 tests groen, 0 gefaald
 ```
 
-**TypeScript Files Created**: 33
-**Coverage**: 100% type safety
+Belangrijkste testbestanden (`src/lib/__tests__/`, `src/**/*.test.ts(x)`):
+- `auth-context.test.ts` — de centrale auth-resolutie (`getAuthContext`) die alle tenant-aware
+  API-routes gebruiken; regressies hier breken tenant-isolatie overal tegelijk.
+- `coach.test.ts`, `coach-predictions.test.ts` — de AI-coach-logica: techniekkeuze, lessen,
+  falsifieerbare voorspellingen.
+- `rate-limit.test.ts` — de rate limiter (`src/lib/rate-limit.ts`) die AI-, auth- en
+  lead-gen-endpoints beschermt.
+- `weekflow.service.test.ts`, `ritual-status.test.ts` en overige domeinlogica.
 
----
+## TypeScript
 
-## 🔒 Security Audit
-
-### Implemented
-- ✅ JWT Authentication with middleware
-- ✅ bcrypt password hashing (12 rounds)
-- ✅ Zod validation schemas
-- ✅ Rate limiting (auth + general)
-- ✅ Helmet security headers
-- ✅ CORS configuration
-- ✅ SQL injection protection (parameterized queries)
-- ✅ Error handling middleware
-- ✅ Request logging
-- ✅ .env.example template
-- ✅ Strong JWT_SECRET (128 chars)
-
-### Remaining
-- ⚠️ Rotate database credentials (exposed in git history)
-- 📋 Add 2FA (future enhancement)
-- 📋 Add refresh tokens (future enhancement)
-
----
-
-## 🏗️ Architecture Validation
-
-### Backend Structure ✅
 ```
-server/
-├── index.ts (77 lines, clean)
-├── middleware/ (4 files)
-├── routes/ (6 files)
-├── schemas/ (3 files)
-└── db/ (1 file)
+npx tsc --noEmit
+Result: 0 errors
 ```
 
-### Frontend Structure ✅
+## ESLint
+
 ```
-src/
-├── components/ui/ (3 components + tests)
-├── hooks/ (3 hooks + tests)
-├── lib/ (3 utilities + tests)
-└── types/ (1 type definition file)
+npx eslint .
 ```
+Zie CHANGELOG/commit-historie voor de actuele stand — dit is een levend cijfer, geen momentopname
+die je hier moet vertrouwen. Draai het commando zelf voor de huidige telling.
+
+## E2E (Playwright)
+
+5 specs in `e2e/`. Dun voor de omvang van de app (43 pages) — kritieke flows (onboarding,
+magic-link login, coach-analyse) verdienen bredere dekking voordat je op meerdere
+klant-organisaties draait. Nog niet gedaan.
+
+## Coverage
+
+`coverage/coverage-final.json` was leeg/verouderd bij eerdere inspectie. Draai
+`npm run test:coverage` voor een actueel cijfer; dit document claimt geen percentage dat niet
+recent geverifieerd is.
 
 ---
 
-## 📊 Performance
+## Wat hier bewust niet in staat
 
-**Server Startup**: < 1 second
-**Test Execution**: 2.78 seconds
-**TypeScript Check**: < 3 seconds
-**Build Time**: Not tested yet
-
----
-
-## ✅ Checklist
-
-### Development
-- [x] TypeScript setup
-- [x] Testing framework
-- [x] Linting configured
-- [x] Path aliases working
-- [x] Error boundaries
-- [x] API client with types
-
-### Backend
-- [x] JWT auth middleware
-- [x] Input validation (Zod)
-- [x] Error handling
-- [x] Request logging
-- [x] Rate limiting
-- [x] Security headers
-- [x] CORS configuration
-- [x] All routes working
-
-### DevOps
-- [x] Docker configuration
-- [x] Docker Compose setup
-- [x] CI/CD pipeline (GitHub Actions)
-- [x] Health checks
-- [x] Environment variables template
-
-### Documentation
-- [x] README.md (164 lines)
-- [x] CONTRIBUTING.md
-- [x] SECURITY.md
-- [x] MIGRATION_GUIDE.md
-- [x] CHANGELOG.md
-- [x] API documentation
-
-### PWA
-- [x] Service worker
-- [x] Web manifest
-- [x] App shortcuts
-
----
-
-## 🎯 Conclusie
-
-**Alle systemen operationeel!** 🚀
-
-De app is succesvol getransformeerd van een MVP naar een productie-klare wereldklasse applicatie met:
-- 100% test coverage op nieuwe code
-- Enterprise-grade security
-- Professional architecture
-- Complete documentation
-- CI/CD automation
-- Docker deployment ready
-
-**Status**: READY FOR PRODUCTION (na database credential rotatie)
-
----
-
-**Getransformeerd door**: Claude Code
-**Datum**: 2024-12-04
-**Versie**: 1.0.0
+Geen "100% coverage", geen "enterprise-grade security", geen checklist met afgevinkte vakjes die
+niet één-op-één tegen de code zijn geverifieerd. Claims die niet kloppen met de code zijn erger
+dan geen claims.

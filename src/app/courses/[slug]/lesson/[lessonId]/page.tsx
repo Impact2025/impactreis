@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle,
-  Clock,
   BookOpen,
   Dumbbell,
   Brain,

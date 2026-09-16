@@ -15,6 +15,7 @@ function ShareContent() {
   const [url, setUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     // Get shared data from URL params
@@ -29,8 +30,17 @@ function ShareContent() {
 
   const handleSave = async () => {
     setIsSaving(true);
+    setSaveError(null);
 
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        // Zonder token 401't de API-call altijd stil (zie hieronder) — beter meteen naar login
+        // sturen dan de gebruiker laten wachten op een save die nooit kan lukken.
+        router.push('/auth/login?next=/share');
+        return;
+      }
+
       const data = {
         title: title || 'Gedeeld item',
         description: text,
@@ -42,12 +52,16 @@ function ShareContent() {
         // Save as win
         const response = await fetch('/api/wins', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             title: data.title,
             description: data.description,
-            category: 'general',
+            // '/api/wins' accepteert alleen business/personal/health/learning — 'general' bestond
+            // niet en werd altijd geweigerd (400), wat vóór de auth-header-fix hierboven nooit
+            // zichtbaar werd omdat de aanvraag al eerder faalde. `date` is daar ook verplicht.
+            category: 'personal',
             impactLevel: 3,
+            date: new Date().toISOString().split('T')[0],
           }),
         });
         if (!response.ok) throw new Error('Failed to save');
@@ -55,7 +69,7 @@ function ShareContent() {
         // Save as goal
         const response = await fetch('/api/goals', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             title: data.title,
             description: data.description,
@@ -71,6 +85,7 @@ function ShareContent() {
       }, 1500);
     } catch (error) {
       console.error('Error saving shared content:', error);
+      setSaveError('Opslaan is mislukt. Controleer je verbinding en probeer opnieuw.');
     } finally {
       setIsSaving(false);
     }
@@ -180,6 +195,12 @@ function ShareContent() {
           <div className="px-4 py-3 bg-surface-inverse/30 border border-line/30 rounded-xl">
             <p className="text-ink-soft text-sm truncate">{url}</p>
           </div>
+        </div>
+      )}
+
+      {saveError && (
+        <div className="mb-4 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl">
+          <p className="text-red-300 text-sm">{saveError}</p>
         </div>
       )}
 
