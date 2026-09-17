@@ -185,10 +185,10 @@ export default function SalesPage() {
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute -top-32 -right-32 w-[480px] h-[480px] rounded-full bg-primary-light/60 blur-3xl" />
         <div className="pointer-events-none absolute -top-10 -left-40 w-[380px] h-[380px] rounded-full bg-tertiary-soft/70 blur-3xl" />
-      <div className="relative max-w-5xl mx-auto px-6 pt-8 sm:pt-20 pb-24 text-center flex flex-col">
-        <div className="order-1 inline-flex items-start gap-2 px-3.5 py-1.5 rounded-full border border-primary-light bg-primary-muted mb-4 sm:mb-8 max-w-[92vw] sm:max-w-none">
-          <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block mt-[5px] shrink-0" />
-          <span className="text-[11px] font-semibold text-primary-dark tracking-wide text-left">
+      <div className="relative max-w-5xl mx-auto px-6 pt-4 sm:pt-10 pb-14 sm:pb-16 text-center flex flex-col">
+        <div className="order-1 self-center inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-full border border-primary-light bg-primary-muted mb-4 sm:mb-8 max-w-[92vw] sm:max-w-none">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block shrink-0" />
+          <span className="text-[11px] font-semibold text-primary-dark tracking-wide text-center">
             Gebaseerd op 25+ jaar ondernemerservaring en de beproefde hefboommethodiek
           </span>
         </div>
@@ -200,7 +200,7 @@ export default function SalesPage() {
           <span className="text-primary">hefboom en controle.</span>
         </h1>
 
-        <div className="order-3 sm:order-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 mb-4 sm:mb-0 sm:mt-0">
+        <div className="order-3 sm:order-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 mt-2 sm:mt-5 mb-4 sm:mb-0">
           <Link
             href="/reality-check"
             className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-primary text-white font-bold text-[15px] shadow-[0_4px_24px_rgba(81,96,80,0.35)] hover:bg-primary-dark active:scale-[0.98] transition-all"
@@ -229,13 +229,12 @@ export default function SalesPage() {
 
       {/* ══ SOCIAL PROOF STRIP ══════════════════════════════════ */}
       <div className="border-y border-line bg-surface-card">
-        <div className="max-w-5xl mx-auto px-6 py-5 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-10 text-center">
-          <p className="text-[12px] text-ink-soft font-medium">
-            Dagelijks gebruikt door ambitieuze leiders.
+        <div className="max-w-5xl mx-auto px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-0 text-center">
+          <p className="text-[12px] text-ink-soft font-medium sm:border-r sm:border-line sm:pr-10">
+            Ontwikkeld voor DGA’s, bestuurders en sociaal ondernemers in het private en publieke domein.
           </p>
-          <div className="w-px h-4 bg-line hidden sm:block" />
-          <p className="text-[12px] text-ink-soft font-medium">
-            Geïnspireerd op beproefde methodes voor high-performance priming, OKR-doelstructuren en executive agendashielding.
+          <p className="text-[12px] text-ink-soft font-medium sm:pl-10">
+            Aangestuurd door 7 deterministische gedragsinterventies, waaronder CGT, ACT en motiverende gespreksvoering.
           </p>
         </div>
       </div>
