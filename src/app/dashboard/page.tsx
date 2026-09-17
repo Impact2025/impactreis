@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -21,7 +21,7 @@ import { WelcomeTour, type TourStep } from '@/components/ui/welcome-tour';
 import type { GoalAction } from '@/lib/goal-actions';
 import { MeditationPlayer } from '@/components/meditations/MeditationPlayer';
 import { getRecommendedMeditation } from '@/lib/meditations/catalog';
-import { FrogButton } from '@/components/coach/frog-button';
+import { FrogButton, type FrogButtonHandle } from '@/components/coach/frog-button';
 
 const dashboardTourSteps: TourStep[] = [
   {
@@ -79,6 +79,12 @@ export default function DashboardPage() {
   const [scorecard, setScorecard] = useState<{ metrics: { key: string; label: string; score: number | null }[]; lowestTwo: { key: string; label: string; score: number | null }[] } | null>(null);
   const [proactiveSignal, setProactiveSignal] = useState<{ signal: boolean; patternKey: string; message: string } | null>(null);
   const [nextStep, setNextStep] = useState<{ key: string; headline: string; message: string; ctaLabel: string; ctaHref: string } | null>(null);
+  // Ref naar de kikker-knop, zodat de "Jouw volgende stap"-kaart 'm kan activeren i.p.v.
+  // linken naar /dashboard (zichzelf) — zie de 'kikker-open'-tak hieronder.
+  const frogButtonRef = useRef<FrogButtonHandle>(null);
+  // Echte naam uit users.name (onboarding-stap 1) — null zolang die nog niet is opgehaald of
+  // ingevuld, dan valt de begroeting terug op het e-mailadres-prefix (zie displayName hieronder).
+  const [accountName, setAccountName] = useState<string | null>(null);
   // Zolang de kern van de dag nog ontbreekt (geen ochtendritueel), is dit de enige stap die
   // ertoe doet — de rest van het dashboard (doelen, streak, wins, kikker-knop) vraagt dan om
   // dezelfde actie via een ander kanaal en verdunt het signaal in plaats van het te versterken.
@@ -108,7 +114,7 @@ export default function DashboardPage() {
 
   const fetchData = async (retry = 0) => {
     try {
-      const [goalsRes, focusRes, winsRes, calendarRes, onboardingRes, signalRes, proposalsRes, morningLogRes, densityRes, nextStepRes] = await Promise.allSettled([
+      const [goalsRes, focusRes, winsRes, calendarRes, onboardingRes, signalRes, proposalsRes, morningLogRes, densityRes, nextStepRes, meRes] = await Promise.allSettled([
         api.goals.getAll(),
         api.focus.getAll(),
         api.wins.getAll(),
@@ -119,10 +125,15 @@ export default function DashboardPage() {
         api.logs.getByTypeAndDate('morning', getToday(settings.timezone)),
         fetch('/api/coach/scorecard', { headers: { Authorization: `Bearer ${AuthService.getToken()}` } }).then((r) => (r.ok ? r.json() : null)),
         api.coach.nextStep(),
+        fetch('/api/auth/me', { headers: { Authorization: `Bearer ${AuthService.getToken()}` } }).then((r) => (r.ok ? r.json() : null)),
       ]);
 
       if (densityRes.status === 'fulfilled' && densityRes.value) {
         setScorecard(densityRes.value);
+      }
+
+      if (meRes.status === 'fulfilled' && meRes.value?.name) {
+        setAccountName(meRes.value.name);
       }
 
       if (nextStepRes.status === 'fulfilled') {
@@ -205,7 +216,7 @@ export default function DashboardPage() {
     return 'Goedenavond';
   };
 
-  const firstName  = user?.email?.split('@')[0] ?? 'Ondernemer';
+  const firstName  = accountName?.trim() || user?.email?.split('@')[0] || 'Ondernemer';
   const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
   // Golden Egg: een actieve Rock van dit kwartaal weegt zwaarder dan "toevallig laatst bewerkt" —
   // dat is precies het punt van Rocks (EOS-kwartaalprioriteiten). Valt terug op het oude gedrag
@@ -405,30 +416,52 @@ export default function DashboardPage() {
               </div>
             </div>
           ) : primarySignal?.kind === 'nextStep' ? (
-            <Link
-              href={primarySignal.step.ctaHref}
-              className="block rounded-card bg-surface-inverse p-5 mb-6 hover:opacity-95 transition-opacity shadow-organic"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-[10px] bg-on-surface-inverse/10 flex items-center justify-center flex-shrink-0">
-                  <Compass size={18} className="text-primary-light" />
+            (() => {
+              const step = primarySignal.step;
+              const isKikkerOpen = step.key === 'kikker-open';
+              const content = (
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-[10px] bg-on-surface-inverse/10 flex items-center justify-center flex-shrink-0">
+                    <Compass size={18} className="text-primary-light" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[9px] font-bold tracking-[0.15em] text-primary-light uppercase mb-1.5">
+                      Jouw volgende stap
+                    </p>
+                    <p className="text-[14px] font-bold text-on-surface-inverse mb-1 leading-snug">
+                      {step.headline}
+                    </p>
+                    <p className="text-[12px] text-on-surface-inverse/70 leading-relaxed mb-3">
+                      {step.message}
+                    </p>
+                    <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-primary-light">
+                      {step.ctaLabel} <ChevronRight size={13} />
+                    </span>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-bold tracking-[0.15em] text-primary-light uppercase mb-1.5">
-                    Jouw volgende stap
-                  </p>
-                  <p className="text-[14px] font-bold text-on-surface-inverse mb-1 leading-snug">
-                    {primarySignal.step.headline}
-                  </p>
-                  <p className="text-[12px] text-on-surface-inverse/70 leading-relaxed mb-3">
-                    {primarySignal.step.message}
-                  </p>
-                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-primary-light">
-                    {primarySignal.step.ctaLabel} <ChevronRight size={13} />
-                  </span>
-                </div>
-              </div>
-            </Link>
+              );
+              // 'kikker-open' verwees naar ctaHref '/dashboard' — een link naar de pagina waar je
+              // al staat, dus leek de knop kapot. Activeert nu direct de kikker-knop hieronder
+              // i.p.v. daar zelf opnieuw naartoe te "navigeren".
+              if (isKikkerOpen) {
+                return (
+                  <button
+                    onClick={() => frogButtonRef.current?.open()}
+                    className="block w-full text-left rounded-card bg-surface-inverse p-5 mb-6 hover:opacity-95 transition-opacity shadow-organic"
+                  >
+                    {content}
+                  </button>
+                );
+              }
+              return (
+                <Link
+                  href={step.ctaHref}
+                  className="block rounded-card bg-surface-inverse p-5 mb-6 hover:opacity-95 transition-opacity shadow-organic"
+                >
+                  {content}
+                </Link>
+              );
+            })()
           ) : primarySignal?.kind === 'nextRitual' ? (
             <Link
               href={primarySignal.ritual.path}
@@ -752,7 +785,7 @@ export default function DashboardPage() {
 
           {/* ══ KIKKER-KNOP — pas zichtbaar zodra er een belangrijkste taak gekozen is (via
                het ochtendritueel); daarvóór is dit dezelfde CTA als de hero-kaart hierboven ═══ */}
-          {!isLocked && <FrogButton />}
+          {!isLocked && <FrogButton ref={frogButtonRef} />}
 
           {/* ══ WEEKSCORECARD — 7-dagen gemiddelde, dus geen vaste "vrijdagmiddag"-naam
                (die klopt niet meer zodra dit op een andere dag wordt getoond) en de labels zijn

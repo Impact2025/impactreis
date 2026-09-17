@@ -39,6 +39,10 @@ export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   organizationId: integer('organization_id').references(() => organizations.id).notNull(),
   email: text('email').notNull().unique(),
+  // Voornaam van de ondernemer zelf — apart van coachProfile.displayName (de naam van de
+  // AI-coach-persona uit de onboarding-wizard). Nullable: bestaande accounts van vóór dit veld
+  // hebben 'm niet; dashboard valt dan terug op het e-mailadres (zie dashboard/page.tsx).
+  name: text('name'),
   passwordHash: text('password_hash'), // nullable: Auth.js magic-link users hebben geen wachtwoord
   role: text('role').notNull().default('member'), // member | owner | program_manager
   createdAt: timestamp('created_at').defaultNow(),

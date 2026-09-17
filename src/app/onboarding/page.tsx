@@ -84,6 +84,10 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [gender, setGender] = useState<Gender | null>(null);
+  // De eigen naam van de ondernemer — apart van `displayName` hieronder (de naam van de
+  // AI-coach-persona). Zonder dit veld viel het dashboard terug op het e-mailadres-prefix
+  // (bv. "Goedemiddag, Info" voor info@bedrijf.nl).
+  const [userName, setUserName] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [industry, setIndustry] = useState<string | null>(null);
   const [teamSize, setTeamSize] = useState<string | null>(null);
@@ -274,7 +278,7 @@ export default function OnboardingPage() {
 
   const canProceed = (): boolean => {
     switch (step) {
-      case 1: return gender !== null;
+      case 1: return userName.trim().length > 0 && gender !== null;
       case 2: return displayName.trim().length > 0;
       case 3: return industry !== null && teamSize !== null && businessModel !== null;
       case 4: return topTimeWasters.length > 0;
@@ -287,7 +291,7 @@ export default function OnboardingPage() {
   };
 
   const submit = async () => {
-    if (!gender || !displayName.trim() || !industry || !teamSize || !businessModel || !avoidanceBehavior || !leverageGoal || !painfulConsequence.trim()) return;
+    if (!userName.trim() || !gender || !displayName.trim() || !industry || !teamSize || !businessModel || !avoidanceBehavior || !leverageGoal || !painfulConsequence.trim()) return;
     setSubmitting(true);
     setError(null);
     const goalOption = LEVERAGE_GOAL_OPTIONS.find((o) => o.value === leverageGoal);
@@ -329,7 +333,7 @@ export default function OnboardingPage() {
       const res = await fetch('/api/onboarding/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(profile),
+        body: JSON.stringify({ ...profile, userName: userName.trim() }),
       });
       if (!res.ok) { setError('Kon je profiel niet opslaan. Probeer het opnieuw.'); return; }
       await fetch('/api/ritual-settings', {
@@ -374,6 +378,19 @@ export default function OnboardingPage() {
         {step === 1 && (
           <div className="space-y-4">
             <div>
+              <h2 className="text-[18px] font-semibold text-ink">Wat is je naam?</h2>
+              <p className="text-[13px] text-ink-soft mt-1">Zo spreekt de app je aan — los van je e-mailadres.</p>
+            </div>
+            <input
+              type="text"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder="Voornaam"
+              maxLength={40}
+              className="w-full px-4 py-3 rounded-[14px] bg-surface-sunken border border-transparent text-[15px] outline-none focus:border-primary focus:bg-white transition-all"
+              autoFocus
+            />
+            <div className="pt-2">
               <h2 className="text-[18px] font-semibold text-ink">Kies je challenger</h2>
               <p className="text-[13px] text-ink-soft mt-1">Welke toon past bij hoe jij aangesproken wilt worden?</p>
             </div>

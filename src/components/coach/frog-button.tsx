@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Flame, X, RefreshCw, Phone } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -22,10 +22,17 @@ function formatClock(iso: string): string {
   return new Date(iso).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
 }
 
+export interface FrogButtonHandle {
+  /** Opent de sessie extern — gebruikt door de "Jouw volgende stap"-kaart op het dashboard,
+   *  zodat die kaart's "Doorbreek uitstel"-CTA niet langer naar zichzelf linkt (/dashboard,
+   *  een no-op) maar deze knop daadwerkelijk activeert. */
+  open: () => void;
+}
+
 /** MECHANISME 1 — De Kikker-knop: on-demand uitsteldoder. Start een 15-minuten countdown en
  *  toont 3 kant-en-klare openingszinnen, zodat het gesprek zonder nadenken begonnen kan worden.
  *  Geen audioprimer (geen voice-assets beschikbaar) — de tekst doet hetzelfde werk. */
-export function FrogButton() {
+export const FrogButton = forwardRef<FrogButtonHandle>(function FrogButton(_props, ref) {
   const [open, setOpen] = useState(false);
   const [seconds, setSeconds] = useState(SELF_TIMER_SECONDS);
   const [running, setRunning] = useState(false);
@@ -145,6 +152,8 @@ export function FrogButton() {
     }
     setLoading(false);
   };
+
+  useImperativeHandle(ref, () => ({ open: startSession }));
 
   const close = () => {
     setRunning(false);
@@ -269,4 +278,4 @@ export function FrogButton() {
       )}
     </>
   );
-}
+});
