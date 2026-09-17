@@ -8,6 +8,7 @@ import { authUsers, authAccounts, authSessions, authVerificationTokens, users, o
 import { eq } from 'drizzle-orm';
 import { sql } from './lib/db';
 import { ensurePreferences } from './lib/email-recipients';
+import { isEmailInvited } from './lib/invites';
 import { getResend, FROM_EMAIL } from './lib/resend';
 import { welcomeEmail, magicLinkEmail } from './lib/email-templates';
 import { notifyAdminNewUser } from './lib/admin-notify';
@@ -26,6 +27,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Auth.js' eigen Resend-provider verstuurt anders een generieke Engelstalige mail zonder
       // huisstijl. We versturen 'm zelf via dezelfde Resend-client/template als de rest van de mails.
       async sendVerificationRequest({ identifier, url }) {
+        // Invite-only: geen mail (en dus geen account) voor niet-uitgenodigde e-mailadressen.
+        // Zie lib/invites.ts en /admin/uitnodigingen.
+        if (!(await isEmailInvited(identifier))) {
+          throw new Error('Dit e-mailadres heeft geen toegang. Vraag een uitnodiging aan.');
+        }
+
         const { subject, html } = magicLinkEmail(url);
         // De resend-package gooit geen exception op een API-fout — die komt terug als
         // { error } terwijl de promise gewoon resolvet. Zonder deze check faalt verzending

@@ -17,6 +17,7 @@ import {
   Target,
   CheckSquare,
   Receipt,
+  Mail,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -24,6 +25,7 @@ import { cn } from '@/lib/utils';
 const sidebarItems = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { label: 'Gebruikers', href: '/admin/gebruikers', icon: UserCog },
+  { label: 'Uitnodigingen', href: '/admin/uitnodigingen', icon: Mail },
   { label: 'Leads', href: '/admin/leads', icon: UserPlus },
   { label: 'Blog', href: '/admin/blog', icon: FileText },
   { label: 'Bedrijven', href: '/admin/crm/bedrijven', icon: Building2 },

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Sparkles, RefreshCw, Compass, Send, TrendingUp, Check, X, HelpCircle, Mic, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft, Sparkles, RefreshCw, Compass, Send, TrendingUp, Check, X, HelpCircle, Mic, Volume2, VolumeX, Zap } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { BottomNav } from '@/components/ui/bottom-nav';
 import { useSpeechRecognition, useSpeechSynthesis } from '@/hooks/use-speech';
@@ -53,6 +53,14 @@ export default function CoachPage() {
   const [voiceMode, setVoiceMode] = useState(false);
   const speech = useSpeechRecognition();
   const tts = useSpeechSynthesis();
+
+  const [mode, setMode] = useState<'reflectie' | 'dump'>('reflectie');
+  const [dumpText, setDumpText] = useState('');
+  const [dumpLoading, setDumpLoading] = useState(false);
+  const [dumpQuestions, setDumpQuestions] = useState<string[] | null>(null);
+  const [dumpFlagged, setDumpFlagged] = useState(false);
+  const [dumpTimesSeen, setDumpTimesSeen] = useState(0);
+  const [dumpError, setDumpError] = useState<string | null>(null);
 
   const fetchLessons = async () => {
     try {
@@ -148,15 +156,49 @@ export default function CoachPage() {
     }
   };
 
-  // Houdt het tekstveld live bij tijdens het spreken.
-  useEffect(() => {
-    if (speech.listening) setInputValue(speech.transcript);
-  }, [speech.transcript, speech.listening]);
+  const askDump = async () => {
+    const text = dumpText.trim();
+    if (!text) return;
+    setDumpLoading(true);
+    setDumpError(null);
+    try {
+      const res = await fetch('/api/coach/dump', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setDumpError(data.error ?? 'Kon deze gedachte niet filteren');
+        return;
+      }
+      setDumpQuestions(data.questions ?? []);
+      setDumpFlagged(!!data.patternFlagged);
+      setDumpTimesSeen(data.timesSeen ?? 0);
+      setDumpText('');
+    } catch {
+      setDumpError('Kon deze gedachte niet filteren');
+    } finally {
+      setDumpLoading(false);
+    }
+  };
 
-  // Stuurt automatisch door zodra het spreken stopt en er iets is gezegd.
+  // Houdt het juiste tekstveld live bij tijdens het spreken — reflectie-antwoord of gedachtendump,
+  // afhankelijk van welke tab actief is.
+  useEffect(() => {
+    if (!speech.listening) return;
+    if (mode === 'dump') setDumpText(speech.transcript);
+    else setInputValue(speech.transcript);
+  }, [speech.transcript, speech.listening, mode]);
+
+  // Stuurt automatisch door zodra het spreken stopt — alleen in de reflectie-chat. De gedachtendump
+  // is bewust een expliciete "Filter"-klik, geen auto-send, want dit is geen doorlopend gesprek.
   const wasListeningRef = useRef(false);
   useEffect(() => {
-    if (wasListeningRef.current && !speech.listening && speech.transcript.trim()) {
+    if (wasListeningRef.current && !speech.listening && speech.transcript.trim() && mode === 'reflectie') {
       handleSend(speech.transcript);
     }
     wasListeningRef.current = speech.listening;
@@ -188,35 +230,117 @@ export default function CoachPage() {
       </div>
 
       <div className="max-w-lg mx-auto px-5 py-5 space-y-5">
-        <div className="rounded-[16px] border border-line p-5 bg-surface-inverse">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles size={16} className="text-primary" />
-            <span className="text-[11px] text-white/40 uppercase tracking-widest">Business &amp; welzijn, gecombineerd</span>
-          </div>
-          <p className="text-[14px] text-white/80 leading-relaxed mb-4">
-            Vraag een reflectie op basis van je ritueel van vandaag, je energie-geschiedenis en wat er eerder over je patronen is geleerd.
-          </p>
+        <div className="flex gap-2 p-1 rounded-[12px] bg-surface-sunken">
           <button
-            onClick={askReflection}
-            disabled={asking}
-            className="w-full py-3.5 bg-primary text-white text-[14px] font-semibold rounded-[12px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50"
+            onClick={() => setMode('reflectie')}
+            className={`flex-1 py-2 text-[13px] font-semibold rounded-[9px] transition-colors ${
+              mode === 'reflectie' ? 'bg-surface-inverse text-white' : 'text-ink-soft'
+            }`}
           >
-            {asking ? (
-              <RefreshCw size={16} className="animate-spin" />
-            ) : (
-              <Compass size={16} />
-            )}
-            {asking ? 'Reflecteert...' : 'Vraag reflectie'}
+            Reflectie
+          </button>
+          <button
+            onClick={() => setMode('dump')}
+            className={`flex-1 py-2 text-[13px] font-semibold rounded-[9px] transition-colors ${
+              mode === 'dump' ? 'bg-surface-inverse text-white' : 'text-ink-soft'
+            }`}
+          >
+            Snelle gedachte
           </button>
         </div>
 
-        {error && (
+        {mode === 'reflectie' && (
+          <div className="rounded-[16px] border border-line p-5 bg-surface-inverse">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles size={16} className="text-primary" />
+              <span className="text-[11px] text-white/40 uppercase tracking-widest">Business &amp; welzijn, gecombineerd</span>
+            </div>
+            <p className="text-[14px] text-white/80 leading-relaxed mb-4">
+              Vraag een reflectie op basis van je ritueel van vandaag, je energie-geschiedenis en wat er eerder over je patronen is geleerd.
+            </p>
+            <button
+              onClick={askReflection}
+              disabled={asking}
+              className="w-full py-3.5 bg-primary text-white text-[14px] font-semibold rounded-[12px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50"
+            >
+              {asking ? (
+                <RefreshCw size={16} className="animate-spin" />
+              ) : (
+                <Compass size={16} />
+              )}
+              {asking ? 'Reflecteert...' : 'Vraag reflectie'}
+            </button>
+          </div>
+        )}
+
+        {mode === 'dump' && (
+          <div className="rounded-[16px] border border-line p-5 bg-surface-inverse">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap size={16} className="text-primary" />
+              <span className="text-[11px] text-white/40 uppercase tracking-widest">Executive zeef</span>
+            </div>
+            <p className="text-[14px] text-white/80 leading-relaxed mb-4">
+              Wat zit je nu dwars of welk idee spookt door je hoofd? Dump het in een paar zinnen — geen gesprek, wel een scherpe vraag terug.
+            </p>
+            <textarea
+              value={dumpText}
+              onChange={(e) => setDumpText(e.target.value)}
+              placeholder="Typ of spreek in..."
+              rows={3}
+              disabled={dumpLoading}
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-[12px] text-[14px] text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none mb-3"
+            />
+            <div className="flex gap-2">
+              {speech.supported && (
+                <button
+                  onClick={() => (speech.listening ? speech.stop() : speech.start())}
+                  disabled={dumpLoading}
+                  className={`px-4 py-3 rounded-[12px] text-[14px] font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform flex items-center justify-center ${
+                    speech.listening ? 'bg-red-500 text-white animate-pulse' : 'bg-white/10 text-white'
+                  }`}
+                  title={speech.listening ? 'Stop met luisteren' : 'Spreek je gedachte in'}
+                >
+                  <Mic size={16} />
+                </button>
+              )}
+              <button
+                onClick={askDump}
+                disabled={dumpLoading || !dumpText.trim()}
+                className="flex-1 py-3 bg-primary text-white text-[14px] font-semibold rounded-[12px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50"
+              >
+                {dumpLoading ? <RefreshCw size={16} className="animate-spin" /> : <Send size={16} />}
+                {dumpLoading ? 'Filtert...' : 'Filter deze gedachte'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {mode === 'dump' && dumpError && (
+          <div className="rounded-[16px] border border-red-100 bg-red-50 p-4">
+            <p className="text-[13px] text-red-600">{dumpError}</p>
+          </div>
+        )}
+
+        {mode === 'dump' && dumpQuestions && dumpQuestions.length > 0 && (
+          <div className="rounded-[16px] border border-line p-5 space-y-3">
+            {dumpQuestions.map((q, i) => (
+              <p key={i} className="text-[15px] text-ink font-medium leading-relaxed">{q}</p>
+            ))}
+            {dumpFlagged && (
+              <p className="text-[11px] text-ink-soft pt-3 border-t border-surface-sunken">
+                Dit is al {dumpTimesSeen}x teruggekomen — dit thema komt terug op de vrijdag-scorecard.
+              </p>
+            )}
+          </div>
+        )}
+
+        {mode === 'reflectie' && error && (
           <div className="rounded-[16px] border border-red-100 bg-red-50 p-4">
             <p className="text-[13px] text-red-600">{error}</p>
           </div>
         )}
 
-        {result && (
+        {mode === 'reflectie' && result && (
           <div className="rounded-[16px] border border-line p-5">
             <div className="flex items-center justify-between mb-3">
               <span className="inline-block text-[11px] font-medium text-primary bg-primary/10 rounded-full px-2.5 py-1">

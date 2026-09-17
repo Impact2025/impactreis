@@ -107,7 +107,7 @@ export default function LoginPage() {
         <p className="text-center text-[13px] text-ink-soft mt-6">
           Nog geen account?{' '}
           <Link href="/auth/register" className="text-ink font-semibold hover:text-primary transition-colors">
-            Registreer gratis
+            Toegang aanvragen
           </Link>
         </p>
       </div>

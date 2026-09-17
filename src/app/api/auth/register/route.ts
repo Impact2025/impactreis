@@ -9,7 +9,10 @@ import { welcomeEmail } from '@/lib/email-templates';
 import { ensurePreferences } from '@/lib/email-recipients';
 import { notifyAdminNewUser } from '@/lib/admin-notify';
 import { clientIp, rateLimitResponse } from '@/lib/rate-limit';
+import { isEmailInvited } from '@/lib/invites';
 
+// Invite-only: dit legacy wachtwoord-registratiepad staat niet meer open voor iedereen.
+// Zelfde gate als de magic-link-flow in auth.ts, zie lib/invites.ts.
 export async function POST(request: NextRequest) {
   try {
     const limited = await rateLimitResponse(`register:${clientIp(request)}`, 5, 60);
@@ -17,6 +20,10 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { email, password } = registerSchema.parse(body);
+
+    if (!(await isEmailInvited(email))) {
+      return NextResponse.json({ error: 'Registreren is alleen mogelijk op uitnodiging.' }, { status: 403 });
+    }
 
     // Check if user exists
     const existingUsers = await sql`

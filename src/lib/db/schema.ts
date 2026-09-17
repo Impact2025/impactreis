@@ -48,6 +48,15 @@ export const users = pgTable('users', {
   loginCount: integer('login_count').notNull().default(0),
 });
 
+// Invite-only toegang: welke e-mailadressen mogen een account aanmaken via de magic-link-flow.
+// Bestaande klanten (al een users-rij) zijn altijd toegestaan — zie sendVerificationRequest in
+// auth.ts en isEmailInvited in lib/invites.ts. Beheer via /admin/uitnodigingen.
+export const invitedEmails = pgTable('invited_emails', {
+  id: serial('id').primaryKey(),
+  email: text('email').notNull().unique(),
+  invitedAt: timestamp('invited_at').defaultNow(),
+});
+
 // Machine-to-machine auth voor externe systemen (vandaag: ImpactOS' coach-bridge) — één token
 // per organisatie, i.p.v. het vroegere enkele gedeelde COACH_BRIDGE_TOKEN dat altijd naar de
 // eerste gebruiker in de hele tabel resolvede (loadSingleUserId, nu vervangen). Zie

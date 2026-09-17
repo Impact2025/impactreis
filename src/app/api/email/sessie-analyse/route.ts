@@ -4,6 +4,7 @@ import { sql } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-context';
 import { sessieAnalyseEmail, streakMilestoneEmail, SessieAnalyseData } from '@/lib/email-templates';
 import { ensurePreferences, wasEmailSent, recordEmailSent, unsubscribeUrl } from '@/lib/email-recipients';
+import { SPARRINGPARTNER_STYLE, sanitizeAiText } from '@/lib/ai-style';
 
 const STREAK_MILESTONES = [7, 14, 30, 60, 90, 180, 365];
 
@@ -112,7 +113,8 @@ export async function POST(request: NextRequest) {
       : 'gelijk gebleven'
     : null;
 
-  const prompt = `Je bent een empathische, motiverende life coach die gespecialiseerd is in ondernemers en persoonlijke groei.
+  const prompt = `Je bent De Sparringpartner: een nuchtere business- en persoonlijke-groei coach voor ondernemers.
+Geen ja-knikker, wel een spiegel — je bevestigt niet zomaar, je legt patronen bloot.
 Analyseer de ochtend ritual sessie van vandaag en schrijf een persoonlijke coaching analyse in het Nederlands.
 
 SESSIE VAN VANDAAG (${todayDate}, ${dayName}):
@@ -135,11 +137,13 @@ Schrijf een analyse van 150-200 woorden die:
 1. Begint met een observatie over vandaag's sessie (energie, slaap, intentie)
 2. ${yesterdayData ? 'Verwijst naar de vergelijking met gisteren en wat dat zegt' : 'Moedigt aan om consistent te zijn'}
 3. Een concreet inzicht geeft over de dankbaarheid of intentie van vandaag
-4. Eindigt met één krachtige coaching tip of bemoediging
+4. Eindigt met één scherpe coaching tip of concrete uitdaging voor morgen
 
-Schrijf in de jij-vorm, warm en direct. Geen bullet points — gewone paragrafen.`;
+Schrijf in de jij-vorm.
 
-  const aiAnalyse = await openRouterChat(prompt);
+${SPARRINGPARTNER_STYLE}`;
+
+  const aiAnalyse = sanitizeAiText(await openRouterChat(prompt));
 
   const emailData: SessieAnalyseData = {
     todayDate,

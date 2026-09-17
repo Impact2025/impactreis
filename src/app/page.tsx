@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
 import {
-  ArrowRight, ChevronDown, Check, Plus, Minus,
+  ArrowRight, ChevronDown, Plus, Minus,
   Sunrise, Target, Sparkles, Timer, Trophy, RefreshCw, LogIn,
 } from 'lucide-react';
 
@@ -20,7 +20,7 @@ const FAQS = [
   },
   {
     q: 'Kan ik starten met alleen de app?',
-    a: 'Ja. Je kunt direct instappen met het maandabonnement (€29/mnd). Wil je een vliegende start en je strategische doelen direct messcherp neerzetten? Dan adviseren we het complete Sparren.app Traject inclusief de 3-urige intake.',
+    a: 'Toegang tot Sparren.app verloopt op dit moment op uitnodiging. Neem contact op om te bespreken wat bij jouw situatie past — van alleen de app tot het complete Traject inclusief de 3-urige intake.',
   },
   {
     q: 'Werkt Sparren.app op zowel desktop als mobiel?',
@@ -149,7 +149,6 @@ export default function SalesPage() {
             {[
               { label: 'Hoe het werkt', href: '#hoe-het-werkt' },
               { label: 'De app',        href: '#features'      },
-              { label: 'Aanbod',        href: '#aanbod'        },
             ].map(({ label, href }) => (
               <a key={href} href={href} className="text-[13px] text-ink-soft hover:text-ink transition-colors font-medium">
                 {label}
@@ -423,112 +422,6 @@ export default function SalesPage() {
               <p className="text-[14px] font-bold text-white">Vincent van Munster</p>
               <p className="text-[12px] text-on-surface-inverse/70 mt-0.5">Oprichter van Sparren.app · Sociaal ondernemer</p>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ══ PRICING ═════════════════════════════════════════════ */}
-      <section id="aanbod" className="max-w-5xl mx-auto px-6 py-24">
-        <div className="text-center mb-14">
-          <p className="text-[11px] font-bold text-primary uppercase tracking-[0.18em] mb-3">Het aanbod &amp; tarieven</p>
-          <h2 className="text-[36px] sm:text-[44px] font-bold leading-[1.1] tracking-tight">
-            Kies jouw niveau van regie en ondersteuning
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
-
-          {/* Starter */}
-          <div className="rounded-[20px] border border-line p-7">
-            <p className="text-[10px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-4">Starter (App Only)</p>
-            <h3 className="text-[17px] font-bold text-ink mb-1">Voor de zelfstandige bouwer</h3>
-            <div className="flex items-baseline gap-1.5 mb-7 mt-3">
-              <span className="text-[40px] font-bold text-ink leading-none tracking-tight">€29</span>
-              <span className="text-[12px] text-ink-soft">/ maand<br />opzegbaar</span>
-            </div>
-            <div className="space-y-3 mb-7">
-              {[
-                'Volledige toegang tot Sparren.app',
-                'Ochtend- & avondrituelen',
-                'Focus- & habit-tracking',
-                'Wall of Wins & offline modus (PWA)',
-                'Dagelijkse AI-reflectiecoach',
-              ].map(f => (
-                <div key={f} className="flex items-center gap-2.5">
-                  <Check size={13} className="text-primary shrink-0" strokeWidth={2.5} />
-                  <span className="text-[13px] text-ink">{f}</span>
-                </div>
-              ))}
-            </div>
-            <Link
-              href="/auth/register"
-              className="block text-center py-3.5 rounded-[14px] border border-ink text-ink font-semibold text-[14px] hover:bg-surface-inverse hover:text-white transition-colors"
-            >
-              Start met Sparren.app
-            </Link>
-          </div>
-
-          {/* Traject — recommended */}
-          <div className="rounded-[20px] bg-surface-inverse p-7 relative md:-mt-4 md:pb-11 md:pt-11">
-            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-primary text-white text-[9px] font-bold uppercase tracking-[0.18em] whitespace-nowrap">
-              Meest gekozen
-            </div>
-            <p className="text-[10px] font-bold text-on-surface-inverse/50 uppercase tracking-[0.18em] mb-4">Sparren.app Traject</p>
-            <h3 className="text-[17px] font-bold text-white mb-1">Voor de structurele doorbraak</h3>
-            <div className="flex items-baseline gap-1.5 mb-7 mt-3">
-              <span className="text-[40px] font-bold text-white leading-none tracking-tight">€1.497</span>
-              <span className="text-[12px] text-on-surface-inverse/50">eenmalig<br />incl. 3 mnd app</span>
-            </div>
-            <div className="space-y-3 mb-7">
-              {[
-                '3 uur LSP Kick-off & Intake',
-                'Persoonlijke inrichting van jouw systeem',
-                '3 maanden volledige app-toegang',
-                '2× 1-op-1 coaching sessies (1 uur)',
-                'Proactieve coach-signalen via WhatsApp',
-              ].map(f => (
-                <div key={f} className="flex items-center gap-2.5">
-                  <Check size={13} className="text-primary shrink-0" strokeWidth={2.5} />
-                  <span className="text-[13px] text-white">{f}</span>
-                </div>
-              ))}
-            </div>
-            <Link
-              href="/auth/register"
-              className="block text-center py-3.5 rounded-[14px] bg-primary text-white font-bold text-[14px] shadow-[0_4px_16px_rgba(81,96,80,0.3)] hover:bg-primary-dark transition-colors"
-            >
-              Boek jouw traject
-            </Link>
-          </div>
-
-          {/* Executive & Team */}
-          <div className="rounded-[20px] border border-line p-7">
-            <p className="text-[10px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-4">Executive &amp; Team</p>
-            <h3 className="text-[17px] font-bold text-ink mb-1">Voor directies en impact-teams</h3>
-            <div className="flex items-baseline gap-1.5 mb-7 mt-3">
-              <span className="text-[40px] font-bold text-ink leading-none tracking-tight">€2.950</span>
-              <span className="text-[12px] text-ink-soft">/ kwartaal<br />max. 6 leiders</span>
-            </div>
-            <div className="space-y-3 mb-7">
-              {[
-                'Alles uit het Traject',
-                'Maandelijkse live strategiesessie',
-                'Team capaciteits- en agendabewaking',
-                'Wekelijkse accountability & feedback',
-                'Directe prioriteitssupport',
-              ].map(f => (
-                <div key={f} className="flex items-center gap-2.5">
-                  <Check size={13} className="text-primary shrink-0" strokeWidth={2.5} />
-                  <span className="text-[13px] text-ink">{f}</span>
-                </div>
-              ))}
-            </div>
-            <Link
-              href="/auth/register"
-              className="block text-center py-3.5 rounded-[14px] border border-ink text-ink font-semibold text-[14px] hover:bg-surface-inverse hover:text-white transition-colors"
-            >
-              Vraag beschikbaarheid aan
-            </Link>
           </div>
         </div>
       </section>

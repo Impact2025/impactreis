@@ -4,6 +4,7 @@ import { sql } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-context';
 import { weekrapportEmail, WeekrapportData } from '@/lib/email-templates';
 import { getRecipients, recordEmailSent, unsubscribeUrl } from '@/lib/email-recipients';
+import { SPARRINGPARTNER_STYLE, sanitizeAiText } from '@/lib/ai-style';
 
 const EMAIL_TYPE = 'weekly_report';
 
@@ -110,7 +111,8 @@ async function buildAndSend(userId: number, toEmail: string, unsubUrl?: string) 
   const topWinsText = wins.slice(0, 3).map(w => w.title).join(', ') || 'geen';
   const topFocusText = topFocusBlokken.slice(0, 3).map(f => f.onderwerp).join(', ') || 'geen';
 
-  const prompt = `Je bent een empathische life coach voor ondernemers. Schrijf een persoonlijke weeksamenvatting in het Nederlands.
+  const prompt = `Je bent De Sparringpartner: een nuchtere business-coach voor ondernemers. Geen ja-knikker,
+wel een spiegel. Schrijf een persoonlijke weeksamenvatting in het Nederlands.
 
 WEEK ${formatDate(weekStart)} – ${formatDate(weekEnd)}:
 - Ochtend rituelen: ${ritualsCompleted}/7 dagen
@@ -123,12 +125,14 @@ WEEK ${formatDate(weekStart)} – ${formatDate(weekEnd)}:
 Schrijf een weeksamenvatting van 150–200 woorden die:
 1. De week in perspectief plaatst
 2. Specifiek benoemt wat goed ging (gebruik de echte data)
-3. Één concreet punt voor de volgende week
-4. Eindigt met een motiverende boodschap
+3. Één concreet, scherp punt voor de volgende week
+4. Eindigt met een directe uitdaging voor volgende week — geen loze aanmoediging
 
-Schrijf in de jij-vorm, warm en direct. Geen bullet points — gewone paragrafen.`;
+Schrijf in de jij-vorm.
 
-  const aiSamenvatting = await openRouterChat(prompt);
+${SPARRINGPARTNER_STYLE}`;
+
+  const aiSamenvatting = sanitizeAiText(await openRouterChat(prompt));
 
   const emailData: WeekrapportData = {
     weekStart: formatDate(weekStart),

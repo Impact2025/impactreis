@@ -1047,6 +1047,80 @@ export async function computeWeeklyScorecard(userId: string): Promise<WeeklyScor
   return { metrics, lowestTwo };
 }
 
+const DUMP_FLAG_THRESHOLD = 3;
+
+export type BrainDumpResult =
+  | { ok: true; questions: string[]; patternFlagged: boolean; timesSeen: number }
+  | { ok: false; status: number; error: string };
+
+/** MECHANISME — Gedachtenknop / Executive Zeef: acute ontlading overdag, geen open chat.
+ *  Filtert een chaotische gedachte via drie lenzen (invloed vs. zorg, vluchtgedrag, double-click)
+ *  tot maximaal 2 confronterende vragen — nooit advies, nooit meebewegen, dus geen `messages`-
+ *  geschiedenis zoals buildFollowUpPrompt: elke dump staat op zichzelf. Matcht op coach_lessons
+ *  zoals rememberLesson elders, zodat een 3x terugkerend thema meetelt richting de
+ *  vrijdag-scorecard i.p.v. in een los archief te verdwijnen. */
+export async function runBrainDump(userId: string, organizationId: number | null, text: string): Promise<BrainDumpResult> {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return { ok: false, status: 400, error: 'Lege gedachte — schrijf eerst wat er speelt.' };
+  }
+
+  const [challenger, identity] = await Promise.all([
+    loadChallengerProfile(userId),
+    loadCoachIdentity(organizationId),
+  ]);
+  const object = identity.addressName || 'de ondernemer';
+  const displayName = challenger?.displayName ?? 'De Sparringpartner';
+
+  const prompt = `Jij bent ${displayName}, de executive AI-challenger van ${object}. ${object} dumpt hieronder een chaotische gedachte of frustratie van dit moment — geen vraag om te chatten, maar om de ruis eruit te filteren.
+
+GEDACHTE VAN ${object.toUpperCase()}:
+"${trimmed}"
+
+Filter dit door drie lenzen, in stilte (schrijf de lenzen zelf niet uit):
+1. Invloed vs. zorg — valt dit binnen directe invloed, of is het marktomstandigheden/andermans gedrag waar ${object} niets aan doet?
+2. Vluchtgedrag-check — is dit een strategische prioriteit, of een nieuw idee/project om iets moeilijkers vandaag te ontlopen${challenger ? ` (bekende valkuil: ${challenger.avoidanceLabel})` : ''}?
+3. Double-click — wat kost het als hier nu niets mee gebeurt, of welk besluit wordt hiermee uitgesteld?
+
+Geef ALLEEN dit terug, in exact dit formaat, niets ervoor of erna:
+VRAAG1: <maximaal 20 woorden, één confronterende vraag>
+VRAAG2: <maximaal 20 woorden, een tweede confronterende vraag, alleen als die iets anders raakt dan VRAAG1>
+THEMA: <2-4 woorden die dit onderwerp samenvatten, kleine letters, geen leestekens>`;
+
+  let raw: string;
+  try {
+    raw = await openRouterChat(prompt, 200);
+  } catch (err) {
+    console.error('Brain dump LLM error:', err);
+    return { ok: false, status: 502, error: 'De zeef kon dit nu niet verwerken. Probeer het zo opnieuw.' };
+  }
+
+  const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean);
+  const questions = lines
+    .filter((l) => /^VRAAG\d:/i.test(l))
+    .map((l) => l.replace(/^VRAAG\d:\s*/i, '').trim())
+    .filter(Boolean)
+    .slice(0, 2);
+  const themeLine = lines.find((l) => /^THEMA:/i.test(l));
+  const theme = themeLine ? themeLine.replace(/^THEMA:\s*/i, '').trim() : '';
+
+  if (questions.length === 0) {
+    // Fallback als het model het format niet volgde — toon de ruwe respons liever dan niets.
+    return { ok: true, questions: [raw.trim()], patternFlagged: false, timesSeen: 1 };
+  }
+
+  let patternFlagged = false;
+  let timesSeen = 1;
+  if (theme) {
+    const patternKey = `dump:${slugifyPattern(theme)}`;
+    const lesson = await rememberLesson(userId, organizationId, patternKey, 'mi', `Terugkerende gedachte: ${theme}`);
+    timesSeen = lesson.timesConfirmed;
+    patternFlagged = lesson.timesConfirmed >= DUMP_FLAG_THRESHOLD;
+  }
+
+  return { ok: true, questions, patternFlagged, timesSeen };
+}
+
 export type CoachAnalysisResult =
   | { ok: true; technique: Technique; techniqueLabel: string; reason: string; analysis: string; streak: number }
   | { ok: false; status: number; error: string; technique?: Technique; reason?: string };
