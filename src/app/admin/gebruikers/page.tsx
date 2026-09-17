@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Users, UserCheck, UserPlus, UserX } from 'lucide-react';
+import { Users, UserCheck, UserPlus, UserX, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/admin/Modal';
 
 interface User {
   id: number;
@@ -39,8 +41,11 @@ export default function GebruikersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [toDelete, setToDelete] = useState<User | null>(null);
+  const [confirmText, setConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
+  const load = () => {
     fetch('/api/admin/users')
       .then((r) => r.json())
       .then((data) => {
@@ -49,7 +54,28 @@ export default function GebruikersPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  };
+  useEffect(load, []);
+
+  const closeModal = () => {
+    setToDelete(null);
+    setConfirmText('');
+  };
+
+  const handleDelete = async () => {
+    if (!toDelete) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/users/${toDelete.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Verwijderen mislukt');
+      closeModal();
+      load();
+    } catch {
+      alert('Verwijderen mislukt. Probeer het opnieuw.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const cards = [
     { label: 'Totaal gebruikers', value: stats?.total ?? 0, icon: Users },
@@ -92,6 +118,7 @@ export default function GebruikersPage() {
                 <th className="px-5 py-3 font-medium">Laatste login</th>
                 <th className="px-5 py-3 font-medium">Logins</th>
                 <th className="px-5 py-3 font-medium">Geregistreerd</th>
+                <th className="px-5 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
@@ -109,12 +136,50 @@ export default function GebruikersPage() {
                     <td className="px-5 py-3 text-ink-soft">{formatDate(u.last_login_at)}</td>
                     <td className="px-5 py-3 text-ink-soft">{u.login_count}</td>
                     <td className="px-5 py-3 text-ink-soft">{formatDate(u.created_at)}</td>
+                    <td className="px-5 py-3 text-right">
+                      <Button variant="ghost" size="sm" onClick={() => setToDelete(u)}>
+                        <Trash2 size={16} className="text-error" />
+                      </Button>
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
+      )}
+
+      {toDelete && (
+        <Modal title="Account verwijderen" onClose={closeModal}>
+          <div className="space-y-4">
+            <p className="text-sm text-ink-soft leading-relaxed">
+              Je staat op het punt <strong className="text-ink">{toDelete.email}</strong> en al hun data
+              (rituelen, doelen, cursusvoortgang, voorkeuren) permanent te verwijderen. Dit kan niet ongedaan
+              worden gemaakt.
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-ink-soft mb-2">
+                Typ het e-mailadres ter bevestiging
+              </label>
+              <input
+                type="text"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg bg-surface-sunken border border-line focus:border-primary focus:outline-none text-ink"
+                placeholder={toDelete.email}
+                autoFocus
+              />
+            </div>
+            <Button
+              variant="danger"
+              className="w-full"
+              disabled={confirmText !== toDelete.email || deleting}
+              onClick={handleDelete}
+            >
+              {deleting ? 'Verwijderen...' : 'Definitief verwijderen'}
+            </Button>
+          </div>
+        </Modal>
       )}
     </div>
   );
