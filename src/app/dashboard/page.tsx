@@ -19,8 +19,6 @@ import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { BottomNav } from '@/components/ui/bottom-nav';
 import { WelcomeTour, type TourStep } from '@/components/ui/welcome-tour';
 import type { GoalAction } from '@/lib/goal-actions';
-import { MeditationPlayer } from '@/components/meditations/MeditationPlayer';
-import { getRecommendedMeditation } from '@/lib/meditations/catalog';
 import { FrogButton, type FrogButtonHandle } from '@/components/coach/frog-button';
 
 const dashboardTourSteps: TourStep[] = [
@@ -507,19 +505,6 @@ export default function DashboardPage() {
               </button>
             </div>
           ) : null}
-
-          {/* ══ MEDITATIE — RUSTMOMENT (optioneel, zie Instellingen) ══ */}
-          {!isLocked && settings.meditationsEnabled && (
-            <div className="pb-6">
-              <MeditationPlayer meditation={getRecommendedMeditation()!} compact />
-              <Link
-                href="/meditations"
-                className="mt-2 inline-block text-[11px] font-semibold text-primary hover:underline"
-              >
-                Alle meditaties bekijken →
-              </Link>
-            </div>
-          )}
 
           {/* ══ VANDAAG — routines, hefboomtaken en agenda in één kaart ═══ */}
           {!isLocked && (() => {
