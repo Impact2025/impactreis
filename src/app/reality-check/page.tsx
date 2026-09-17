@@ -297,7 +297,7 @@ export default function RealityCheckPage() {
 
             <div className="flex items-center justify-center gap-2 mt-6 text-[12px] text-ink-soft">
               <Check size={13} className="text-primary" />
-              Ingevuld door meer dan 180 directeuren, bestuurders en serie-ondernemers.
+              Gemaakt door en voor ondernemers.
             </div>
           </div>
         )}

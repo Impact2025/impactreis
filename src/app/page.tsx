@@ -222,7 +222,7 @@ export default function SalesPage() {
           </a>
         </div>
         <p className="text-[12px] text-ink-soft mt-5">
-          Ingevuld door meer dan 180 directeuren, bestuurders en serie-ondernemers. Direct inzicht in je tijdlek.
+          Gemaakt door en voor ondernemers. Direct inzicht in je tijdlek.
         </p>
       </div>
       </section>
