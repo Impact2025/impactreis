@@ -66,8 +66,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     sql`DELETE FROM coach_lessons WHERE organization_id = ${orgId}`,
     sql`DELETE FROM energy_log WHERE organization_id = ${orgId}`,
     sql`DELETE FROM coach_predictions WHERE organization_id = ${orgId}`,
+    sql`DELETE FROM coach_next_steps WHERE organization_id = ${orgId}`,
     sql`DELETE FROM calendar_proposals WHERE organization_id = ${orgId}`,
-    sql`DELETE FROM approval_queue WHERE organization_id = ${orgId}`,
     sql`DELETE FROM onboarding_profiles WHERE organization_id = ${orgId}`,
     sql`DELETE FROM client_bridge_tokens WHERE organization_id = ${orgId}`,
 
