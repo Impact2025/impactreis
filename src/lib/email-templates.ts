@@ -425,6 +425,27 @@ export function magicLinkEmail(loginUrl: string): { subject: string; html: strin
   return { subject, html: base('Inloggen bij Sparren.app', subject, body) };
 }
 
+// ─── Template: Uitnodiging (invite-only toegang) ─────────────────────────────
+// Verstuurd zodra een admin een e-mailadres toevoegt op /admin/uitnodigingen — zonder deze
+// mail weet de uitgenodigde niet dat ze toegang hebben en dat ze zelf naar /auth/login moeten
+// om hun inloglink aan te vragen (het toevoegen aan invited_emails stuurt zelf niets).
+
+export function inviteEmail(appUrl: string): { subject: string; html: string } {
+  const subject = 'Je bent uitgenodigd voor Sparren.app';
+
+  const body = `
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Je hebt toegang tot Sparren.app.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
+      Sparren.app is op dit moment alleen toegankelijk op uitnodiging — en je bent uitgenodigd.
+      Klik op de knop hieronder, vul dit e-mailadres in en je krijgt direct een inloglink.
+    </p>
+
+    <div style="text-align:center;">${btn('Naar Sparren.app →', `${appUrl}/auth/login`)}</div>
+  `;
+
+  return { subject, html: base('Je bent uitgenodigd', subject, body) };
+}
+
 // ─── Template 7: Welkomstmail ────────────────────────────────────────────────
 
 export function welcomeEmail(appUrl: string): { subject: string; html: string } {
