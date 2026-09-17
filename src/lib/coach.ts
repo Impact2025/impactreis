@@ -323,6 +323,15 @@ export async function loadCoachContext(userId: string, organizationId: number | 
       return { probleem: d?.probleem ?? '', gekozenActie: d?.gekozen_actie ?? '', losgelaten: !!d?.losgelaten };
     });
 
+  // Kikker-sprint vandaag zonder resultaat weggeklikt (X-knop, zie dismiss() in frog-button.tsx)?
+  // Telt hetzelfde als een zelf-gerapporteerde 'gevlucht_in_veiligheid' in het avondritueel —
+  // stilletjes wegklikken is precies het vluchtgedrag dat deze knop moet doorbreken, dus mag niet
+  // geruisloos verdwijnen. Alleen toepassen als het avondritueel dat nog niet zelf al zei (respecteer
+  // een eigen, later ingevuld antwoord).
+  const todayKikker = (morningRows as DailyLogRow[]).find((r) => r.date_string === today && r.type === 'kikker');
+  const kikkerDismissed = todayKikker ? parseData(todayKikker.data)?.dismissed === true : false;
+  const kikkerDismissedTask = kikkerDismissed ? (parseData(todayKikker!.data)?.task as string | undefined) ?? null : null;
+
   const openLeverageTask = (goalRows as { data: any }[])
     .map((r) => r.data)
     .filter((g) => !g.completed && g.isRock && g.quarter === currentQuarter)
@@ -351,6 +360,10 @@ export async function loadCoachContext(userId: string, organizationId: number | 
     today: {
       ...(todayMorning ? parseData(todayMorning.data) : {}),
       ...(todayEvening ? parseData(todayEvening.data) : {}),
+      ...(kikkerDismissed && !todayEvening ? {
+        eveningVerdict: 'gevlucht_in_veiligheid',
+        eveningVerdictDetail: kikkerDismissedTask ? `Kikker-sprint weggeklikt: ${kikkerDismissedTask}` : 'Kikker-sprint weggeklikt zonder resultaat.',
+      } : {}),
     },
     yesterday: yesterdayMorning ? parseData(yesterdayMorning.data) : null,
     streak,
@@ -655,14 +668,23 @@ Schrijf een coach-reflectie van 120-180 woorden in het Nederlands, in de jij-vor
 
 /** Laatste bekende avond-realiteitstoets van vandaag — losstaand van loadCoachContext (die
  *  alleen ochtend+avond van vandaag/gisteren samenvoegt voor de reflectie-prompt) omdat de
- *  coach-chat een lichter path is dat geen hele CoachContext hoeft op te bouwen. */
+ *  coach-chat een lichter path is dat geen hele CoachContext hoeft op te bouwen. Telt een
+ *  weggeklikte kikker-sprint (X-knop, geen eigen avondritueel-antwoord) net zo zwaar als een
+ *  zelf-gerapporteerde 'gevlucht_in_veiligheid' — zie dezelfde afweging in loadCoachContext. */
 async function loadTodayEveningVerdict(userId: string): Promise<string | null> {
   const today = new Date().toISOString().split('T')[0];
   const rows = await sql`
     SELECT data FROM daily_logs WHERE user_id = ${userId} AND type = 'evening' AND date_string = ${today} LIMIT 1
   `;
   const data = (rows as { data: any }[])[0]?.data;
-  return parseData(data)?.eveningVerdict ?? null;
+  const verdict = parseData(data)?.eveningVerdict ?? null;
+  if (verdict) return verdict;
+
+  const kikkerRows = await sql`
+    SELECT data FROM daily_logs WHERE user_id = ${userId} AND type = 'kikker' AND date_string = ${today} LIMIT 1
+  `;
+  const kikkerData = (kikkerRows as { data: any }[])[0]?.data;
+  return parseData(kikkerData)?.dismissed === true ? 'gevlucht_in_veiligheid' : null;
 }
 
 /**
@@ -957,19 +979,88 @@ function slugifyPattern(text: string): string {
     .slice(0, 60);
 }
 
-/** MECHANISME 1 — Kikker-knop: genereert 3 korte, direct te gebruiken openingszinnen voor het
- *  telefoontje/bericht dat wordt uitgesteld, gebaseerd op het bekende vluchtgedrag en de top-
- *  tijdvreters uit de onboarding. Geen audioprimer (geen voice-assets beschikbaar) — alleen tekst,
- *  bedoeld om precies bij de 15-minuten countdown te verschijnen zodat er niet nagedacht hoeft te
- *  worden, alleen getypt of gebeld. */
-export async function generateFrogOpeners(userId: string, taskDescription: string | null): Promise<{ displayName: string; lines: string[] }> {
+export type FrogModus = 'bellen' | 'schrijven' | 'bouwen' | 'analyseren';
+
+// Categorie uit het ochtendritueel (kikkerCategory, zie TIME_WASTER_OPTIONS) geeft alleen een
+// betrouwbare default voor de ondubbelzinnige gevallen — 'brandjes_blussen' kan van alles zijn
+// (bellen, bouwen, administratie) en leunt daarom volledig op de vrije tekst hieronder.
+const FROG_MODUS_BY_CATEGORY: Partial<Record<string, FrogModus>> = {
+  telefonische_bereikbaarheid: 'bellen',
+  offertes_opvolging: 'bellen',
+  inbox_email: 'schrijven',
+  facturatie_debiteuren: 'schrijven',
+  personeelsplanning: 'schrijven',
+};
+
+const FROG_MODUS_KEYWORDS: [FrogModus, string[]][] = [
+  ['bouwen', ['bouwen', 'coderen', 'code', 'programmeren', 'ontwikkelen', 'app', 'systeem', 'automatisering', 'techniek']],
+  ['analyseren', ['marge', 'calculatie', 'cijfers', 'analyse', 'berekening', 'begroting', 'budget', 'rapportage']],
+  ['schrijven', ['schrijven', 'mail', 'mailen', 'offerte', 'contract', 'voorstel', 'tekst', 'blog', 'artikel']],
+  ['bellen', ['bellen', 'telefoon', 'telefoontje', 'gesprek', 'nabellen']],
+];
+
+/** Deterministisch, geen LLM: welke actie-modus dit is. Zonder dit stuurde de kikker-knop altijd
+ *  op bellen ("Ik pak nu de telefoon", telefoonicoon) — ook als de kikker "blijven bouwen aan het
+ *  systeem" was, wat de knop voor iedereen met een andere hefboom dan bellen liet mismatchen. */
+export function determineFrogModus(category: string | null | undefined, taskText: string): FrogModus {
+  const lower = taskText.toLowerCase();
+  for (const [modus, keywords] of FROG_MODUS_KEYWORDS) {
+    if (keywords.some((k) => lower.includes(k))) return modus;
+  }
+  if (category && FROG_MODUS_BY_CATEGORY[category]) return FROG_MODUS_BY_CATEGORY[category]!;
+  return 'bellen';
+}
+
+const FROG_MODUS_INSTRUCTIONS: Record<FrogModus, string> = {
+  bellen: 'Dit is een telefoongesprek of bericht dat wordt uitgesteld. Geef 3 openingszinnen die de ondernemer letterlijk kan zeggen of typen om dit gesprek nu te starten.',
+  schrijven: 'Dit is schrijfwerk (mail, offerte, tekst) dat wordt uitgesteld. Geef 3 eerste zinnen die de ondernemer nu letterlijk kan intypen om dit stuk te beginnen — geen telefoontaal.',
+  bouwen: 'Dit is bouw- of ontwikkelwerk dat wordt uitgesteld. Geef 3 concrete eerste acties (geen zinnen om te zeggen, geen telefoontaal) om dit nu 15 minuten te bouwen — bijvoorbeeld welk bestand of onderdeel als eerste.',
+  analyseren: 'Dit is een analyse of berekening die wordt uitgesteld. Geef 3 concrete eerste stappen (geen telefoontaal) om deze analyse nu 15 minuten te starten — welk cijfer of welke vraag als eerste.',
+};
+
+const FROG_MODUS_FALLBACK_LINES: Record<FrogModus, (task: string) => string[]> = {
+  bellen: (task) => [
+    `Hoi, ik bel je nu even over ${task} — heb je twee minuten?`,
+    `Ik wilde dit niet langer laten liggen: ${task}. Zullen we dat nu afronden?`,
+    `Kort en direct: ${task}. Kunnen we dat nu even regelen?`,
+  ],
+  schrijven: (task) => [
+    `Open het document nu en schrijf de eerste zin over ${task} — niet perfect, gewoon staan.`,
+    `Begin met één bullet: wat ${task} in essentie moet zeggen. De rest volgt.`,
+    `Zet nu een titel neer voor ${task} en typ door, ook als het rommelig is.`,
+  ],
+  bouwen: (task) => [
+    `Open nu het bestand voor ${task} en maak de eerste, kleinste wijziging.`,
+    `Kies één onderdeel van ${task} en bouw alleen dat, nu.`,
+    `Zet een timer van 15 minuten en werk uitsluitend aan ${task} — geen andere tabbladen.`,
+  ],
+  analyseren: (task) => [
+    `Open nu het cijfer dat bij ${task} hoort en schrijf op wat je ziet.`,
+    `Begin met de simpelste berekening binnen ${task} — de rest volgt daaruit.`,
+    `Zet nu drie vragen op papier die ${task} moet beantwoorden.`,
+  ],
+};
+
+/** MECHANISME 1 — Kikker-knop: genereert 3 korte, direct te gebruiken eerste-stap-zinnen voor
+ *  de taak die wordt uitgesteld, gebaseerd op het bekende vluchtgedrag en de top-tijdvreters uit
+ *  de onboarding. Geen audioprimer (geen voice-assets beschikbaar) — alleen tekst, bedoeld om
+ *  precies bij de 15-minuten countdown te verschijnen zodat er niet nagedacht hoeft te worden,
+ *  alleen begonnen. `category` (kikkerCategory) + de taaktekst bepalen de modus (determineFrogModus)
+ *  zodat de UI niet altijd naar "bellen" wijst — zie FrogButton. */
+export async function generateFrogOpeners(
+  userId: string,
+  taskDescription: string | null,
+  category: string | null = null
+): Promise<{ displayName: string; modus: FrogModus; lines: string[] }> {
   const challenger = await loadChallengerProfile(userId);
   const displayName = challenger?.displayName ?? 'je coach';
   const task = taskDescription?.trim() || challenger?.topTimeWasterLabels[0] || 'de taak die je uitstelt';
+  const modus = determineFrogModus(category, `${task} ${category ?? ''}`);
 
-  const prompt = `Jij bent ${displayName}, een nuchtere, directieve executive-challenger voor een ondernemer.
+  const prompt = `Jij bent een nuchtere, directieve executive-challenger voor een ondernemer.
 Context: de ondernemer stelt dit uit: "${task}"${challenger ? `. Bekende valkuil: ${challenger.avoidanceLabel}.` : '.'}
-Geef EXACT 3 korte openingszinnen (max 20 woorden elk) die de ondernemer letterlijk kan gebruiken om dit gesprek of bericht nu te starten, zonder verder na te denken. Geen inleiding, geen uitleg — alleen de 3 zinnen, elk op een eigen regel, genummerd "1." "2." "3.".`;
+${FROG_MODUS_INSTRUCTIONS[modus]}
+Geef EXACT 3 korte zinnen (max 20 woorden elk), zonder verder na te denken. Geen inleiding, geen uitleg — alleen de 3 zinnen, elk op een eigen regel, genummerd "1." "2." "3.".`;
 
   try {
     const raw = await openRouterChat(prompt, 200);
@@ -978,18 +1069,11 @@ Geef EXACT 3 korte openingszinnen (max 20 woorden elk) die de ondernemer letterl
       .map((l) => l.replace(/^\s*\d+[.)]\s*/, '').trim())
       .filter(Boolean)
       .slice(0, 3);
-    if (lines.length === 3) return { displayName, lines };
+    if (lines.length === 3) return { displayName, modus, lines };
   } catch (err) {
     console.error('Kikker-opener LLM error:', err);
   }
-  return {
-    displayName,
-    lines: [
-      `Hoi, ik bel je nu even over ${task} — heb je twee minuten?`,
-      `Ik wilde dit niet langer laten liggen: ${task}. Zullen we dat nu afronden?`,
-      `Kort en direct: ${task}. Kunnen we dat nu even regelen?`,
-    ],
-  };
+  return { displayName, modus, lines: FROG_MODUS_FALLBACK_LINES[modus](task) };
 }
 
 export interface ScorecardMetric {

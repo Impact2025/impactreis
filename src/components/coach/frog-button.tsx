@@ -1,11 +1,68 @@
 'use client';
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Flame, X, RefreshCw, Phone } from 'lucide-react';
+import { Flame, X, RefreshCw, Phone, PenLine, Code2, Calculator } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { getToday } from '@/lib/weekflow.service';
 import { TIME_WASTER_OPTIONS } from '@/lib/onboarding';
+import type { FrogModus } from '@/lib/coach';
+
+// Confrontatie per tijdvreter-categorie i.p.v. een verzonnen personage ("Marcus zegt: ...") —
+// een spiegel praat niet over zichzelf in de derde persoon, die toont het feitelijke gedrag.
+const KIKKER_HEADLINES: Partial<Record<string, string>> = {
+  inbox_email: 'Je verstopt je in de inbox.',
+  offertes_opvolging: 'Je laat offertes koud worden.',
+  telefonische_bereikbaarheid: 'Je wacht tot de telefoon jou vindt.',
+  facturatie_debiteuren: 'Je stelt het innen van je eigen geld uit.',
+  personeelsplanning: 'Je verdrinkt in het rooster, niet in het echte werk.',
+  brandjes_blussen: 'Je vlucht in operationele ruis.',
+};
+const DEFAULT_KIKKER_HEADLINE = 'Je stelt dit uit.';
+
+// Bepaalt icoon/labels per actie-modus — zie determineFrogModus in lib/coach.ts. Zonder dit
+// stuurde de UI altijd op bellen ("Ik pak nu de telefoon"), ook bij bouw- of schrijfwerk.
+const MODUS_CONFIG: Record<FrogModus, {
+  icon: typeof Phone;
+  sectionLabel: string;
+  fallbackText: string;
+  confirmLabel: string;
+  confirmQuestion: string;
+  confirmYesLabel: string;
+}> = {
+  bellen: {
+    icon: Phone,
+    sectionLabel: 'Openingszinnen — kies er één',
+    fallbackText: 'Geen zinnen beschikbaar — bel toch. Nu.',
+    confirmLabel: 'Ik pak nu de telefoon',
+    confirmQuestion: 'Heb je gebeld?',
+    confirmYesLabel: 'Ja, gebeld',
+  },
+  schrijven: {
+    icon: PenLine,
+    sectionLabel: 'Eerste zinnen — kies er één',
+    fallbackText: 'Geen zinnen beschikbaar — schrijf toch. Nu.',
+    confirmLabel: 'Ik begin nu met schrijven',
+    confirmQuestion: 'Heb je geschreven?',
+    confirmYesLabel: 'Ja, geschreven',
+  },
+  bouwen: {
+    icon: Code2,
+    sectionLabel: 'Eerste acties — kies er één',
+    fallbackText: 'Geen acties beschikbaar — bouw toch. Nu.',
+    confirmLabel: 'Ik begin nu met bouwen',
+    confirmQuestion: 'Heb je gebouwd?',
+    confirmYesLabel: 'Ja, gebouwd',
+  },
+  analyseren: {
+    icon: Calculator,
+    sectionLabel: 'Eerste stappen — kies er één',
+    fallbackText: 'Geen stappen beschikbaar — begin toch. Nu.',
+    confirmLabel: 'Ik begin nu met de cijfers',
+    confirmQuestion: 'Is het gelukt?',
+    confirmYesLabel: 'Ja, gedaan',
+  },
+};
 
 const SELF_TIMER_SECONDS = 15 * 60;
 const MAX_CALENDAR_DEADLINE_SECONDS = 45 * 60;
@@ -45,9 +102,10 @@ export const FrogButton = forwardRef<FrogButtonHandle, FrogButtonProps>(function
   const [running, setRunning] = useState(false);
   const [deadline, setDeadline] = useState<{ summary: string; at: string } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [displayName, setDisplayName] = useState('Je coach');
   const [lines, setLines] = useState<string[]>([]);
+  const [modus, setModus] = useState<FrogModus>('bellen');
   const [todaysFrog, setTodaysFrog] = useState<string | null>(null);
+  const [todaysFrogCategory, setTodaysFrogCategory] = useState<string | null>(null);
   const [checkedToday, setCheckedToday] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [weekCount, setWeekCount] = useState<number | null>(null);
@@ -83,6 +141,7 @@ export const FrogButton = forwardRef<FrogButtonHandle, FrogButtonProps>(function
         const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
         const category = data?.kikkerCategory as string | undefined;
         if (category) {
+          setTodaysFrogCategory(category);
           const label = TIME_WASTER_OPTIONS.find((o) => o.value === category)?.label ?? category;
           setTodaysFrog(data?.kikkerDetail ? `${label} — ${data.kikkerDetail}` : label);
         }
@@ -140,7 +199,7 @@ export const FrogButton = forwardRef<FrogButtonHandle, FrogButtonProps>(function
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ task: todaysFrog }),
+      body: JSON.stringify({ task: todaysFrog, category: todaysFrogCategory }),
     })
       .then((res) => (res.ok ? res.json() : null))
       .catch(() => null);
@@ -154,7 +213,7 @@ export const FrogButton = forwardRef<FrogButtonHandle, FrogButtonProps>(function
       setSeconds(SELF_TIMER_SECONDS);
     }
     if (linesData) {
-      setDisplayName(linesData.displayName ?? 'Je coach');
+      setModus((linesData.modus as FrogModus) ?? 'bellen');
       setLines(linesData.lines ?? []);
     }
     setLoading(false);
@@ -169,13 +228,14 @@ export const FrogButton = forwardRef<FrogButtonHandle, FrogButtonProps>(function
     setDeadline(null);
   };
 
-  const logOutcome = async (called: boolean) => {
+  const logOutcome = async (called: boolean, dismissed = false) => {
     const todayStr = getToday('Europe/Amsterdam');
     try {
       await api.logs.create({
         type: 'kikker',
         date: todayStr,
         called,
+        dismissed,
         task: todaysFrog,
         secondsLeft: seconds,
         deadlineSource: deadline ? 'calendar' : 'self',
@@ -187,6 +247,11 @@ export const FrogButton = forwardRef<FrogButtonHandle, FrogButtonProps>(function
     }
     close();
   };
+
+  // X-knop: registreert dit als ontweken sprint (zelfde gewicht als 'gevlucht_in_veiligheid'
+  // in het avondritueel — zie loadCoachContext/loadTodayEveningVerdict in lib/coach.ts) i.p.v.
+  // geruisloos wegklikken zonder spoor.
+  const dismiss = () => { void logOutcome(false, true); };
 
   return (
     <>
@@ -212,15 +277,20 @@ export const FrogButton = forwardRef<FrogButtonHandle, FrogButtonProps>(function
         </button>
       )}
 
-      {open && (
+      {open && (() => {
+        const cfg = MODUS_CONFIG[modus];
+        const ModusIcon = cfg.icon;
+        const headline = (todaysFrogCategory && KIKKER_HEADLINES[todaysFrogCategory]) ?? DEFAULT_KIKKER_HEADLINE;
+        return (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-4">
           <div className="w-full max-w-md bg-white rounded-[20px] p-6 space-y-5">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[15px] font-bold text-ink">{displayName} zegt: stop met uitstellen</p>
-                {todaysFrog && <p className="text-[12px] text-ink-soft truncate mt-0.5">{todaysFrog}</p>}
+                <p className="text-[15px] font-bold text-ink">{headline}</p>
+                <p className="text-[12px] text-ink-soft mt-0.5">15 minuten sprint. Geen uitvluchten, geen uitstel.</p>
+                {todaysFrog && <p className="text-[11px] text-ink-soft/70 truncate mt-1">{todaysFrog}</p>}
               </div>
-              <button onClick={close} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-sunken shrink-0">
+              <button onClick={dismiss} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-sunken shrink-0">
                 <X size={16} className="text-ink-soft" />
               </button>
             </div>
@@ -231,7 +301,7 @@ export const FrogButton = forwardRef<FrogButtonHandle, FrogButtonProps>(function
               </p>
               <p className="text-[12px] text-ink-soft mt-1">
                 {seconds === 0
-                  ? 'Tijd om. Heb je gebeld?'
+                  ? `Tijd om. ${cfg.confirmQuestion}`
                   : deadline
                   ? `Tot "${deadline.summary}" om ${formatClock(deadline.at)}`
                   : 'Zelfgekozen sprint — geen excuus, geen echte deadline.'}
@@ -239,7 +309,7 @@ export const FrogButton = forwardRef<FrogButtonHandle, FrogButtonProps>(function
             </div>
 
             <div className="space-y-2">
-              <p className="text-[11px] font-medium text-ink-soft uppercase tracking-wider">Openingszinnen — kies er één</p>
+              <p className="text-[11px] font-medium text-ink-soft uppercase tracking-wider">{cfg.sectionLabel}</p>
               {loading ? (
                 <div className="flex items-center gap-2 text-[13px] text-ink-soft py-3">
                   <RefreshCw size={14} className="animate-spin" /> Zinnen genereren...
@@ -247,18 +317,18 @@ export const FrogButton = forwardRef<FrogButtonHandle, FrogButtonProps>(function
               ) : lines.length > 0 ? (
                 lines.map((line, i) => (
                   <div key={i} className="rounded-[12px] bg-surface-sunken px-4 py-3 flex items-start gap-2.5">
-                    <Phone size={14} className="text-primary shrink-0 mt-0.5" />
+                    <ModusIcon size={14} className="text-primary shrink-0 mt-0.5" />
                     <p className="text-[13px] text-ink leading-relaxed">{line}</p>
                   </div>
                 ))
               ) : (
-                <p className="text-[13px] text-ink-soft py-2">Geen zinnen beschikbaar — bel toch. Nu.</p>
+                <p className="text-[13px] text-ink-soft py-2">{cfg.fallbackText}</p>
               )}
             </div>
 
             {confirming ? (
               <div className="space-y-2">
-                <p className="text-[13px] text-ink text-center font-medium">Heb je gebeld?</p>
+                <p className="text-[13px] text-ink text-center font-medium">{cfg.confirmQuestion}</p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => logOutcome(false)}
@@ -270,7 +340,7 @@ export const FrogButton = forwardRef<FrogButtonHandle, FrogButtonProps>(function
                     onClick={() => logOutcome(true)}
                     className="flex-1 py-3 rounded-[14px] bg-primary text-white font-bold text-[14px]"
                   >
-                    Ja, gebeld
+                    {cfg.confirmYesLabel}
                   </button>
                 </div>
               </div>
@@ -279,12 +349,13 @@ export const FrogButton = forwardRef<FrogButtonHandle, FrogButtonProps>(function
                 onClick={() => setConfirming(true)}
                 className="w-full py-3 rounded-[14px] bg-primary text-white font-bold text-[14px]"
               >
-                Ik pak nu de telefoon
+                {cfg.confirmLabel}
               </button>
             )}
           </div>
         </div>
-      )}
+        );
+      })()}
     </>
   );
 });

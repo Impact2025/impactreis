@@ -13,13 +13,15 @@ export async function POST(request: NextRequest) {
   if (limited) return limited;
 
   let taskDescription: string | null = null;
+  let category: string | null = null;
   try {
     const body = await request.json();
     if (typeof body?.task === 'string') taskDescription = body.task;
+    if (typeof body?.category === 'string') category = body.category;
   } catch {
     // geen body meegestuurd — val terug op de bekende tijdvreters/valkuil
   }
 
-  const result = await generateFrogOpeners(String(authCtx.userId), taskDescription);
+  const result = await generateFrogOpeners(String(authCtx.userId), taskDescription, category);
   return NextResponse.json(result);
 }
