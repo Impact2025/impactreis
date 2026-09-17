@@ -60,3 +60,34 @@ export function CheckRow({ selected, onClick, disabled, children }: { selected: 
     </button>
   );
 }
+
+export const ISO_WEEKDAY_LABELS: { value: number; label: string }[] = [
+  { value: 1, label: 'Ma' },
+  { value: 2, label: 'Di' },
+  { value: 3, label: 'Wo' },
+  { value: 4, label: 'Do' },
+  { value: 5, label: 'Vr' },
+  { value: 6, label: 'Za' },
+  { value: 7, label: 'Zo' },
+];
+
+// Gedeeld tussen Instellingen (Ritueel-instellingen) en de onboarding-wizard (stap "Zet je ritme")
+// — zelfde werkdagen-toggle, zodat wat je bij de intake instelt er in Instellingen identiek uitziet.
+export function WeekdayPicker({ selectedDays, onToggle }: { selectedDays: number[]; onToggle: (day: number) => void }) {
+  return (
+    <div className="flex gap-1.5">
+      {ISO_WEEKDAY_LABELS.map(({ value, label }) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => onToggle(value)}
+          className={`w-9 h-9 rounded-[10px] text-[12px] font-semibold transition-colors ${
+            selectedDays.includes(value) ? 'bg-primary text-white' : 'bg-surface-sunken text-ink-soft'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}

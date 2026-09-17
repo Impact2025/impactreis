@@ -18,7 +18,7 @@ import {
 import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { DEFAULT_RITUAL_SETTINGS, formatHour, type RitualSettings } from '@/lib/weekflow.service';
 import { BottomNav } from '@/components/ui/bottom-nav';
-import { ChipButton, CardOption, CheckRow } from '@/components/ui/dna-controls';
+import { ChipButton, CardOption, CheckRow, WeekdayPicker, ISO_WEEKDAY_LABELS } from '@/components/ui/dna-controls';
 import {
   INDUSTRY_OPTIONS,
   TEAM_SIZE_OPTIONS,
@@ -41,16 +41,6 @@ const COMMON_TIMEZONES = [
   'Asia/Dubai',
   'Australia/Sydney',
   'UTC',
-];
-
-const ISO_WEEKDAY_LABELS: { value: number; label: string }[] = [
-  { value: 1, label: 'Ma' },
-  { value: 2, label: 'Di' },
-  { value: 3, label: 'Wo' },
-  { value: 4, label: 'Do' },
-  { value: 5, label: 'Vr' },
-  { value: 6, label: 'Za' },
-  { value: 7, label: 'Zo' },
 ];
 
 interface EmailPreferences {
@@ -486,21 +476,7 @@ export default function SettingsPage() {
             </div>
             <div className="px-5 py-4">
               <p className="text-[14px] font-medium text-ink mb-2">Werkdagen</p>
-              <div className="flex gap-1.5">
-                {ISO_WEEKDAY_LABELS.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    onClick={() => handleToggleWorkDay(value)}
-                    className={`w-9 h-9 rounded-[10px] text-[12px] font-semibold transition-colors ${
-                      ritualSettings.workDays.includes(value)
-                        ? 'bg-primary text-white'
-                        : 'bg-surface-sunken text-ink-soft'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+              <WeekdayPicker selectedDays={ritualSettings.workDays} onToggle={handleToggleWorkDay} />
               <p className="text-[12px] text-ink-soft mt-2">
                 Op niet-geselecteerde dagen worden ochtend/avond/weekstart niet als &quot;gemist&quot; geteld.
               </p>

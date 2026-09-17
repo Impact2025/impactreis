@@ -17,7 +17,7 @@ export interface NotificationPreferences {
   createBeforeConsumeEnabled: boolean;
 }
 
-const DEFAULT_PREFERENCES: NotificationPreferences = {
+export const DEFAULT_PREFERENCES: NotificationPreferences = {
   enabled: true,
   morningTime: '06:30',
   eveningTime: '21:30',

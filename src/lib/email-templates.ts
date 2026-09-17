@@ -399,6 +399,32 @@ export function resetWachtwoordEmail(resetUrl: string): { subject: string; html:
   return { subject, html: base('Wachtwoord resetten', subject, body) };
 }
 
+// ─── Template: Inloglink (Auth.js magic link) ────────────────────────────────
+
+export function magicLinkEmail(loginUrl: string): { subject: string; html: string } {
+  const subject = 'Je inloglink voor Sparren.app';
+
+  const body = `
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Klik om in te loggen.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
+      Klik op de knop hieronder om in te loggen bij Sparren.app. Geen wachtwoord nodig — deze link is eenmalig
+      en verloopt na 24 uur.
+    </p>
+
+    <div style="text-align:center;margin-bottom:28px;">
+      ${btn('Inloggen bij Sparren.app →', loginUrl)}
+    </div>
+
+    <div style="background:#f4f3f1;border-radius:12px;padding:16px 20px;">
+      <p style="margin:0;font-size:12px;color:#747872;line-height:1.6;">
+        Heb jij dit niet aangevraagd? Dan kun je deze e-mail veilig negeren.
+      </p>
+    </div>
+  `;
+
+  return { subject, html: base('Inloggen bij Sparren.app', subject, body) };
+}
+
 // ─── Template 7: Welkomstmail ────────────────────────────────────────────────
 
 export function welcomeEmail(appUrl: string): { subject: string; html: string } {

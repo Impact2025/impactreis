@@ -17,11 +17,64 @@ import {
   labelFor,
   type UserOnboardingProfile,
 } from '@/lib/onboarding';
-import { ChipButton, CardOption, CheckRow } from '@/components/ui/dna-controls';
+import { ChipButton, CardOption, CheckRow, WeekdayPicker } from '@/components/ui/dna-controls';
+import { DEFAULT_RITUAL_SETTINGS } from '@/lib/weekflow.service';
+import { DEFAULT_PREFERENCES, isNotificationSupported, requestPermission, savePreferences, scheduleAllNotifications } from '@/lib/notifications.service';
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
+
+const STEP_LABELS = [
+  'je challenger',
+  'je naam',
+  'je bedrijf',
+  'je tijdvreters',
+  'je vluchtgedrag',
+  'je kwartaalhefboom',
+  'de consequentie',
+  'je ritme',
+];
+
+const COMMON_TIMEZONES = [
+  'Europe/Amsterdam',
+  'Europe/London',
+  'Europe/Berlin',
+  'Europe/Paris',
+  'Europe/Madrid',
+  'America/New_York',
+  'America/Los_Angeles',
+  'Asia/Singapore',
+  'Asia/Dubai',
+  'Australia/Sydney',
+  'UTC',
+];
 
 type Gender = 'male' | 'female';
+
+// Advies op stap 8 grijpt terug op wat de ondernemer net over zichzelf invulde (stap 4-6), zodat
+// het voelt als een coach die meedenkt i.p.v. een generiek instellingenformulier.
+function scheduleAdvice(topTimeWasters: string[], avoidanceBehavior: string | null, leverageGoal: string | null) {
+  const morning = topTimeWasters.includes('inbox_email')
+    ? 'Jij gaf aan dat je inbox een tijdvreter is — zet je ochtendreminder vóór 08:00, zodat je het ritueel doet vóórdat de mail opent.'
+    : topTimeWasters.includes('telefonische_bereikbaarheid')
+    ? 'Bereikbaarheid vreet je tijd — start vroeg, vóórdat de telefoon begint te rinkelen.'
+    : avoidanceBehavior === 'telefoontjes_uitstellen'
+    ? 'Jij schuift moeilijke gesprekken voor je uit — een vroege reminder geeft je een duwtje vóórdat de dag je meesleurt.'
+    : 'Een vast moment aan het begin van de dag houdt het ritueel een gewoonte in plaats van een taak.';
+
+  const workDays = avoidanceBehavior === 'te_snel_ja_zeggen'
+    ? 'Bewaak je grenzen ook hier: laat weekenden weekenden, dan telt het niet mee als "gemist".'
+    : 'Standaard maandag t/m vrijdag — pas aan als jouw werkweek er anders uitziet.';
+
+  const focus = leverageGoal === 'capaciteit'
+    ? 'Jouw doel is capaciteit vrijspelen — reserveer je focusblokken vroeg, vóórdat operationele ruis de dag vult.'
+    : leverageGoal === 'marge'
+    ? 'Jouw doel is marge — gebruik de focusblokken voor het werk dat je uurtarief of projectprijs echt omhoog brengt, niet voor de inbox.'
+    : leverageGoal === 'rust_focus'
+    ? 'Jouw doel is rust & focus — hou de blokken kort en scherp, zodat er ook echt ruimte overblijft.'
+    : 'Twee vaste blokken houden je belangrijkste werk uit de waan van de dag.';
+
+  return { morning, workDays, focus };
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -40,6 +93,17 @@ export default function OnboardingPage() {
   const [leverageGoal, setLeverageGoal] = useState<string | null>(null);
   const [painfulConsequence, setPainfulConsequence] = useState('');
   const [meditationsEnabled, setMeditationsEnabled] = useState(true);
+
+  // Stap 8 — "Zet je ritme": ritueel-instellingen die anders pas bij toeval in Instellingen
+  // ontdekt worden. Alles heeft al een verstandige default, dus deze stap is nooit blokkerend.
+  const [timezone, setTimezone] = useState(DEFAULT_RITUAL_SETTINGS.timezone);
+  const [workDays, setWorkDays] = useState<number[]>(DEFAULT_RITUAL_SETTINGS.workDays);
+  const [morningTime, setMorningTime] = useState(DEFAULT_PREFERENCES.morningTime);
+  const [eveningTime, setEveningTime] = useState(DEFAULT_PREFERENCES.eveningTime);
+  const [focusBlock1Start, setFocusBlock1Start] = useState(DEFAULT_RITUAL_SETTINGS.focusBlock1Start);
+  const [focusBlock2Start, setFocusBlock2Start] = useState(DEFAULT_RITUAL_SETTINGS.focusBlock2Start);
+  const [notifOptIn, setNotifOptIn] = useState(true);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission | 'unsupported'>('default');
 
   // Coach-verdieping op de consequentie (stap 7): optioneel, max 2 vragen. Volledig additief —
   // blokkeert nooit "Activeer mijn werkruimte", dat blijft alleen aan painfulConsequence hangen.
@@ -135,6 +199,16 @@ export default function OnboardingPage() {
   };
 
   useEffect(() => {
+    try {
+      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (detected) setTimezone(detected);
+    } catch {
+      // val terug op DEFAULT_RITUAL_SETTINGS.timezone
+    }
+    setNotifPermission(isNotificationSupported() ? Notification.permission : 'unsupported');
+  }, []);
+
+  useEffect(() => {
     if (!AuthService.isAuthenticated()) { router.push('/auth/login'); return; }
     (async () => {
       try {
@@ -161,6 +235,20 @@ export default function OnboardingPage() {
     });
   };
 
+  const toggleWorkDay = (day: number) => {
+    setWorkDays((prev) => {
+      const next = prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day];
+      if (next.length === 0) return prev; // minstens één werkdag
+      return next.sort((a, b) => a - b);
+    });
+  };
+
+  const handleEnableNotifications = async () => {
+    const permission = await requestPermission();
+    setNotifPermission(permission);
+    if (permission !== 'granted') setNotifOptIn(false);
+  };
+
   const canProceed = (): boolean => {
     switch (step) {
       case 1: return gender !== null;
@@ -170,6 +258,7 @@ export default function OnboardingPage() {
       case 5: return avoidanceBehavior !== null;
       case 6: return leverageGoal !== null;
       case 7: return painfulConsequence.trim().length > 0;
+      case 8: return true;
       default: return false;
     }
   };
@@ -223,8 +312,10 @@ export default function OnboardingPage() {
       await fetch('/api/ritual-settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ meditationsEnabled }),
+        body: JSON.stringify({ meditationsEnabled, timezone, workDays, focusBlock1Start, focusBlock2Start }),
       }).catch(() => {});
+      savePreferences({ enabled: notifOptIn, morningTime, eveningTime });
+      if (notifOptIn && notifPermission === 'granted') scheduleAllNotifications();
       router.push('/dashboard');
     } catch {
       setError('Er ging iets mis. Probeer het opnieuw.');
@@ -248,7 +339,7 @@ export default function OnboardingPage() {
           <Image src="/logo.png" alt="Sparren.app logo" width={36} height={36} className="rounded-full" priority />
           <div className="flex-1">
             <p className="text-[14px] font-semibold text-ink">Sparren.app</p>
-            <p className="text-[11px] text-ink-soft">Stap {step} van {TOTAL_STEPS} — je Bedrijfs-DNA</p>
+            <p className="text-[11px] text-ink-soft">Stap {step} van {TOTAL_STEPS} — {STEP_LABELS[step - 1]}</p>
           </div>
         </div>
         <div className="max-w-lg mx-auto mt-3 h-1 bg-surface-sunken rounded-full overflow-hidden">
@@ -476,6 +567,89 @@ export default function OnboardingPage() {
           </div>
         )}
 
+        {step === 8 && (() => {
+          const advice = scheduleAdvice(topTimeWasters, avoidanceBehavior, leverageGoal);
+          return (
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-[18px] font-semibold text-ink">Zet je ritme</h2>
+                <p className="text-[13px] text-ink-soft mt-1">
+                  Op basis van wat je net vertelde, hier een startpunt. Alles staat al goed — pas aan wat niet klopt.
+                </p>
+              </div>
+
+              <div className="rounded-[14px] border border-line p-4 space-y-2">
+                <p className="text-[13px] font-medium text-ink">Tijdzone</p>
+                <select
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="w-full bg-surface-sunken rounded-[10px] px-3 py-2 text-[13px] text-ink border-none outline-none"
+                >
+                  {(COMMON_TIMEZONES.includes(timezone) ? COMMON_TIMEZONES : [timezone, ...COMMON_TIMEZONES]).map((tz) => (
+                    <option key={tz} value={tz}>{tz}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="rounded-[14px] border border-line p-4 space-y-2">
+                <p className="text-[13px] font-medium text-ink">Werkdagen</p>
+                <WeekdayPicker selectedDays={workDays} onToggle={toggleWorkDay} />
+                <p className="text-[12px] text-ink-soft">{advice.workDays}</p>
+              </div>
+
+              <div className="rounded-[14px] border border-line p-4 space-y-2">
+                <p className="text-[13px] font-medium text-ink">Ochtend- en avondreminder</p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="time"
+                    value={morningTime}
+                    onChange={(e) => setMorningTime(e.target.value)}
+                    className="flex-1 bg-surface-sunken rounded-[10px] px-3 py-2 text-[13px] text-ink border-none outline-none"
+                  />
+                  <input
+                    type="time"
+                    value={eveningTime}
+                    onChange={(e) => setEveningTime(e.target.value)}
+                    className="flex-1 bg-surface-sunken rounded-[10px] px-3 py-2 text-[13px] text-ink border-none outline-none"
+                  />
+                </div>
+                <p className="text-[12px] text-ink-soft">{advice.morning}</p>
+                {notifPermission !== 'unsupported' && notifPermission !== 'granted' && (
+                  <button
+                    type="button"
+                    onClick={handleEnableNotifications}
+                    className="mt-1 px-3.5 py-2 rounded-[10px] bg-primary-muted text-primary text-[13px] font-medium"
+                  >
+                    Zet herinneringen aan
+                  </button>
+                )}
+                {notifPermission === 'granted' && (
+                  <p className="text-[12px] text-primary font-medium">Herinneringen staan aan.</p>
+                )}
+              </div>
+
+              <div className="rounded-[14px] border border-line p-4 space-y-2">
+                <p className="text-[13px] font-medium text-ink">Focusblokken</p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="time"
+                    value={focusBlock1Start}
+                    onChange={(e) => setFocusBlock1Start(e.target.value)}
+                    className="flex-1 bg-surface-sunken rounded-[10px] px-3 py-2 text-[13px] text-ink border-none outline-none"
+                  />
+                  <input
+                    type="time"
+                    value={focusBlock2Start}
+                    onChange={(e) => setFocusBlock2Start(e.target.value)}
+                    className="flex-1 bg-surface-sunken rounded-[10px] px-3 py-2 text-[13px] text-ink border-none outline-none"
+                  />
+                </div>
+                <p className="text-[12px] text-ink-soft">{advice.focus}</p>
+              </div>
+            </div>
+          );
+        })()}
+
         {error && (
           <div className="rounded-[16px] border border-red-100 bg-red-50 p-4">
             <p className="text-[13px] text-red-600">{error}</p>
@@ -510,7 +684,7 @@ export default function OnboardingPage() {
               disabled={!canProceed() || submitting}
               className="flex-1 py-3 rounded-[14px] bg-primary text-white font-bold text-[14px] disabled:opacity-60"
             >
-              {submitting ? 'Bezig...' : 'Activeer mijn werkruimte'}
+              {submitting ? 'Bezig...' : 'Start met dit ritme'}
             </button>
           )}
         </div>

@@ -9,7 +9,7 @@ import { eq } from 'drizzle-orm';
 import { sql } from './lib/db';
 import { ensurePreferences } from './lib/email-recipients';
 import { getResend, FROM_EMAIL } from './lib/resend';
-import { welcomeEmail } from './lib/email-templates';
+import { welcomeEmail, magicLinkEmail } from './lib/email-templates';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -22,6 +22,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Resend({
       apiKey: process.env.RESEND_API_KEY,
       from: process.env.RESEND_FROM_EMAIL || 'Mijn Ondernemers OS <onboarding@resend.dev>',
+      // Auth.js' eigen Resend-provider verstuurt anders een generieke Engelstalige mail zonder
+      // huisstijl. We versturen 'm zelf via dezelfde Resend-client/template als de rest van de mails.
+      async sendVerificationRequest({ identifier, url }) {
+        const { subject, html } = magicLinkEmail(url);
+        // De resend-package gooit geen exception op een API-fout — die komt terug als
+        // { error } terwijl de promise gewoon resolvet. Zonder deze check faalt verzending
+        // stil: de gebruiker komt op /auth/check-email terecht zonder dat er ooit een mail is verstuurd.
+        const { error } = await getResend().emails.send({ from: FROM_EMAIL, to: identifier, subject, html });
+        if (error) throw new Error(`Resend error: ${JSON.stringify(error)}`);
+      },
     }),
   ],
   session: { strategy: 'database' },
