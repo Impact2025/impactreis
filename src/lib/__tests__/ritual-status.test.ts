@@ -24,6 +24,11 @@ function dailyLogRows(dates: string[]): { date_string: string; type: string }[] 
 function mockDefaultSettingsThen(...rest: unknown[][]) {
   sql.mockResolvedValueOnce([]); // ritual_settings: geen rij -> defaults
   for (const r of rest) sql.mockResolvedValueOnce(r);
+  // users.created_at: standaard een account van 60 dagen oud, zodat bestaande
+  // "gisteren/vorige week gemist"-scenario's ongewijzigd blijven werken. Tests die specifiek
+  // een gloednieuw account willen simuleren, mocken dit zelf via sql.mockResolvedValueOnce(...)
+  // ná de aanroep van mockDefaultSettingsThen.
+  sql.mockResolvedValueOnce([{ created_at: getDateDaysAgo(60) }]);
 }
 
 describe('getRitualStatus', () => {
@@ -78,6 +83,21 @@ describe('getRitualStatus', () => {
     expect(missedEvening).toBeDefined();
     expect(missedEvening?.canRecover).toBe(true);
     expect(status.streak.currentStreak).toBe(0);
+  });
+
+  it('meldt geen gemist avondritueel van gisteren voor een account dat vandaag pas is aangemaakt', async () => {
+    // Regressie: een gloednieuw account (created_at = vandaag) kreeg voorheen alsnog "avondritueel
+    // gemist — gisteren" te zien, terwijl het account gisteren nog niet bestond.
+    sql.mockResolvedValueOnce([]); // ritual_settings: defaults
+    sql.mockResolvedValueOnce([]); // daily_logs venster: leeg, nieuw account
+    sql.mockResolvedValueOnce([]); // huidige week
+    sql.mockResolvedValueOnce([]); // vorige week
+    sql.mockResolvedValueOnce([{ created_at: getToday() }]); // account vandaag aangemaakt
+
+    const status = await getRitualStatus('1', 1);
+
+    expect(status.missedRituals.some((m) => m.type === 'evening' && m.daysAgo === 1)).toBe(false);
+    expect(status.missedRituals.some((m) => m.type === 'morning' && m.daysAgo === 1)).toBe(false);
   });
 
   it('telt vandaag als volledig voltooid zodra zowel ochtend als avond gelogd zijn', async () => {
@@ -155,6 +175,7 @@ describe('getRitualStatus', () => {
       },
     ]);
     sql.mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    sql.mockResolvedValueOnce([{ created_at: getDateDaysAgo(60) }]);
 
     const status = await getRitualStatus('1', 1);
 

@@ -79,6 +79,16 @@ function isValidDuration(n: unknown): n is number {
   return Number.isInteger(n) && (n as number) >= 15 && (n as number) <= 240;
 }
 
+/** Datum (in de tijdzone van de gebruiker) waarop het account is aangemaakt — nodig om te
+ *  voorkomen dat een gloednieuw account een "gisteren gemist"-verwijt krijgt voor een dag
+ *  waarop het account nog niet eens bestond. */
+async function getAccountCreatedDate(userId: string, timezone: string): Promise<string> {
+  const rows = await sql`SELECT created_at FROM users WHERE id = ${Number(userId)}`;
+  const createdAt = (rows[0] as { created_at: string | Date } | undefined)?.created_at;
+  if (!createdAt) return getToday(timezone);
+  return new Date(createdAt).toLocaleDateString('en-CA', { timeZone: timezone });
+}
+
 async function getRitualSettingsFor(userId: string): Promise<RitualSettings> {
   const rows = await sql`
     SELECT timezone, work_days, evening_ritual_opens_hour, week_start_deadline_weekday, meditations_enabled,
@@ -250,10 +260,11 @@ export async function getRitualStatus(
   const isoDayOfWeek = dayOfWeek === 0 ? 7 : dayOfWeek;
   const yesterday = getDateDaysAgo(1, settings.timezone);
 
-  const [completionMap, weekFlags, lastWeekFlags] = await Promise.all([
+  const [completionMap, weekFlags, lastWeekFlags, accountCreatedDate] = await Promise.all([
     getCompletionMap(userId, organizationId, STREAK_WINDOW_DAYS, settings),
     getWeeklyFlags(userId, organizationId, weekNumber),
     getWeeklyFlags(userId, organizationId, weekNumber - 1),
+    getAccountCreatedDate(userId, settings.timezone),
   ]);
 
   const morningDone = !!completionMap.get(today)?.morning;
@@ -313,7 +324,9 @@ export async function getRitualStatus(
     const jsDay = getWeekdayOf(yesterday);
     return jsDay === 0 ? 7 : jsDay;
   })();
-  if (workDays.includes(yesterdayIsoDayOfWeek)) {
+  // "Gisteren gemist" kan alleen kloppen als het account gisteren al bestond — anders krijgt
+  // een gloednieuwe gebruiker op dag 1 een verwijt voor een dag waarop ze nog geen account hadden.
+  if (workDays.includes(yesterdayIsoDayOfWeek) && yesterday >= accountCreatedDate) {
     const yEntry = completionMap.get(yesterday);
     if (!yEntry?.morning) {
       missedRituals.push({ type: 'morning', date: yesterday, daysAgo: 1, canRecover: false, priority: 'low' });
@@ -327,7 +340,9 @@ export async function getRitualStatus(
   }
   // Niet op de eerste werkdag melden: de gebruiker heeft de nieuwe week dan nog niet eens een
   // dag achter de rug en heeft geen realistische kans gehad om dit al op te merken/te herstellen.
-  if (isoDayOfWeek !== workDays[0] && !lastWeekFlags.review) {
+  // Ook niet als het account nog geen volle week oud is — dan was er nog geen "vorige week" om te
+  // review'en.
+  if (isoDayOfWeek !== workDays[0] && !lastWeekFlags.review && accountCreatedDate <= getDateDaysAgo(7, settings.timezone)) {
     missedRituals.push({ type: 'weeklyReview', date: 'last week', daysAgo: 7, canRecover: false, priority: 'low' });
   }
 
