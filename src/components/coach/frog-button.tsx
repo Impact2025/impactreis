@@ -29,10 +29,17 @@ export interface FrogButtonHandle {
   open: () => void;
 }
 
+export interface FrogButtonProps {
+  /** false wanneer het dashboard de trigger-knop zelf al toont (Challenger-modus in de
+   *  "Jouw volgende stap"-hero-kaart) — de sessie-modal blijft dan wel beschikbaar via de ref,
+   *  zodat er niet twee identieke "Doorbreek Uitstel"-knoppen naast elkaar staan. */
+  showTrigger?: boolean;
+}
+
 /** MECHANISME 1 — De Kikker-knop: on-demand uitsteldoder. Start een 15-minuten countdown en
  *  toont 3 kant-en-klare openingszinnen, zodat het gesprek zonder nadenken begonnen kan worden.
  *  Geen audioprimer (geen voice-assets beschikbaar) — de tekst doet hetzelfde werk. */
-export const FrogButton = forwardRef<FrogButtonHandle>(function FrogButton(_props, ref) {
+export const FrogButton = forwardRef<FrogButtonHandle, FrogButtonProps>(function FrogButton({ showTrigger = true }, ref) {
   const [open, setOpen] = useState(false);
   const [seconds, setSeconds] = useState(SELF_TIMER_SECONDS);
   const [running, setRunning] = useState(false);
@@ -183,25 +190,27 @@ export const FrogButton = forwardRef<FrogButtonHandle>(function FrogButton(_prop
 
   return (
     <>
-      <button
-        onClick={startSession}
-        className="w-full flex items-center gap-3 rounded-card bg-red-600 p-4 mb-6 hover:bg-red-700 transition-colors shadow-organic"
-      >
-        <div className="w-10 h-10 rounded-[10px] bg-white/15 flex items-center justify-center flex-shrink-0">
-          <Flame size={18} className="text-white" />
-        </div>
-        <div className="flex-1 min-w-0 text-left">
-          <p className="text-[13px] font-bold text-white">Doorbreek Uitstel</p>
-          <p className="text-[11px] text-white/70 leading-snug truncate">
-            {!checkedToday
-              ? '15 minuten, geen nadenken'
-              : todaysFrog
-              ? `Vandaag: ${todaysFrog}`
-              : 'Nog geen belangrijkste taak gekozen — vul eerst je ochtendritueel in'}
-            {weekCount !== null && weekCount > 0 ? ` · ${weekCount}x deze week doorbroken` : ''}
-          </p>
-        </div>
-      </button>
+      {showTrigger && (
+        <button
+          onClick={startSession}
+          className="w-full flex items-center gap-3 rounded-card bg-red-600 p-4 mb-6 hover:bg-red-700 transition-colors shadow-organic"
+        >
+          <div className="w-10 h-10 rounded-[10px] bg-white/15 flex items-center justify-center flex-shrink-0">
+            <Flame size={18} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0 text-left">
+            <p className="text-[13px] font-bold text-white">Doorbreek Uitstel</p>
+            <p className="text-[11px] text-white/70 leading-snug truncate">
+              {!checkedToday
+                ? '15 minuten, geen nadenken'
+                : todaysFrog
+                ? `Vandaag: ${todaysFrog}`
+                : 'Nog geen belangrijkste taak gekozen — vul eerst je ochtendritueel in'}
+              {weekCount !== null && weekCount > 0 ? ` · ${weekCount}x deze week doorbroken` : ''}
+            </p>
+          </div>
+        </button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-4">

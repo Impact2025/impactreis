@@ -266,6 +266,10 @@ export default function DashboardPage() {
     showNsdr ? { kind: 'nsdr' } :
     null;
 
+  // Zodra "Doorbreek uitstel" de hero-kaart is (Challenger-modus), verdwijnt de losse rode
+  // kikker-knop verderop — anders staat dezelfde actie twee keer op het scherm.
+  const kikkerMergedIntoHero = primarySignal?.kind === 'nextStep' && primarySignal.step.key === 'kikker-open';
+
   const completeLeverageTask = async (goal: Goal, action: GoalAction) => {
     setLeverageTasks(prev => prev.filter(t => t.action.id !== action.id));
     const nextActions = (goal.nextActions ?? []).map(a => a.id === action.id ? { ...a, completed: true } : a);
@@ -418,38 +422,34 @@ export default function DashboardPage() {
           ) : primarySignal?.kind === 'nextStep' ? (
             (() => {
               const step = primarySignal.step;
-              const isKikkerOpen = step.key === 'kikker-open';
-              const content = (
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-[10px] bg-on-surface-inverse/10 flex items-center justify-center flex-shrink-0">
-                    <Compass size={18} className="text-primary-light" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[9px] font-bold tracking-[0.15em] text-primary-light uppercase mb-1.5">
-                      Jouw volgende stap
-                    </p>
-                    <p className="text-[14px] font-bold text-on-surface-inverse mb-1 leading-snug">
-                      {step.headline}
-                    </p>
-                    <p className="text-[12px] text-on-surface-inverse/70 leading-relaxed mb-3">
-                      {step.message}
-                    </p>
-                    <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-primary-light">
-                      {step.ctaLabel} <ChevronRight size={13} />
-                    </span>
-                  </div>
-                </div>
-              );
-              // 'kikker-open' verwees naar ctaHref '/dashboard' — een link naar de pagina waar je
-              // al staat, dus leek de knop kapot. Activeert nu direct de kikker-knop hieronder
-              // i.p.v. daar zelf opnieuw naartoe te "navigeren".
-              if (isKikkerOpen) {
+              // 'kikker-open' verwees voorheen naar ctaHref '/dashboard' (een link naar de pagina
+              // waar je al staat) én stond hier als groene kaart naast de losse rode "Doorbreek
+              // Uitstel"-knop verderop — twee kaarten voor dezelfde actie. De Challenger-modus
+              // neemt nu de hero-kaart zelf over (rood, Flame-icoon) en activeert de kikker-sessie
+              // direct; de losse rode knop verdwijnt in dat geval (zie kikkerMergedIntoHero).
+              if (kikkerMergedIntoHero) {
                 return (
                   <button
                     onClick={() => frogButtonRef.current?.open()}
-                    className="block w-full text-left rounded-card bg-surface-inverse p-5 mb-6 hover:opacity-95 transition-opacity shadow-organic"
+                    className="flex w-full items-start gap-3 text-left rounded-card bg-red-600 p-5 mb-6 hover:bg-red-700 transition-colors shadow-organic"
                   >
-                    {content}
+                    <div className="w-10 h-10 rounded-[10px] bg-white/15 flex items-center justify-center flex-shrink-0">
+                      <Flame size={18} className="text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[9px] font-bold tracking-[0.15em] text-white/80 uppercase mb-1.5">
+                        Doorbreek uitstel
+                      </p>
+                      <p className="text-[14px] font-bold text-white mb-1 leading-snug">
+                        {step.headline}
+                      </p>
+                      <p className="text-[12px] text-white/70 leading-relaxed mb-3">
+                        {step.message}
+                      </p>
+                      <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-white">
+                        {step.ctaLabel} <ChevronRight size={13} />
+                      </span>
+                    </div>
                   </button>
                 );
               }
@@ -458,7 +458,25 @@ export default function DashboardPage() {
                   href={step.ctaHref}
                   className="block rounded-card bg-surface-inverse p-5 mb-6 hover:opacity-95 transition-opacity shadow-organic"
                 >
-                  {content}
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-[10px] bg-on-surface-inverse/10 flex items-center justify-center flex-shrink-0">
+                      <Compass size={18} className="text-primary-light" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[9px] font-bold tracking-[0.15em] text-primary-light uppercase mb-1.5">
+                        Jouw volgende stap
+                      </p>
+                      <p className="text-[14px] font-bold text-on-surface-inverse mb-1 leading-snug">
+                        {step.headline}
+                      </p>
+                      <p className="text-[12px] text-on-surface-inverse/70 leading-relaxed mb-3">
+                        {step.message}
+                      </p>
+                      <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-primary-light">
+                        {step.ctaLabel} <ChevronRight size={13} />
+                      </span>
+                    </div>
+                  </div>
                 </Link>
               );
             })()
@@ -784,8 +802,11 @@ export default function DashboardPage() {
           )}
 
           {/* ══ KIKKER-KNOP — pas zichtbaar zodra er een belangrijkste taak gekozen is (via
-               het ochtendritueel); daarvóór is dit dezelfde CTA als de hero-kaart hierboven ═══ */}
-          {!isLocked && <FrogButton ref={frogButtonRef} />}
+               het ochtendritueel); daarvóór is dit dezelfde CTA als de hero-kaart hierboven.
+               Zodra de Challenger-modus de hero-kaart zelf heeft overgenomen
+               (kikkerMergedIntoHero), blijft alleen de sessie-modal actief via de ref — de
+               losse rode knop wordt niet nogmaals getoond. ═══ */}
+          {!isLocked && <FrogButton ref={frogButtonRef} showTrigger={!kikkerMergedIntoHero} />}
 
           {/* ══ WEEKSCORECARD — 7-dagen gemiddelde, dus geen vaste "vrijdagmiddag"-naam
                (die klopt niet meer zodra dit op een andere dag wordt getoond) en de labels zijn
