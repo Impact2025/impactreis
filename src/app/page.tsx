@@ -189,7 +189,7 @@ export default function SalesPage() {
         <div className="order-1 inline-flex items-start gap-2 px-3.5 py-1.5 rounded-full border border-primary-light bg-primary-muted mb-4 sm:mb-8 max-w-[92vw] sm:max-w-none">
           <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block mt-[5px] shrink-0" />
           <span className="text-[11px] font-semibold text-primary-dark tracking-wide text-left">
-            Voor ondernemers, directeuren en impactmakers die niet langer geleefd willen worden door hun agenda
+            Gebaseerd op 25+ jaar ondernemerservaring en de beproefde hefboommethodiek
           </span>
         </div>
 
@@ -197,7 +197,7 @@ export default function SalesPage() {
           Stop met<br />
           <span className="text-ink-soft line-through decoration-tertiary decoration-4">overleven.</span><br />
           Leid je bedrijf met<br />
-          <span className="text-primary">rust en focus.</span>
+          <span className="text-primary">hefboom en controle.</span>
         </h1>
 
         <div className="order-3 sm:order-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 mb-4 sm:mb-0 sm:mt-0">
@@ -218,11 +218,11 @@ export default function SalesPage() {
         </div>
 
         <p className="order-4 sm:order-3 text-[14px] sm:text-[18px] text-ink-soft max-w-xl mx-auto leading-relaxed mb-6 sm:mb-10">
-          Sparren.app is je dagelijkse executive challenger — een systeem dat je scherp houdt op je doelen, je agenda en je uitstelgedrag, elke dag in slechts 10 minuten.
+          Sparren.app is je dagelijkse executive challenger — een compromisloos besturingssysteem dat je scherp houdt op je 80/20-prioriteiten, je agenda en je uitstelgedrag. In slechts 10 minuten per dag.
         </p>
 
         <p className="order-5 text-[12px] text-ink-soft">
-          Gemaakt door en voor ondernemers. Direct inzicht in je tijdlek.
+          Ontwikkeld door en voor ondernemers. Direct inzicht in je operationele tijdlek.
         </p>
       </div>
       </section>

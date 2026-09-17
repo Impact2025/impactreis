@@ -392,7 +392,7 @@ export default function OnboardingPage() {
             />
             <div className="pt-2">
               <h2 className="text-[18px] font-semibold text-ink">Kies je challenger</h2>
-              <p className="text-[13px] text-ink-soft mt-1">Welke toon past bij hoe jij aangesproken wilt worden?</p>
+              <p className="text-[13px] text-ink-soft mt-1">Gebaseerd op 25+ jaar ondernemerservaring en de hefboommethodiek. Welke stem dwingt jou tot de beste executie?</p>
             </div>
             <CardOption
               selected={gender === 'male'}
