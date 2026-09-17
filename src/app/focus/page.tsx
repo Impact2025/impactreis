@@ -18,6 +18,7 @@ import { getToday, DEFAULT_RITUAL_SETTINGS } from '@/lib/weekflow.service';
 interface PlannedFocusBlock {
   start: string;
   end: string;
+  durationMin: number;
   categoryLabel: string;
   taaknaam: string;
 }
@@ -40,10 +41,11 @@ const powerQuestions = [
 ];
 
 export default function FocusPage() {
-  // Standaard 25 min (Pomodoro); overschreven zodra de onboarding een voorkeur oplevert
-  // (focusBlockDurationMinutes: 25 | 50 | 90) — zie fetchWorkMinutes hieronder.
-  const [workMinutes, setWorkMinutes] = useState(25);
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
+  // Standaard 90 min — zelfde default als de focusblokken in Instellingen/Ochtendritueel
+  // (DEFAULT_RITUAL_SETTINGS.focusBlock1DurationMin). Wordt hieronder overschreven zodra de
+  // echte ritual-settings of een actief gepland blok bekend zijn.
+  const [workMinutes, setWorkMinutes] = useState(DEFAULT_RITUAL_SETTINGS.focusBlock1DurationMin);
+  const [timeLeft, setTimeLeft] = useState(DEFAULT_RITUAL_SETTINGS.focusBlock1DurationMin * 60);
   const [isActive, setIsActive] = useState(false);
   const [sessions, setSessions] = useState<FocusSession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,22 +76,17 @@ export default function FocusPage() {
         const savedSessions = localStorage.getItem('focusSessions');
         if (savedSessions) setSessions(JSON.parse(savedSessions));
 
-        try {
-          const { profile } = await api.onboarding.profile();
-          const minutes = profile?.schedule?.focusBlockDurationMinutes;
-          if (minutes) {
-            setWorkMinutes(minutes);
-            setTimeLeft(minutes * 60);
-          }
-        } catch {
-          // geen profiel of onboarding nog niet gedaan — gewoon de standaard 25 min
-        }
-
         // Synergie ochtendritueel ↔ Focus: de #1-prioriteit (Kikker) én de twee geplande
         // focusblokken (tijd + categorie + taaknaam) komen hier terug, i.p.v. een leeg
         // invoerveld en blokken die na het invullen nooit meer worden getoond.
         try {
           const ritualSettings = await api.ritualSettings.get().catch(() => DEFAULT_RITUAL_SETTINGS);
+          // Eigen ingestelde blokduur (Instellingen → Focusblokken) i.p.v. de vaste 25 min —
+          // die kwam voorheen uit een oud onboarding-veld dat nergens meer werd ingevuld, dus
+          // stond de timer altijd op 25 min ook als iemand 90-minuten-blokken had ingesteld.
+          setWorkMinutes(ritualSettings.focusBlock1DurationMin);
+          setTimeLeft(ritualSettings.focusBlock1DurationMin * 60);
+
           const today = getToday(ritualSettings.timezone);
           const logs = await api.logs.getByTypeAndDate('morning', today);
           const rawData = logs?.[0]?.data;
@@ -107,20 +104,23 @@ export default function FocusPage() {
             const blok = parsedData?.[slot.key];
             const categoryLabel = focusCategoryLabel(blok?.category);
             if (!categoryLabel) return null;
-            return { start: slot.start, end: slot.end, categoryLabel, taaknaam: blok?.taaknaam || '' };
+            return { start: slot.start, end: slot.end, durationMin: slot.durationMin, categoryLabel, taaknaam: blok?.taaknaam || '' };
           }).filter((b): b is PlannedFocusBlock => b !== null);
           setPlannedBlocks(blocks);
 
           // Zit je nú in een gepland blok? Dan wint dat van de algemene Kikker-intentie —
           // het is specifieker (tijd + categorie) én is wat je vanochtend voor dít moment koos.
+          // De timer volgt mee op de echte blokduur, niet meer op een vaste 25 min.
           const now = new Date();
           const activeBlock = blocks.find((b) => isWithinBlock(now, b.start, b.end));
           if (activeBlock) {
             setSessionGoal(activeBlock.taaknaam || activeBlock.categoryLabel);
             setGoalFromCoach(true);
+            setWorkMinutes(activeBlock.durationMin);
+            setTimeLeft(activeBlock.durationMin * 60);
           }
         } catch {
-          // geen ochtendritueel vandaag — gewoon een leeg invoerveld
+          // geen ochtendritueel vandaag — gewoon een leeg invoerveld, standaard blokduur blijft staan
         }
       } catch { router.push('/auth/login'); }
       finally { setLoading(false); }
@@ -376,10 +376,16 @@ export default function FocusPage() {
         {/* Session Goal Input */}
         {showGoalInput && currentSession === 'work' && (
           <div className="bg-white rounded-[16px] border border-line p-5 mb-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Zap size={16} className="text-tertiary" />
-              <span className="text-[14px] font-semibold text-ink">
-                Wat ga je focussen deze sessie?
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                <Zap size={16} className="text-tertiary" />
+                <span className="text-[14px] font-semibold text-ink">
+                  Wat ga je focussen deze sessie?
+                </span>
+              </div>
+              <span className="flex items-center gap-1 text-[11px] font-semibold text-primary bg-primary-muted rounded-full px-2.5 py-1 shrink-0">
+                <Timer size={11} />
+                {workMinutes} min
               </span>
             </div>
             {goalFromCoach && (
@@ -404,12 +410,16 @@ export default function FocusPage() {
                     onClick={() => {
                       setSessionGoal(b.taaknaam || b.categoryLabel);
                       setGoalFromCoach(true);
+                      setWorkMinutes(b.durationMin);
+                      setTimeLeft(b.durationMin * 60);
                     }}
                     className="flex items-center gap-1.5 text-[12px] px-3 py-1.5 rounded-full border border-line hover:border-primary/50 text-ink transition-colors"
                   >
                     <span className="font-semibold text-primary">{b.start}–{b.end}</span>
                     <span className="text-ink-soft">·</span>
                     <span>{b.taaknaam || b.categoryLabel}</span>
+                    <span className="text-ink-soft">·</span>
+                    <span className="text-ink-soft">{b.durationMin} min</span>
                   </button>
                 ))}
               </div>
@@ -437,8 +447,11 @@ export default function FocusPage() {
           </div>
         )}
 
-        {/* Timer Card */}
-        <div className="bg-white rounded-[20px] border border-line p-6 mb-4 text-center">
+        {/* Timer Card — kleurt duidelijk op zodra een sprint loopt, i.p.v. altijd hetzelfde
+             neutrale wit als in rust (was onduidelijk of je nu daadwerkelijk aan het focussen was). */}
+        <div className={`rounded-[20px] border p-6 mb-4 text-center transition-colors duration-500 ${
+          isActive ? 'bg-primary-muted border-primary/30' : 'bg-white border-line'
+        }`}>
           {/* SVG Timer Ring */}
           <div className="relative w-52 h-52 mx-auto mb-6">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">

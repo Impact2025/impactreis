@@ -25,11 +25,13 @@ export function getFocusBlockSlots(settings: RitualSettings = DEFAULT_RITUAL_SET
       key: 'focusBlok1' as const,
       start: settings.focusBlock1Start,
       end: addMinutesToTime(settings.focusBlock1Start, settings.focusBlock1DurationMin),
+      durationMin: settings.focusBlock1DurationMin,
     },
     {
       key: 'focusBlok2' as const,
       start: settings.focusBlock2Start,
       end: addMinutesToTime(settings.focusBlock2Start, settings.focusBlock2DurationMin),
+      durationMin: settings.focusBlock2DurationMin,
     },
   ];
 }
