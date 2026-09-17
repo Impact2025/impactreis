@@ -114,6 +114,16 @@ export default function OnboardingPage() {
   const [deepeningLoading, setDeepeningLoading] = useState(false);
   const [deepeningAnswer, setDeepeningAnswer] = useState('');
   const [deepeningClosed, setDeepeningClosed] = useState(false);
+  // Definitief oordeel na de laatste doorvraag: blijft `true` zolang de consequentie tandeloos
+  // is gebleven ("Niemand", "nvt", te kort) — canProceed() voor stap 7 hangt hieraan zodat de
+  // ondernemer niet stilzwijgend kan ontsnappen, en wordt pas gewist zodra de tekst écht herschreven is.
+  const [deepeningWeak, setDeepeningWeak] = useState(false);
+
+  const isWeakAnswer = (text: string) => {
+    const t = text.trim().toLowerCase().replace(/[.!?]+$/, '');
+    if (t.length < 12) return true;
+    return ['niemand', 'niks', 'niets', 'nvt', 'geen', 'geen idee', 'weet niet', 'geen idee eigenlijk'].includes(t);
+  };
 
   const questionCount = deepeningMessages.filter((m) => m.role === 'assistant').length;
   const showAnswerInput = deepeningActive && !deepeningClosed && !deepeningLoading && deepeningMessages[deepeningMessages.length - 1]?.role === 'assistant';
@@ -171,7 +181,20 @@ export default function OnboardingPage() {
     setDeepeningAnswer('');
 
     if (questionCount >= 2) {
-      // Harde cap: na 2 vragen sluiten we lokaal af, geen 3e model-call.
+      // Harde cap: na 2 vragen sluiten we lokaal af, geen 3e model-call — maar wel een hard,
+      // deterministisch oordeel in plaats van stilte, anders ontsnapt een tandeloos antwoord
+      // ("Niemand") zonder dat de coach ooit echt confronteert.
+      const weak = isWeakAnswer(answer);
+      setDeepeningWeak(weak);
+      setDeepeningMessages([
+        ...withAnswer,
+        {
+          role: 'assistant',
+          content: weak
+            ? 'Dat is geen stok achter de deur, dat is een excuus — een sanctie die niemand raakt, raakt jou ook niet. Herschrijf je consequentie hierboven tot die wél iemand of iets concreets kost (geld, reputatie, je team) voordat je verdergaat.'
+            : 'Duidelijk — dat is scherp genoeg om je aan vast te houden als het lastig wordt.',
+        },
+      ]);
       setDeepeningClosed(true);
       return;
     }
@@ -257,7 +280,7 @@ export default function OnboardingPage() {
       case 4: return topTimeWasters.length > 0;
       case 5: return avoidanceBehavior !== null;
       case 6: return leverageGoal !== null;
-      case 7: return painfulConsequence.trim().length > 0;
+      case 7: return painfulConsequence.trim().length > 0 && !deepeningWeak;
       case 8: return true;
       default: return false;
     }
@@ -484,12 +507,20 @@ export default function OnboardingPage() {
             </div>
             <textarea
               value={painfulConsequence}
-              onChange={(e) => setPainfulConsequence(e.target.value.slice(0, 300))}
+              onChange={(e) => {
+                setPainfulConsequence(e.target.value.slice(0, 300));
+                if (deepeningWeak) setDeepeningWeak(false);
+              }}
               placeholder="Bijv: als ik dit kwartaal mijn doel mis, doneer ik €500 aan..."
               rows={3}
               maxLength={300}
               className="w-full resize-none px-4 py-3 rounded-[14px] bg-surface-sunken border border-transparent text-[14px] outline-none focus:border-primary focus:bg-white transition-all"
             />
+            {deepeningWeak && (
+              <p className="text-[12px] font-medium text-red-600">
+                Herschrijf de consequentie hierboven — pas dan kun je verder.
+              </p>
+            )}
 
             {!deepeningActive && !deepeningSkipped && painfulConsequence.trim().length > 0 && (
               <div className="flex items-center gap-3">
@@ -551,19 +582,6 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            <div className="rounded-[14px] bg-surface-sunken px-4 py-3.5 flex items-center justify-between gap-4 mt-6">
-              <div>
-                <p className="text-[13px] font-medium text-ink">Meditaties</p>
-                <p className="text-[11px] text-ink-soft mt-0.5">Optionele ochtend-centering op je dashboard</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMeditationsEnabled((v) => !v)}
-                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${meditationsEnabled ? 'bg-primary' : 'bg-line'}`}
-              >
-                <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${meditationsEnabled ? 'translate-x-5' : ''}`} />
-              </button>
-            </div>
           </div>
         )}
 
@@ -645,6 +663,20 @@ export default function OnboardingPage() {
                   />
                 </div>
                 <p className="text-[12px] text-ink-soft">{advice.focus}</p>
+              </div>
+
+              <div className="rounded-[14px] bg-surface-sunken px-4 py-3.5 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[13px] font-medium text-ink">Meditaties</p>
+                  <p className="text-[11px] text-ink-soft mt-0.5">Optionele ochtend-centering op je dashboard</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMeditationsEnabled((v) => !v)}
+                  className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${meditationsEnabled ? 'bg-primary' : 'bg-line'}`}
+                >
+                  <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${meditationsEnabled ? 'translate-x-5' : ''}`} />
+                </button>
               </div>
             </div>
           );

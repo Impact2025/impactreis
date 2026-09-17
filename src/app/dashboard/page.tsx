@@ -79,6 +79,10 @@ export default function DashboardPage() {
   const [scorecard, setScorecard] = useState<{ metrics: { key: string; label: string; score: number | null }[]; lowestTwo: { key: string; label: string; score: number | null }[] } | null>(null);
   const [proactiveSignal, setProactiveSignal] = useState<{ signal: boolean; patternKey: string; message: string } | null>(null);
   const [nextStep, setNextStep] = useState<{ key: string; headline: string; message: string; ctaLabel: string; ctaHref: string } | null>(null);
+  // Zolang de kern van de dag nog ontbreekt (geen ochtendritueel), is dit de enige stap die
+  // ertoe doet — de rest van het dashboard (doelen, streak, wins, kikker-knop) vraagt dan om
+  // dezelfde actie via een ander kanaal en verdunt het signaal in plaats van het te versterken.
+  const isLocked = nextStep?.key === 'geen-ochtendritueel';
   const [signalDismissed, setSignalDismissed] = useState(false);
   const [proposals, setProposals] = useState<any[]>([]);
   const [resolvingProposalId, setResolvingProposalId] = useState<string | number | null>(null);
@@ -454,7 +458,7 @@ export default function DashboardPage() {
           ) : null}
 
           {/* ══ MEDITATIE — RUSTMOMENT (optioneel, zie Instellingen) ══ */}
-          {settings.meditationsEnabled && (
+          {!isLocked && settings.meditationsEnabled && (
             <div className="pb-6">
               <MeditationPlayer meditation={getRecommendedMeditation()!} compact />
               <Link
@@ -467,7 +471,7 @@ export default function DashboardPage() {
           )}
 
           {/* ══ VANDAAG — routines, hefboomtaken en agenda in één kaart ═══ */}
-          {(() => {
+          {!isLocked && (() => {
             const hasLeverageTasks = leverageTasks.length > 0;
             const hasAgenda = calendarConfigured && calendarEvents.length > 0;
 
@@ -706,7 +710,7 @@ export default function DashboardPage() {
           })()}
 
           {/* ══ VOORGESTELDE TIJDBLOKKEN ═════════════════════════ */}
-          {proposals.length > 0 && (
+          {!isLocked && proposals.length > 0 && (
             <section className="mb-6">
               <div className="flex items-center gap-2.5 mb-3.5">
                 <div className="w-8 h-8 rounded-[10px] bg-primary-muted flex items-center justify-center">
@@ -746,19 +750,23 @@ export default function DashboardPage() {
             </section>
           )}
 
-          {/* ══ KIKKER-KNOP ══════════════════════════════════════ */}
-          <FrogButton />
+          {/* ══ KIKKER-KNOP — pas zichtbaar zodra er een belangrijkste taak gekozen is (via
+               het ochtendritueel); daarvóór is dit dezelfde CTA als de hero-kaart hierboven ═══ */}
+          {!isLocked && <FrogButton />}
 
-          {/* ══ VRIJDAGMIDDAG SCORECARD ══════════════════════════ */}
-          {scorecard && scorecard.lowestTwo.length > 0 && (
+          {/* ══ WEEKSCORECARD — 7-dagen gemiddelde, dus geen vaste "vrijdagmiddag"-naam
+               (die klopt niet meer zodra dit op een andere dag wordt getoond) en de labels zijn
+               expliciet "afgelopen 7 dagen" zodat een 10/10 hier nooit lijkt tegen te spreken met
+               "nog geen taak gekozen vandaag" in de hero-kaart hierboven ═══ */}
+          {!isLocked && scorecard && scorecard.lowestTwo.length > 0 && (
             <div className="rounded-card border border-accent/25 bg-accent-soft p-4 mb-6">
-              <p className="text-[13px] font-bold text-ink mb-0.5">Vrijdagmiddag Scorecard</p>
-              <p className="text-[11px] text-ink-soft leading-snug mb-3">Je 2 zwakste non-negotiables deze week — agenda voor je volgende sparring</p>
+              <p className="text-[13px] font-bold text-ink mb-0.5">Weekscorecard</p>
+              <p className="text-[11px] text-ink-soft leading-snug mb-3">Je 2 zwakste non-negotiables van de afgelopen 7 dagen — agenda voor je volgende sparring</p>
               <div className="flex gap-3">
                 {scorecard.lowestTwo.map((m) => (
                   <div key={m.key} className="flex-1 rounded-[12px] bg-surface-card p-3 text-center">
                     <p className="text-[18px] font-bold text-accent">{m.score}<span className="text-[11px] text-ink-soft">/10</span></p>
-                    <p className="text-[11px] text-ink-soft mt-0.5">{m.label}</p>
+                    <p className="text-[11px] text-ink-soft mt-0.5">{m.label} <span className="text-ink-soft/70">(7 dgn)</span></p>
                   </div>
                 ))}
               </div>
@@ -766,25 +774,27 @@ export default function DashboardPage() {
           )}
 
           {/* ══ Sparren ═════════════════════════════════════════════ */}
-          <Link
-            href="/coach"
-            data-tour="aipa"
-            className="block rounded-card bg-surface-inverse p-4 mb-6 hover:opacity-95 transition-opacity shadow-organic"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-[10px] bg-on-surface-inverse/10 flex items-center justify-center flex-shrink-0">
-                <Sparkles size={18} className="text-primary-light" />
+          {!isLocked && (
+            <Link
+              href="/coach"
+              data-tour="aipa"
+              className="block rounded-card bg-surface-inverse p-4 mb-6 hover:opacity-95 transition-opacity shadow-organic"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-[10px] bg-on-surface-inverse/10 flex items-center justify-center flex-shrink-0">
+                  <Sparkles size={18} className="text-primary-light" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-bold text-on-surface-inverse">Sparren</p>
+                  <p className="text-[11px] text-on-surface-inverse/50 leading-snug">Je business- en welzijnscoach — vraag een reflectie op je dag</p>
+                </div>
+                <ChevronRight size={16} className="text-on-surface-inverse/40 flex-shrink-0" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-bold text-on-surface-inverse">Sparren</p>
-                <p className="text-[11px] text-on-surface-inverse/50 leading-snug">Je business- en welzijnscoach — vraag een reflectie op je dag</p>
-              </div>
-              <ChevronRight size={16} className="text-on-surface-inverse/40 flex-shrink-0" />
-            </div>
-          </Link>
+            </Link>
+          )}
 
           {/* ══ ACTUELE DOELEN ══════════════════════════════════ */}
-          {goals.length > 0 && (
+          {!isLocked && goals.length > 0 && (
             <section className="mb-6">
               <div className="flex items-center justify-between mb-3.5">
                 <h2 className="text-[15px] font-bold text-ink">Actuele Doelen</h2>
@@ -847,6 +857,7 @@ export default function DashboardPage() {
           )}
 
           {/* ══ STATS ROW ═══════════════════════════════════════ */}
+          {!isLocked && (
           <section data-tour="stats" className="mb-6">
             <div className="grid grid-cols-3 gap-2.5">
               <div className="rounded-[14px] bg-primary-muted px-3 py-4">
@@ -866,9 +877,10 @@ export default function DashboardPage() {
               </div>
             </div>
           </section>
+          )}
 
           {/* ══ RECENTE WINS ════════════════════════════════════ */}
-          {recentWins.length > 0 && (
+          {!isLocked && recentWins.length > 0 && (
             <section className="mb-6">
               <div className="flex items-center justify-between mb-3.5">
                 <h2 className="text-[15px] font-bold text-ink">Recente Wins</h2>
@@ -903,6 +915,7 @@ export default function DashboardPage() {
           )}
 
           {/* ══ SNEL VERDER ═════════════════════════════════════ */}
+          {!isLocked && (
           <section className="mb-6">
             <div className="flex items-center justify-between mb-3.5">
               <h2 className="text-[15px] font-bold text-ink">Snel verder</h2>
@@ -934,6 +947,7 @@ export default function DashboardPage() {
               </Link>
             </div>
           </section>
+          )}
 
         </main>
 
