@@ -12,6 +12,8 @@ import {
   Briefcase,
   Building2,
   Users,
+  UserCog,
+  UserPlus,
   Target,
   CheckSquare,
   Receipt,
@@ -21,6 +23,8 @@ import { cn } from '@/lib/utils';
 
 const sidebarItems = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+  { label: 'Gebruikers', href: '/admin/gebruikers', icon: UserCog },
+  { label: 'Leads', href: '/admin/leads', icon: UserPlus },
   { label: 'Blog', href: '/admin/blog', icon: FileText },
   { label: 'Bedrijven', href: '/admin/crm/bedrijven', icon: Building2 },
   { label: 'Contacten', href: '/admin/crm/contacten', icon: Users },

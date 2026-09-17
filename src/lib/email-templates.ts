@@ -658,3 +658,50 @@ export function realityCheckEmail4(data: RealityCheckLeadEmailData): { subject: 
 
   return { subject, html: base('De 3-uur Strategische Reset', subject, body, { quote: true, unsubscribeUrl: data.unsubscribeUrl }) };
 }
+
+// ─── Admin-notificaties (interne mails, geen quote/unsubscribe) ─────────────
+
+export function adminNewUserEmail(data: { email: string; source: 'magic-link' | 'wachtwoord'; appUrl: string }): { subject: string; html: string } {
+  const subject = `Nieuwe gebruiker: ${data.email}`;
+
+  const body = `
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Nieuwe registratie.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
+      Er heeft zich zojuist een nieuwe gebruiker aangemeld bij Sparren.app.
+    </p>
+
+    ${section('E-mailadres', data.email)}
+    ${section('Inlogmethode', data.source === 'magic-link' ? 'Magic-link' : 'Wachtwoord')}
+
+    <div style="text-align:center;">${btn('Bekijk gebruikers in admin →', `${data.appUrl}/admin/gebruikers`)}</div>
+  `;
+
+  return { subject, html: base('Nieuwe gebruiker', subject, body) };
+}
+
+export function adminNewLeadEmail(data: {
+  email: string;
+  name?: string | null;
+  level: string;
+  score: number;
+  profileLabel: string;
+  appUrl: string;
+}): { subject: string; html: string } {
+  const subject = `Nieuwe lead: ${data.name || data.email}`;
+
+  const body = `
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Nieuwe Reality Check-lead.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
+      Iemand heeft zojuist de Executive Reality Check afgerond.
+    </p>
+
+    ${section('Naam', data.name || '—')}
+    ${section('E-mailadres', data.email)}
+    ${section('Niveau', data.level)}
+    ${section('Score / profiel', `${data.score} — ${data.profileLabel}`)}
+
+    <div style="text-align:center;">${btn('Bekijk leads in admin →', `${data.appUrl}/admin/leads`)}</div>
+  `;
+
+  return { subject, html: base('Nieuwe lead', subject, body) };
+}

@@ -42,6 +42,10 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash'), // nullable: Auth.js magic-link users hebben geen wachtwoord
   role: text('role').notNull().default('member'), // member | owner | program_manager
   createdAt: timestamp('created_at').defaultNow(),
+  // Login-activiteit voor het admin-gebruikersoverzicht — bijgewerkt bij elke succesvolle login
+  // (zowel wachtwoord als magic-link, zie /api/auth/login en auth.ts events.signIn).
+  lastLoginAt: timestamp('last_login_at'),
+  loginCount: integer('login_count').notNull().default(0),
 });
 
 // Machine-to-machine auth voor externe systemen (vandaag: ImpactOS' coach-bridge) — één token

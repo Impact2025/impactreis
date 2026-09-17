@@ -12,6 +12,7 @@ import {
 import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { realityCheckEmail1 } from '@/lib/email-templates';
 import { clientIp, rateLimitResponse } from '@/lib/rate-limit';
+import { notifyAdminNewLead } from '@/lib/admin-notify';
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -80,6 +81,8 @@ export async function POST(request: NextRequest) {
     } catch (sendErr) {
       console.error('reality-check email1 send threw:', sendErr);
     }
+
+    await notifyAdminNewLead({ email, name, level, score, profileLabel: profile.label });
 
     return NextResponse.json({
       score,

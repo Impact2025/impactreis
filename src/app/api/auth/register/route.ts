@@ -7,6 +7,7 @@ import { generateToken } from '@/lib/auth';
 import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { welcomeEmail } from '@/lib/email-templates';
 import { ensurePreferences } from '@/lib/email-recipients';
+import { notifyAdminNewUser } from '@/lib/admin-notify';
 import { clientIp, rateLimitResponse } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
@@ -62,6 +63,8 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       console.error('Welcome email failed (registration continues):', err);
     }
+
+    await notifyAdminNewUser(user.email as string, 'wachtwoord');
 
     // Generate JWT
     const token = generateToken(user.id, user.email);

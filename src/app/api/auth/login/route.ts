@@ -34,6 +34,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Onjuiste inloggegevens' }, { status: 401 });
     }
 
+    // Best-effort: login-tracking mag een succesvolle login nooit blokkeren.
+    try {
+      await sql`
+        UPDATE users
+        SET last_login_at = NOW(), login_count = login_count + 1
+        WHERE id = ${user.id}
+      `;
+    } catch (err) {
+      console.error('Login-tracking update failed (login continues):', err);
+    }
+
     // Generate JWT
     const token = generateToken(user.id, user.email);
 

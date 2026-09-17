@@ -10,6 +10,7 @@ import { sql } from './lib/db';
 import { ensurePreferences } from './lib/email-recipients';
 import { getResend, FROM_EMAIL } from './lib/resend';
 import { welcomeEmail, magicLinkEmail } from './lib/email-templates';
+import { notifyAdminNewUser } from './lib/admin-notify';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -97,6 +98,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         await getResend().emails.send({ from: FROM_EMAIL, to: user.email, subject, html });
       } catch (err) {
         console.error('Welcome email failed (createUser continues):', err);
+      }
+
+      await notifyAdminNewUser(user.email, 'magic-link');
+    },
+    // Vuurt bij elke succesvolle magic-link login (ook na de allereerste, die createUser hierboven
+    // al afhandelt) — bijhouden voor het admin-activiteitsoverzicht, zie /api/admin/users.
+    async signIn({ user }) {
+      if (!user.email) return;
+      try {
+        await sql`
+          UPDATE users
+          SET last_login_at = NOW(), login_count = login_count + 1
+          WHERE email = ${user.email}
+        `;
+      } catch (err) {
+        console.error('Login-tracking update failed (signIn continues):', err);
       }
     },
   },

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { FileText, Target, CheckSquare, Receipt } from 'lucide-react';
+import { FileText, Target, CheckSquare, Receipt, UserCog, UserPlus } from 'lucide-react';
 
 interface Stats {
   posts: { status: string; count: number }[];
@@ -11,17 +11,38 @@ interface Stats {
   invoices: { status: string; count: number; total: number }[];
 }
 
+interface UserStats {
+  total: number;
+  active_7d: number;
+  new_7d: number;
+}
+
+interface LeadStats {
+  total: number;
+  new_7d: number;
+}
+
 function euro(n: number): string {
   return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n);
 }
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [leadStats, setLeadStats] = useState<LeadStats | null>(null);
 
   useEffect(() => {
     fetch('/api/admin/stats')
       .then((r) => r.json())
       .then(setStats)
+      .catch(() => {});
+    fetch('/api/admin/users')
+      .then((r) => r.json())
+      .then((d) => setUserStats(d.stats ?? null))
+      .catch(() => {});
+    fetch('/api/admin/leads')
+      .then((r) => r.json())
+      .then((d) => setLeadStats(d.stats ?? null))
       .catch(() => {});
   }, []);
 
@@ -32,6 +53,20 @@ export default function AdminDashboardPage() {
   const openInvoices = stats?.invoices.find((i) => i.status === 'open');
 
   const cards = [
+    {
+      label: 'Gebruikers',
+      href: '/admin/gebruikers',
+      icon: UserCog,
+      value: `${userStats?.total ?? 0} totaal`,
+      sub: `${userStats?.active_7d ?? 0} actief (7d) · ${userStats?.new_7d ?? 0} nieuw (7d)`,
+    },
+    {
+      label: 'Leads',
+      href: '/admin/leads',
+      icon: UserPlus,
+      value: `${leadStats?.total ?? 0} totaal`,
+      sub: `${leadStats?.new_7d ?? 0} nieuw (7d)`,
+    },
     {
       label: 'Blog',
       href: '/admin/blog',
