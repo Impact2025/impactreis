@@ -49,6 +49,10 @@ export default function IdentityPage() {
     await api.identity.updateProfile({ statements: nextIdentities, proofs: nextProofs });
   };
 
+  // Voegt een identiteit toe én opent meteen de bewijs-modal ervoor — zonder deze stap moest de
+  // gebruiker zelf ontdekken dat "+ Bewijs toevoegen" de eigenlijke actie is; de abstracte uitleg
+  // bovenaan alleen lezen was niet genoeg om het mechanisme (statement → bewijs → effect) te
+  // snappen. Dit maakt de eerste keer een geleide flow in plaats van een dode-eind-knop.
   const addIdentity = (statement: string) => {
     const newIdentity: IdentityStatement = {
       id: Date.now().toString(),
@@ -61,6 +65,7 @@ export default function IdentityPage() {
     persist([...identities, newIdentity], proofs);
     setNewStatement('');
     setShowAddForm(false);
+    setSelectedIdentity(newIdentity.id);
   };
 
   const toggleIdentity = (id: string) => {
@@ -134,14 +139,25 @@ export default function IdentityPage() {
       </div>
 
       <div className="max-w-lg mx-auto px-5 pt-5 space-y-4">
-        {/* Uitleg */}
-        <div className="rounded-[14px] bg-surface-sunken px-4 py-3.5">
-          <p className="text-[12px] text-ink-soft leading-relaxed">
-            Kies wie je wilt <em>zijn</em> — niet wat je wilt bereiken. Elke keer dat je iets doet dat dat
-            bevestigt, log je dat als bewijs. Je coach ziet je actieve identiteiten en het aantal
-            verzamelde bewijzen mee, en gebruikt dat om zijn reflecties op te bouwen — niet alleen op
-            je cijfers, maar ook op wie je probeert te worden.
-          </p>
+        {/* Uitleg — getoond als concreet voorbeeld i.p.v. abstracte uitleg, zodat het mechanisme
+             (statement → bewijs → effect op de coach-reflectie) in één oogopslag duidelijk is,
+             zonder dat de gebruiker eerst een alinea moet lezen en zelf moet interpreteren. */}
+        <div className="rounded-[14px] border border-line bg-surface-sunken p-4">
+          <p className="text-[11px] font-semibold text-ink-soft uppercase tracking-wider mb-3">Zo werkt het — een voorbeeld</p>
+          <div className="space-y-2.5">
+            <div className="flex items-start gap-2.5">
+              <span className="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
+              <p className="text-[12px] text-ink leading-relaxed">Je kiest: <span className="font-medium">&ldquo;Ik ben iemand die zijn woord houdt&rdquo;</span></p>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <span className="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+              <p className="text-[12px] text-ink leading-relaxed">Vandaag doe je iets dat dat bevestigt, en je logt het: <span className="italic text-ink-soft">&ldquo;Klant X teruggebeld zoals beloofd, ook al kwam het niet uit&rdquo;</span></p>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <span className="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
+              <p className="text-[12px] text-ink leading-relaxed">Je coach ziet dat bewijs terug en bouwt zijn reflecties niet alleen op je cijfers, maar ook op wie je aantoonbaar aan het worden bent.</p>
+            </div>
+          </div>
         </div>
 
         {/* Add form */}
@@ -202,6 +218,11 @@ export default function IdentityPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="w-10 h-1 bg-line rounded-full mx-auto mb-5" />
+              {identities.find(i => i.id === selectedIdentity)?.proofCount === 0 && (
+                <p className="text-[12px] text-primary font-medium mb-3">
+                  Goed gekozen. Noteer nu je eerste bewijs — iets dat je vandaag al deed of nog gaat doen dat hierbij past.
+                </p>
+              )}
               <p className="text-[11px] text-ink-soft mb-1 uppercase tracking-wider">Bewijs voor</p>
               <p className="text-[15px] font-semibold text-ink mb-4 leading-snug">
                 &ldquo;{identities.find(i => i.id === selectedIdentity)?.statement}&rdquo;
@@ -209,7 +230,7 @@ export default function IdentityPage() {
               <textarea
                 value={newProof}
                 onChange={(e) => setNewProof(e.target.value)}
-                placeholder="Wat heb je gedaan dat dit bewijst?"
+                placeholder="Bijv: 'Klant X teruggebeld zoals beloofd, ook al kwam het niet uit'"
                 rows={3}
                 autoFocus
                 className="w-full bg-surface-sunken text-ink placeholder-ink-soft rounded-[12px] px-4 py-3 text-[14px] outline-none resize-none border border-line focus:border-primary transition-colors mb-4"
@@ -233,22 +254,23 @@ export default function IdentityPage() {
           </div>
         )}
 
-        {/* Empty state */}
+        {/* Empty state — verwijst nu naar de suggesties erboven i.p.v. een generieke knop die
+             naar hetzelfde lege tekstveld leidt; "zelf verzinnen" blijft mogelijk via + Toevoegen. */}
         {identities.length === 0 && !showAddForm && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="flex flex-col items-center justify-center py-10 text-center">
             <div className="w-16 h-16 rounded-full bg-surface-sunken flex items-center justify-center mb-4">
               <Shield size={28} className="text-ink-soft" />
             </div>
             <p className="text-[16px] font-semibold text-ink mb-2">Claim je eerste identiteit</p>
-            <p className="text-[13px] text-ink-soft max-w-[240px] leading-relaxed mb-6">
-              Je identiteit bepaalt je gedrag. Kies wie je wilt zijn.
+            <p className="text-[13px] text-ink-soft max-w-[260px] leading-relaxed mb-6">
+              Tik hierboven een suggestie aan, of schrijf je eigen — je kiest daarna meteen je eerste bewijs.
             </p>
             <button
               onClick={() => setShowAddForm(true)}
               className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-full text-[14px] font-semibold active:scale-95 transition-transform"
             >
               <Plus size={16} />
-              Begin nu
+              Eigen identiteit schrijven
             </button>
           </div>
         )}
