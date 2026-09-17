@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Sunrise, ArrowLeft, ArrowRight, CheckCircle, Heart, Target, Zap, Brain, CalendarClock, Mountain, Coffee, Sun, GlassWater, Mic, AlertTriangle } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
@@ -14,6 +15,7 @@ import { getMeditationsByCategory } from '@/lib/meditations/catalog';
 import { useSpeechRecognition } from '@/hooks/use-speech';
 import { TIME_WASTER_OPTIONS } from '@/lib/onboarding';
 import { FOCUS_CATEGORY_OPTIONS, getFocusBlockSlots } from '@/lib/focus-blocks';
+import { queryKeys } from '@/lib/query-client';
 
 type Step = 'dagtype' | 'centering' | 'intentie' | 'focusblokken' | 'status' | 'dankbaarheid' | 'affirmatie' | 'done';
 type DayType = 'focus' | 'buffer' | 'free';
@@ -110,6 +112,7 @@ export default function MorningPage() {
   const [meetingCount, setMeetingCount] = useState<number | null>(null);
   const [mode, setMode] = useState<Mode>('full');
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { settings } = useRitualStatus();
   const [focusBlockSlot1, focusBlockSlot2] = getFocusBlockSlots(settings);
 
@@ -264,6 +267,7 @@ export default function MorningPage() {
         }).catch(() => {});
       }
 
+      await queryClient.invalidateQueries({ queryKey: queryKeys.ritualStatus });
       setStep('done');
       setTimeout(() => { router.push('/dashboard'); }, 2000);
     } catch (err) {

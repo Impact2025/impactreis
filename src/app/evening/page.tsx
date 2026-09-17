@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Moon, Lightbulb, TrendingDown, Calendar, Heart, ArrowLeft, CheckCircle, Zap, AlertTriangle } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
@@ -10,6 +11,7 @@ import { TimeGateScreen } from '@/components/weekflow/time-gate-screen';
 import { isAfter5PM, getToday, formatHour } from '@/lib/weekflow.service';
 import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { buildRecoveryProposalUrl } from '@/lib/calendar-proposal';
+import { queryKeys } from '@/lib/query-client';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
 type EveningVerdict = 'waarde_verkocht' | 'gered_door_operatie' | 'gevlucht_in_veiligheid';
@@ -45,7 +47,9 @@ function EveningContent() {
   const [morningIntentie, setMorningIntentie] = useState<string | null>(null);
   const [focusSummary, setFocusSummary] = useState<{ completed: number; total: number; minutes: number } | null>(null);
   const [isAlreadyComplete, setIsAlreadyComplete] = useState(false);
+  const [editingComplete, setEditingComplete] = useState(false);
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
 
   // Support ?date=YYYY-MM-DD for filling in a past evening ritual
@@ -153,6 +157,7 @@ function EveningContent() {
           }).catch(() => {});
         }
       }
+      await queryClient.invalidateQueries({ queryKey: queryKeys.ritualStatus });
       setShowSuccess(true);
       setTimeout(() => { router.push('/dashboard'); }, 2000);
     } catch (error) {
@@ -196,6 +201,79 @@ function EveningContent() {
     );
   }
 
+  // Hooguit één avondritueel per dag: is dit al ingevuld voor de doeldatum, toon dan de
+  // samenvatting in plaats van een leeg-ogend, direct bewerkbaar formulier — net als bij het
+  // ochtendritueel moet je expliciet op "Opnieuw invullen" tikken om het te overschrijven.
+  if (isAlreadyComplete && !editingComplete) {
+    const verdictLabel = VERDICT_OPTIONS.find((o) => o.value === formData.eveningVerdict)?.label;
+    return (
+      <div className="min-h-screen bg-surface-card pb-28">
+        <header className="bg-surface-card border-b border-line px-5 py-4 sticky top-0 z-30">
+          <div className="max-w-lg mx-auto flex items-center gap-3">
+            <Link
+              href="/dashboard"
+              className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-surface-sunken text-ink active:scale-95 transition-transform"
+            >
+              <ArrowLeft size={18} strokeWidth={2} />
+            </Link>
+            <div>
+              <h1 className="text-[18px] font-bold text-ink tracking-tight">Avond Ritueel</h1>
+              <p className="text-[11px] text-ink-soft">Al voltooid voor {new Date(targetDate + 'T12:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })}</p>
+            </div>
+          </div>
+        </header>
+        <div className="max-w-lg mx-auto px-5 pt-6 space-y-4">
+          <div className="rounded-[16px] bg-primary-muted border border-primary-light p-5 flex items-center gap-4">
+            <CheckCircle size={28} className="text-primary flex-shrink-0" />
+            <div>
+              <p className="text-[15px] font-semibold text-ink">Goed gedaan vandaag!</p>
+              <p className="text-[12px] text-ink-soft mt-0.5">Je avondritueel is al voltooid.</p>
+            </div>
+          </div>
+
+          <div className="rounded-[16px] border border-line p-5 space-y-4">
+            {verdictLabel && (
+              <div>
+                <p className="text-[11px] text-ink-soft uppercase tracking-widest mb-1">Realiteitstoets</p>
+                <p className="text-[14px] font-semibold text-ink">{verdictLabel}</p>
+              </div>
+            )}
+            {formData.biggestWin && (
+              <div className="border-t border-surface-sunken pt-4">
+                <p className="text-[11px] text-ink-soft uppercase tracking-widest mb-1">Belangrijkste overwinning</p>
+                <p className="text-[14px] text-ink leading-relaxed">{formData.biggestWin}</p>
+              </div>
+            )}
+            {formData.tomorrowTop3?.some((t) => t) && (
+              <div className="border-t border-surface-sunken pt-4">
+                <p className="text-[11px] text-ink-soft uppercase tracking-widest mb-2">Morgen voorbereid</p>
+                <ul className="space-y-1">
+                  {formData.tomorrowTop3.filter((t) => t).map((t, i) => (
+                    <li key={i} className="text-[13px] text-ink flex items-start gap-2">
+                      <span className="text-primary mt-0.5">✓</span>{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="border-t border-surface-sunken pt-4 text-center">
+              <p className="text-[11px] text-ink-soft">Energie</p>
+              <p className="text-[18px] font-bold text-primary">{formData.energyLevel}<span className="text-[12px] text-ink-soft">/10</span></p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setEditingComplete(true)}
+            className="w-full py-3.5 rounded-[14px] border border-line text-[14px] text-ink-soft font-medium active:scale-[0.98] transition-transform"
+          >
+            Opnieuw invullen
+          </button>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-surface-card pb-28">
       {/* Header */}
@@ -233,13 +311,13 @@ function EveningContent() {
           </div>
         )}
 
-        {/* Already complete banner */}
-        {isAlreadyComplete && (
+        {/* Bewust opnieuw invullen — overschrijft de eerder ingevulde reflectie van vandaag */}
+        {isAlreadyComplete && editingComplete && (
           <div className="rounded-[16px] border border-primary/20 bg-primary/5 p-4 mb-5 flex items-center gap-3">
             <CheckCircle size={18} className="text-primary flex-shrink-0" />
             <div>
-              <p className="text-[13px] font-semibold text-ink">Je hebt dit ritueel al voltooid vandaag</p>
-              <p className="text-[12px] text-ink-soft">Je kunt het opnieuw doen om te overschrijven</p>
+              <p className="text-[13px] font-semibold text-ink">Je overschrijft je al voltooide ritueel</p>
+              <p className="text-[12px] text-ink-soft">De eerder ingevulde reflectie wordt vervangen zodra je opslaat</p>
             </div>
           </div>
         )}

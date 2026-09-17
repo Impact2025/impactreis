@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Calendar, Target, Book, AlertCircle, Trophy,
   Rocket, CheckCircle, Plus, X, Mountain
@@ -11,6 +12,7 @@ import { AuthService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { getCurrentQuarter, getCurrentWeekNumber, getToday } from '@/lib/weekflow.service';
 import { useRitualStatus } from '@/hooks/useRitualStatus';
+import { queryKeys } from '@/lib/query-client';
 import { BottomNav } from '@/components/ui/bottom-nav';
 
 interface WeeklyStartData {
@@ -40,6 +42,7 @@ const FOCUS_LABELS: Record<string, string> = {
 
 export default function WeeklyStartPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { settings } = useRitualStatus();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -123,6 +126,9 @@ export default function WeeklyStartPage() {
         data: formData,
       });
       setSaved(true);
+      // Zonder dit blijft het dashboard tot 30s de gecachte "Week nog niet gestart"-status tonen
+      // na de redirect hieronder — de weekstart-mutatie gaat buiten react-query om.
+      await queryClient.invalidateQueries({ queryKey: queryKeys.ritualStatus });
       // Redirect to dashboard after a brief success confirmation
       setTimeout(() => {
         router.push('/dashboard');

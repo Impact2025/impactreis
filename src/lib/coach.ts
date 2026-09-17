@@ -1302,7 +1302,7 @@ function buildNextStepPrompt(ctx: CoachContext, candidate: NextStepCandidate): s
 FEIT (al vastgesteld door het systeem — verzin niets extra's, gebruik alleen dit):
 ${candidate.factLine}
 
-Schrijf in het Nederlands, in de jij-vorm, maximaal 2 zinnen: leg in één zin uit waarom dit nu de beste volgende stap is voor ${object}, en eindig met een korte, directe aansporing om de actie te nemen ("${candidate.ctaLabel}"). Geen inleiding, geen bullet points, geen aanhalingstekens om je antwoord.`;
+Schrijf in het Nederlands, in de jij-vorm (jij/je/jouw — jij spreekt ${object} aan, dus gebruik nooit "ik" of "mij"), maximaal 2 zinnen: leg in één zin uit waarom dit nu de beste volgende stap is voor ${object}, en eindig met een korte, directe aansporing om de actie te nemen ("${candidate.ctaLabel}"). Geen inleiding, geen bullet points, geen aanhalingstekens, geen quote of gesimuleerde uitspraak van ${object} zelf — alleen jouw eigen coach-tekst.`;
 }
 
 export type NextStepResult =
@@ -1401,7 +1401,11 @@ export async function runNextStepAnalysis(userId: string, organizationId: number
     message = `${candidate.factLine} Dat is de beste volgende stap nu — de rest van de dag bouwt hierop voort.`;
   } else {
     try {
-      message = (await openRouterChat(buildNextStepPrompt(ctx, candidate), 150)).trim();
+      const generated = (await openRouterChat(buildNextStepPrompt(ctx, candidate), 150)).trim();
+      // Val terug op de kale factLine als het model toch de jij-vorm verlaat (bijv. een
+      // "ik"-geformuleerde rationalisatie namens de ondernemer i.p.v. coach-tekst aan hem) —
+      // dat is verwarrender dan de simpele feitzin die het systeem al had vastgesteld.
+      message = /\b(ik|mij|mijn|me)\b/i.test(generated) ? candidate.factLine : generated;
     } catch (err) {
       console.error('Next-step LLM error:', err);
       message = candidate.factLine;

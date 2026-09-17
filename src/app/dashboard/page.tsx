@@ -86,6 +86,7 @@ export default function DashboardPage() {
   const [leverageTasks, setLeverageTasks] = useState<{ goal: Goal; action: GoalAction }[]>([]);
   const [nsdrDismissed, setNsdrDismissed] = useState(false);
   const [restartTour, setRestartTour] = useState(false);
+  const [todayExpanded, setTodayExpanded] = useState(false);
   const router                      = useRouter();
 
   const ritualStatuses = useRitualStatus();
@@ -233,6 +234,23 @@ export default function DashboardPage() {
     setNsdrDismissed(true);
   };
 
+  // Precies één hero-signaal tegelijk, hoogste prioriteit wint — voorkomt dat een gebruiker op
+  // een zware dag (gemist ritueel + proactief signaal + NSDR) vier banners na elkaar krijgt.
+  type PrimarySignal =
+    | { kind: 'missedEvening' }
+    | { kind: 'proactive'; signal: NonNullable<typeof proactiveSignal> }
+    | { kind: 'nextStep'; step: NonNullable<typeof nextStep> }
+    | { kind: 'nextRitual'; ritual: NonNullable<typeof nextRitual> }
+    | { kind: 'nsdr' };
+
+  const primarySignal: PrimarySignal | null =
+    missedEveningYesterday ? { kind: 'missedEvening' } :
+    showProactiveSignal && proactiveSignal ? { kind: 'proactive', signal: proactiveSignal } :
+    nextStep ? { kind: 'nextStep', step: nextStep } :
+    (nextRitual && nextRitual.isAvailable) ? { kind: 'nextRitual', ritual: nextRitual } :
+    showNsdr ? { kind: 'nsdr' } :
+    null;
+
   const completeLeverageTask = async (goal: Goal, action: GoalAction) => {
     setLeverageTasks(prev => prev.filter(t => t.action.id !== action.id));
     const nextActions = (goal.nextActions ?? []).map(a => a.id === action.id ? { ...a, completed: true } : a);
@@ -325,49 +343,8 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* ══ BESTE VOLGENDE STAP (Sparren) ══════════════════════ */}
-          {nextStep && (
-            <Link
-              href={nextStep.ctaHref}
-              className="block rounded-card bg-surface-inverse p-5 mb-6 hover:opacity-95 transition-opacity shadow-organic"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-[10px] bg-on-surface-inverse/10 flex items-center justify-center flex-shrink-0">
-                  <Compass size={18} className="text-primary-light" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-bold tracking-[0.15em] text-primary-light uppercase mb-1.5">
-                    Jouw volgende stap
-                  </p>
-                  <p className="text-[14px] font-bold text-on-surface-inverse mb-1 leading-snug">
-                    {nextStep.headline}
-                  </p>
-                  <p className="text-[12px] text-on-surface-inverse/70 leading-relaxed mb-3">
-                    {nextStep.message}
-                  </p>
-                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-primary-light">
-                    {nextStep.ctaLabel} <ChevronRight size={13} />
-                  </span>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {/* ══ MEDITATIE — RUSTMOMENT (optioneel, zie Instellingen) ══ */}
-          {settings.meditationsEnabled && (
-            <div className="pb-6">
-              <MeditationPlayer meditation={getRecommendedMeditation()!} compact />
-              <Link
-                href="/meditations"
-                className="mt-2 inline-block text-[11px] font-semibold text-primary hover:underline"
-              >
-                Alle meditaties bekijken →
-              </Link>
-            </div>
-          )}
-
-          {/* ══ FREE DAY — RUST, GEEN PRESTATIEDRUK ═════════════ */}
-          {todayDayType === 'free' && (
+          {/* ══ PRIMAIR SIGNAAL — precies één per keer, hoogste prioriteit wint ═══ */}
+          {todayDayType === 'free' ? (
             <div className="flex items-center gap-3 rounded-card border border-tertiary/20 bg-tertiary-soft p-4 mb-5">
               <div className="w-9 h-9 rounded-[10px] bg-tertiary/15 flex items-center justify-center flex-shrink-0">
                 <Sunrise size={17} className="text-tertiary" />
@@ -377,10 +354,20 @@ export default function DashboardPage() {
                 <p className="text-[11px] text-ink-soft">Herstel is vandaag het doel, niet presteren.</p>
               </div>
             </div>
-          )}
-
-          {/* ══ PROACTIEVE SIGNAALKAART (Sparren) ══════════════════ */}
-          {todayDayType !== 'free' && showProactiveSignal && proactiveSignal && (
+          ) : primarySignal?.kind === 'missedEvening' ? (
+            <Link
+              href={`/evening?date=${yesterday}`}
+              className="flex items-center gap-3 rounded-card border border-accent/25 bg-accent-soft p-4 mb-5 active:scale-[0.99] transition-transform"
+            >
+              <div className="w-9 h-9 rounded-[10px] bg-accent/15 flex items-center justify-center flex-shrink-0">
+                <Moon size={17} className="text-accent" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold text-ink">Avondritueel gemist</p>
+                <p className="text-[11px] text-accent">Tik om gisteren alsnog in te vullen →</p>
+              </div>
+            </Link>
+          ) : primarySignal?.kind === 'proactive' ? (
             <div className="rounded-card border border-accent/25 bg-accent-soft p-4 mb-5">
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-[10px] bg-accent/15 flex items-center justify-center flex-shrink-0">
@@ -388,7 +375,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[9px] font-bold tracking-[0.15em] text-accent uppercase mb-1">Sparren signaleert</p>
-                  <p className="text-[13px] text-ink leading-relaxed mb-3">{proactiveSignal.message}</p>
+                  <p className="text-[13px] text-ink leading-relaxed mb-3">{primarySignal.signal.message}</p>
                   <div className="flex items-center gap-3">
                     <Link
                       href="/coach"
@@ -413,257 +400,46 @@ export default function DashboardPage() {
                 </button>
               </div>
             </div>
-          )}
-
-          {/* ══ NOG TE DOEN: RITUEEL ═════════════════════════════ */}
-          {todayDayType !== 'free' && nextRitual && nextRitual.isAvailable && (
+          ) : primarySignal?.kind === 'nextStep' ? (
             <Link
-              href={nextRitual.path}
+              href={primarySignal.step.ctaHref}
+              className="block rounded-card bg-surface-inverse p-5 mb-6 hover:opacity-95 transition-opacity shadow-organic"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-[10px] bg-on-surface-inverse/10 flex items-center justify-center flex-shrink-0">
+                  <Compass size={18} className="text-primary-light" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] font-bold tracking-[0.15em] text-primary-light uppercase mb-1.5">
+                    Jouw volgende stap
+                  </p>
+                  <p className="text-[14px] font-bold text-on-surface-inverse mb-1 leading-snug">
+                    {primarySignal.step.headline}
+                  </p>
+                  <p className="text-[12px] text-on-surface-inverse/70 leading-relaxed mb-3">
+                    {primarySignal.step.message}
+                  </p>
+                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-primary-light">
+                    {primarySignal.step.ctaLabel} <ChevronRight size={13} />
+                  </span>
+                </div>
+              </div>
+            </Link>
+          ) : primarySignal?.kind === 'nextRitual' ? (
+            <Link
+              href={primarySignal.ritual.path}
               className="flex items-center gap-3 rounded-card border border-primary/25 bg-primary-muted p-4 mb-5 active:scale-[0.99] transition-transform"
             >
               <div className="w-9 h-9 rounded-[10px] bg-primary/15 flex items-center justify-center flex-shrink-0">
                 <Sunrise size={17} className="text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-ink">Nog te doen: {nextRitual.title}</p>
-                <p className="text-[11px] text-primary">{nextRitual.reason} →</p>
+                <p className="text-[13px] font-semibold text-ink">Nog te doen: {primarySignal.ritual.title}</p>
+                <p className="text-[11px] text-primary">{primarySignal.ritual.reason} →</p>
               </div>
             </Link>
-          )}
-
-          {/* ══ GEMIST AVONDRITUEEL BANNER ══════════════════════ */}
-          {missedEveningYesterday && (
-            <Link
-              href={`/evening?date=${yesterday}`}
-              className="flex items-center gap-3 rounded-card border border-accent/25 bg-accent-soft p-4 mb-5 active:scale-[0.99] transition-transform"
-            >
-              <div className="w-9 h-9 rounded-[10px] bg-accent/15 flex items-center justify-center flex-shrink-0">
-                <Moon size={17} className="text-accent" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-ink">Avondritueel gemist</p>
-                <p className="text-[11px] text-accent">Tik om gisteren alsnog in te vullen →</p>
-              </div>
-            </Link>
-          )}
-
-          {/* ══ HEFBOOM-TAKEN VANDAAG (80/20) ════════════════════ */}
-          {leverageTasks.length > 0 && (
-            <section data-tour="leverage-tasks" className="mb-6">
-              <div className="flex items-center gap-2.5 mb-3.5">
-                <div className="w-8 h-8 rounded-[10px] bg-tertiary-soft flex items-center justify-center">
-                  <Flame size={15} className="text-tertiary" />
-                </div>
-                <h2 className="text-[15px] font-bold text-ink">Hefboom-taken vandaag</h2>
-              </div>
-              <div className="space-y-2">
-                {leverageTasks.map(({ goal, action }) => (
-                  <div key={action.id} className="flex items-center gap-3 px-4 py-3 rounded-[14px] border border-line bg-surface-card">
-                    <button
-                      onClick={() => completeLeverageTask(goal, action)}
-                      className="w-6 h-6 shrink-0 rounded-full border-2 border-tertiary flex items-center justify-center active:scale-90 transition-transform"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-ink truncate">{action.text}</p>
-                      <p className="text-[11px] text-ink-soft truncate">{goal.title}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* ══ MIJN ROUTINES ═══════════════════════════════════ */}
-          <section data-tour="routines" className="mb-6">
-            <div className="flex items-center justify-between mb-3.5">
-              <h2 className="text-[15px] font-bold text-ink">Mijn Routines</h2>
-              <Link href="/morning" className="text-[12px] font-semibold text-primary">
-                Beheer alles
-              </Link>
-            </div>
-
-            <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5 snap-x snap-mandatory">
-              <Link
-                href="/morning"
-                className="flex-none w-[168px] snap-start rounded-card border border-line bg-surface-card p-4 shadow-organic hover:border-primary/30 transition-colors"
-              >
-                <div className="flex items-center justify-between mb-3.5">
-                  <div className="w-9 h-9 rounded-[10px] bg-tertiary-soft flex items-center justify-center">
-                    <Sunrise size={17} className="text-tertiary" />
-                  </div>
-                  {ritualStatuses.morning.isComplete && (
-                    <span className="text-[9px] font-bold text-primary bg-primary-muted px-1.5 py-0.5 rounded-full">✓ Klaar</span>
-                  )}
-                </div>
-                <p className="text-[13px] font-bold text-ink mb-0.5">Ochtend Routine</p>
-                <p className="text-[10px] text-ink-soft mb-3 leading-snug">Intentie, Focus, Dankbaarheid</p>
-                <div className="h-1 rounded-full bg-surface-sunken overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all duration-700"
-                    style={{ width: ritualStatuses.morning.isComplete ? '100%' : '0%' }}
-                  />
-                </div>
-                <p className="text-[10px] text-ink-soft mt-1.5 font-medium">
-                  {ritualStatuses.morning.isComplete ? '100%' : 'Nog niet gestart'}
-                </p>
-              </Link>
-
-              <Link
-                href="/evening"
-                className="flex-none w-[168px] snap-start rounded-card border border-line bg-surface-card p-4 shadow-organic hover:border-accent/30 transition-colors"
-              >
-                <div className="flex items-center justify-between mb-3.5">
-                  <div className="w-9 h-9 rounded-[10px] bg-accent-soft flex items-center justify-center">
-                    <Moon size={17} className="text-accent" />
-                  </div>
-                  {ritualStatuses.evening.isComplete && (
-                    <span className="text-[9px] font-bold text-primary bg-primary-muted px-1.5 py-0.5 rounded-full">✓ Klaar</span>
-                  )}
-                </div>
-                <p className="text-[10px] text-ink-soft mb-0.5 tabular-nums">20:00 – 21:00</p>
-                <p className="text-[13px] font-bold text-ink mb-0.5">Avond Routine</p>
-                <p className="text-[10px] text-ink-soft mb-3 leading-snug">Reflectie, Planning</p>
-                <div className="h-1 rounded-full bg-surface-sunken overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-accent transition-all duration-700"
-                    style={{ width: ritualStatuses.evening.isComplete ? '100%' : '0%' }}
-                  />
-                </div>
-                <p className="text-[10px] text-ink-soft mt-1.5 font-medium">
-                  {ritualStatuses.evening.isComplete ? '100%' : 'Vanaf 17:00'}
-                </p>
-              </Link>
-
-              {ritualStatuses.weeklyStart.canStillComplete && !ritualStatuses.weeklyStart.isComplete && (
-                <Link
-                  href="/weekly-start"
-                  className="flex-none w-[168px] snap-start rounded-card border border-line bg-surface-card p-4 shadow-organic"
-                >
-                  <div className="mb-3.5">
-                    <div className="w-9 h-9 rounded-[10px] bg-primary-muted flex items-center justify-center">
-                      <CalendarDays size={17} className="text-primary" />
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-ink-soft mb-0.5">Maandag</p>
-                  <p className="text-[13px] font-bold text-ink mb-0.5">Week Start</p>
-                  <p className="text-[10px] text-ink-soft mb-3">Plan je week</p>
-                  <div className="h-1 rounded-full bg-surface-sunken" />
-                  <p className="text-[10px] text-ink-soft mt-1.5">Niet gestart</p>
-                </Link>
-              )}
-
-              {dayType === 'weekend' && (
-                <Link
-                  href="/weekly-review"
-                  className="flex-none w-[168px] snap-start rounded-card border border-line bg-surface-card p-4 shadow-organic"
-                >
-                  <div className="flex items-center justify-between mb-3.5">
-                    <div className="w-9 h-9 rounded-[10px] bg-tertiary-soft flex items-center justify-center">
-                      <TrendingUp size={17} className="text-tertiary" />
-                    </div>
-                    {ritualStatuses.weeklyReview.isComplete && (
-                      <span className="text-[9px] font-bold text-primary bg-primary-muted px-1.5 py-0.5 rounded-full">✓</span>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-ink-soft mb-0.5">Weekend</p>
-                  <p className="text-[13px] font-bold text-ink mb-0.5">Week Review</p>
-                  <p className="text-[10px] text-ink-soft mb-3">Evalueer je week</p>
-                  <div className="h-1 rounded-full bg-surface-sunken overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-tertiary"
-                      style={{ width: ritualStatuses.weeklyReview.isComplete ? '100%' : '0%' }}
-                    />
-                  </div>
-                </Link>
-              )}
-            </div>
-          </section>
-
-          {/* ══ VANDAAG IN JE AGENDA ════════════════════════════ */}
-          {calendarConfigured && calendarEvents.length > 0 && (() => {
-            const meetingMinutes = calendarEvents.reduce((sum, ev) => {
-              if (ev.isAllDay || !ev.start || !ev.end) return sum;
-              return sum + Math.max(0, (new Date(ev.end).getTime() - new Date(ev.start).getTime()) / 60000);
-            }, 0);
-            const hours = Math.round((meetingMinutes / 60) * 10) / 10;
-            const isDrukkeDag = meetingMinutes >= 300;
-            const druk = isDrukkeDag ? 'Drukke dag' : meetingMinutes >= 150 ? 'Gemiddelde vergaderdruk' : 'Rustige dag';
-
-            const timedEvents = calendarEvents.filter((ev) => !ev.isAllDay && ev.end);
-            const lastEventEnd = timedEvents.length > 0
-              ? new Date(Math.max(...timedEvents.map((ev) => new Date(ev.end!).getTime())))
-              : new Date();
-            const recoveryStart = new Date(lastEventEnd.getTime() + 15 * 60000);
-            const recoveryUrl = buildRecoveryProposalUrl(
-              recoveryStart,
-              60,
-              'Hersteltijd (voorgesteld door Sparren)',
-              'Voorgesteld na een drukke dag met veel vergaderingen — even geen scherm, even geen taak.'
-            );
-
-            // Maker-tijd-signaal: op een Focus Day is de ochtend het duurste onroerend goed op de
-            // kalender (zie het tijdsarchitectuur-onderzoek) — een vergadering vóór de middag botst
-            // daarmee, puur signalerend, geen automatische actie.
-            const hasMorningMeeting = todayDayType === 'focus' && timedEvents.some(
-              (ev) => ev.start && new Date(ev.start).getHours() < 12
-            );
-
-            return (
-            <div className="rounded-card border border-line bg-surface-card p-5 mb-6 shadow-organic">
-              <div className="flex items-center justify-between mb-3.5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-[10px] bg-primary-muted flex items-center justify-center">
-                    <CalendarDays size={15} className="text-primary" />
-                  </div>
-                  <p className="text-[14px] font-semibold text-ink">Vandaag in je agenda</p>
-                </div>
-                {meetingMinutes > 0 && (
-                  <span className="text-[10px] font-medium text-ink-soft bg-surface-sunken rounded-full px-2.5 py-1 whitespace-nowrap">
-                    {druk} &middot; {hours}u
-                  </span>
-                )}
-              </div>
-              <div className="space-y-2.5">
-                {calendarEvents.map((ev) => (
-                  <div key={ev.id} className="flex items-center gap-3">
-                    <span className="text-[12px] font-medium text-ink-soft w-12 flex-shrink-0 tabular-nums">
-                      {ev.isAllDay || !ev.start
-                        ? 'Hele dag'
-                        : new Date(ev.start).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <span className="text-[13px] text-ink truncate">{ev.summary}</span>
-                  </div>
-                ))}
-              </div>
-              {hasMorningMeeting && (
-                <div className="mt-4 flex items-center gap-2.5 rounded-[12px] bg-tertiary-soft px-4 py-3">
-                  <Mountain size={14} className="text-tertiary flex-shrink-0" />
-                  <span className="text-[12px] font-medium text-ink flex-1">
-                    Vergadering(en) vóór de middag botsen met je Focus Day — de ochtend is je duurste onroerend goed
-                  </span>
-                </div>
-              )}
-              {isDrukkeDag && (
-                <a
-                  href={recoveryUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 flex items-center gap-2.5 rounded-[12px] bg-primary-muted px-4 py-3 hover:bg-primary/15 transition-colors"
-                >
-                  <Sparkles size={14} className="text-primary flex-shrink-0" />
-                  <span className="text-[12px] font-medium text-ink flex-1">
-                    Drukke dag — Sparren stelt een uur hersteltijd voor na je laatste afspraak
-                  </span>
-                  <ChevronRight size={14} className="text-primary flex-shrink-0" />
-                </a>
-              )}
-            </div>
-            );
-          })()}
-
-          {/* ══ NSDR-SUGGESTIE (NAMIDDAG, FOCUS DAY) ═════════════ */}
-          {showNsdr && (
-            <div className="flex items-center gap-3 rounded-card border border-tertiary/20 bg-tertiary-soft p-4 mb-6">
+          ) : primarySignal?.kind === 'nsdr' ? (
+            <div className="flex items-center gap-3 rounded-card border border-tertiary/20 bg-tertiary-soft p-4 mb-5">
               <div className="w-9 h-9 rounded-[10px] bg-tertiary/15 flex items-center justify-center flex-shrink-0">
                 <Moon size={17} className="text-tertiary" />
               </div>
@@ -675,7 +451,259 @@ export default function DashboardPage() {
                 <X size={15} />
               </button>
             </div>
+          ) : null}
+
+          {/* ══ MEDITATIE — RUSTMOMENT (optioneel, zie Instellingen) ══ */}
+          {settings.meditationsEnabled && (
+            <div className="pb-6">
+              <MeditationPlayer meditation={getRecommendedMeditation()!} compact />
+              <Link
+                href="/meditations"
+                className="mt-2 inline-block text-[11px] font-semibold text-primary hover:underline"
+              >
+                Alle meditaties bekijken →
+              </Link>
+            </div>
           )}
+
+          {/* ══ VANDAAG — routines, hefboomtaken en agenda in één kaart ═══ */}
+          {(() => {
+            const hasLeverageTasks = leverageTasks.length > 0;
+            const hasAgenda = calendarConfigured && calendarEvents.length > 0;
+
+            let meetingMinutes = 0, hours = 0, isDrukkeDag = false, druk = '', hasMorningMeeting = false, recoveryUrl = '';
+            if (hasAgenda) {
+              meetingMinutes = calendarEvents.reduce((sum, ev) => {
+                if (ev.isAllDay || !ev.start || !ev.end) return sum;
+                return sum + Math.max(0, (new Date(ev.end).getTime() - new Date(ev.start).getTime()) / 60000);
+              }, 0);
+              hours = Math.round((meetingMinutes / 60) * 10) / 10;
+              isDrukkeDag = meetingMinutes >= 300;
+              druk = isDrukkeDag ? 'Drukke dag' : meetingMinutes >= 150 ? 'Gemiddelde vergaderdruk' : 'Rustige dag';
+
+              const timedEvents = calendarEvents.filter((ev) => !ev.isAllDay && ev.end);
+              const lastEventEnd = timedEvents.length > 0
+                ? new Date(Math.max(...timedEvents.map((ev) => new Date(ev.end!).getTime())))
+                : new Date();
+              const recoveryStart = new Date(lastEventEnd.getTime() + 15 * 60000);
+              recoveryUrl = buildRecoveryProposalUrl(
+                recoveryStart,
+                60,
+                'Hersteltijd (voorgesteld door Sparren)',
+                'Voorgesteld na een drukke dag met veel vergaderingen — even geen scherm, even geen taak.'
+              );
+
+              // Maker-tijd-signaal: op een Focus Day is de ochtend het duurste onroerend goed op de
+              // kalender (zie het tijdsarchitectuur-onderzoek) — een vergadering vóór de middag botst
+              // daarmee, puur signalerend, geen automatische actie.
+              hasMorningMeeting = todayDayType === 'focus' && timedEvents.some(
+                (ev) => ev.start && new Date(ev.start).getHours() < 12
+              );
+            }
+
+            return (
+              <section data-tour="routines" className="mb-6 rounded-card border border-line bg-surface-card shadow-organic overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setTodayExpanded((v) => !v)}
+                  className="w-full flex items-center justify-between gap-3 p-4 text-left"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-[10px] bg-primary-muted flex items-center justify-center shrink-0">
+                      <CalendarDays size={15} className="text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="text-[15px] font-bold text-ink">Vandaag</h2>
+                      <p className="text-[11px] text-ink-soft truncate">
+                        Ochtend {ritualStatuses.morning.isComplete ? '✓' : '○'} · Avond {ritualStatuses.evening.isComplete ? '✓' : '○'}
+                        {hasLeverageTasks ? ` · ${leverageTasks.length} hefboomtaak${leverageTasks.length > 1 ? 'en' : ''}` : ''}
+                        {hasAgenda && meetingMinutes > 0 ? ` · ${druk.toLowerCase()}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className={`text-ink-soft shrink-0 transition-transform ${todayExpanded ? 'rotate-90' : ''}`} />
+                </button>
+
+                {todayExpanded && (
+                  <div className="px-4 pb-4 pt-1 border-t border-line space-y-5">
+                    {/* Routines */}
+                    <div className="flex items-center justify-end -mb-1">
+                      <Link href="/morning" className="text-[12px] font-semibold text-primary">
+                        Beheer alles
+                      </Link>
+                    </div>
+                    <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x snap-mandatory">
+                      <Link
+                        href="/morning"
+                        className="flex-none w-[168px] snap-start rounded-[14px] border border-tertiary/15 bg-tertiary-soft/40 p-4 hover:border-tertiary/30 transition-colors"
+                      >
+                        <div className="flex items-center justify-between mb-3.5">
+                          <div className="w-9 h-9 rounded-[10px] bg-tertiary-soft flex items-center justify-center">
+                            <Sunrise size={17} className="text-tertiary" />
+                          </div>
+                          {ritualStatuses.morning.isComplete && (
+                            <span className="text-[9px] font-bold text-primary bg-primary-muted px-1.5 py-0.5 rounded-full">✓ Klaar</span>
+                          )}
+                        </div>
+                        <p className="text-[13px] font-bold text-ink mb-0.5">Ochtend Routine</p>
+                        <p className="text-[10px] text-ink-soft mb-3 leading-snug">Intentie, Focus, Dankbaarheid</p>
+                        <div className="h-1 rounded-full bg-surface-card overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all duration-700"
+                            style={{ width: ritualStatuses.morning.isComplete ? '100%' : '0%' }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-ink-soft mt-1.5 font-medium">
+                          {ritualStatuses.morning.isComplete ? '100%' : 'Nog niet gestart'}
+                        </p>
+                      </Link>
+
+                      <Link
+                        href="/evening"
+                        className="flex-none w-[168px] snap-start rounded-[14px] border border-accent/15 bg-accent-soft/40 p-4 hover:border-accent/30 transition-colors"
+                      >
+                        <div className="flex items-center justify-between mb-3.5">
+                          <div className="w-9 h-9 rounded-[10px] bg-accent-soft flex items-center justify-center">
+                            <Moon size={17} className="text-accent" />
+                          </div>
+                          {ritualStatuses.evening.isComplete && (
+                            <span className="text-[9px] font-bold text-primary bg-primary-muted px-1.5 py-0.5 rounded-full">✓ Klaar</span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-ink-soft mb-0.5 tabular-nums">20:00 – 21:00</p>
+                        <p className="text-[13px] font-bold text-ink mb-0.5">Avond Routine</p>
+                        <p className="text-[10px] text-ink-soft mb-3 leading-snug">Reflectie, Planning</p>
+                        <div className="h-1 rounded-full bg-surface-card overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-accent transition-all duration-700"
+                            style={{ width: ritualStatuses.evening.isComplete ? '100%' : '0%' }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-ink-soft mt-1.5 font-medium">
+                          {ritualStatuses.evening.isComplete ? '100%' : 'Vanaf 17:00'}
+                        </p>
+                      </Link>
+
+                      {ritualStatuses.weeklyStart.canStillComplete && !ritualStatuses.weeklyStart.isComplete && (
+                        <Link
+                          href="/weekly-start"
+                          className="flex-none w-[168px] snap-start rounded-[14px] border border-primary/15 bg-primary-muted/50 p-4"
+                        >
+                          <div className="mb-3.5">
+                            <div className="w-9 h-9 rounded-[10px] bg-primary-muted flex items-center justify-center">
+                              <CalendarDays size={17} className="text-primary" />
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-ink-soft mb-0.5">Maandag</p>
+                          <p className="text-[13px] font-bold text-ink mb-0.5">Week Start</p>
+                          <p className="text-[10px] text-ink-soft mb-3">Plan je week</p>
+                          <div className="h-1 rounded-full bg-surface-card" />
+                          <p className="text-[10px] text-ink-soft mt-1.5">Niet gestart</p>
+                        </Link>
+                      )}
+
+                      {dayType === 'weekend' && (
+                        <Link
+                          href="/weekly-review"
+                          className="flex-none w-[168px] snap-start rounded-[14px] border border-tertiary/15 bg-tertiary-soft/40 p-4"
+                        >
+                          <div className="flex items-center justify-between mb-3.5">
+                            <div className="w-9 h-9 rounded-[10px] bg-tertiary-soft flex items-center justify-center">
+                              <TrendingUp size={17} className="text-tertiary" />
+                            </div>
+                            {ritualStatuses.weeklyReview.isComplete && (
+                              <span className="text-[9px] font-bold text-primary bg-primary-muted px-1.5 py-0.5 rounded-full">✓</span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-ink-soft mb-0.5">Weekend</p>
+                          <p className="text-[13px] font-bold text-ink mb-0.5">Week Review</p>
+                          <p className="text-[10px] text-ink-soft mb-3">Evalueer je week</p>
+                          <div className="h-1 rounded-full bg-surface-card overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-tertiary"
+                              style={{ width: ritualStatuses.weeklyReview.isComplete ? '100%' : '0%' }}
+                            />
+                          </div>
+                        </Link>
+                      )}
+                    </div>
+
+                    {/* Hefboom-taken */}
+                    {hasLeverageTasks && (
+                      <div data-tour="leverage-tasks">
+                        <div className="flex items-center gap-2 mb-2.5">
+                          <Flame size={13} className="text-tertiary" />
+                          <p className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.1em]">Hefboom-taken vandaag</p>
+                        </div>
+                        <div className="space-y-2">
+                          {leverageTasks.map(({ goal, action }) => (
+                            <div key={action.id} className="flex items-center gap-3 px-4 py-3 rounded-[14px] border border-line bg-surface-sunken">
+                              <button
+                                onClick={() => completeLeverageTask(goal, action)}
+                                className="w-6 h-6 shrink-0 rounded-full border-2 border-tertiary flex items-center justify-center active:scale-90 transition-transform"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[13px] font-medium text-ink truncate">{action.text}</p>
+                                <p className="text-[11px] text-ink-soft truncate">{goal.title}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Agenda */}
+                    {hasAgenda && (
+                      <div>
+                        <div className="flex items-center justify-between mb-2.5">
+                          <p className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.1em]">Vandaag in je agenda</p>
+                          {meetingMinutes > 0 && (
+                            <span className="text-[10px] font-medium text-ink-soft bg-surface-sunken rounded-full px-2.5 py-1 whitespace-nowrap">
+                              {druk} &middot; {hours}u
+                            </span>
+                          )}
+                        </div>
+                        <div className="space-y-2.5">
+                          {calendarEvents.map((ev) => (
+                            <div key={ev.id} className="flex items-center gap-3">
+                              <span className="text-[12px] font-medium text-ink-soft w-12 flex-shrink-0 tabular-nums">
+                                {ev.isAllDay || !ev.start
+                                  ? 'Hele dag'
+                                  : new Date(ev.start).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              <span className="text-[13px] text-ink truncate">{ev.summary}</span>
+                            </div>
+                          ))}
+                        </div>
+                        {hasMorningMeeting && (
+                          <div className="mt-3 flex items-center gap-2.5 rounded-[12px] bg-tertiary-soft px-4 py-3">
+                            <Mountain size={14} className="text-tertiary flex-shrink-0" />
+                            <span className="text-[12px] font-medium text-ink flex-1">
+                              Vergadering(en) vóór de middag botsen met je Focus Day — de ochtend is je duurste onroerend goed
+                            </span>
+                          </div>
+                        )}
+                        {isDrukkeDag && (
+                          <a
+                            href={recoveryUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-3 flex items-center gap-2.5 rounded-[12px] bg-primary-muted px-4 py-3 hover:bg-primary/15 transition-colors"
+                          >
+                            <Sparkles size={14} className="text-primary flex-shrink-0" />
+                            <span className="text-[12px] font-medium text-ink flex-1">
+                              Drukke dag — Sparren stelt een uur hersteltijd voor na je laatste afspraak
+                            </span>
+                            <ChevronRight size={14} className="text-primary flex-shrink-0" />
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+            );
+          })()}
 
           {/* ══ VOORGESTELDE TIJDBLOKKEN ═════════════════════════ */}
           {proposals.length > 0 && (
@@ -688,7 +716,7 @@ export default function DashboardPage() {
               </div>
               <div className="space-y-2.5">
                 {proposals.map((p) => (
-                  <div key={p.id} className="rounded-card border border-line bg-surface-card p-4">
+                  <div key={p.id} className="rounded-card border border-primary-light bg-primary-muted p-4">
                     <p className="text-[13px] font-semibold text-ink mb-0.5">{p.summary}</p>
                     <p className="text-[11px] text-ink-soft mb-1">
                       {new Date(p.start_time).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
@@ -723,13 +751,13 @@ export default function DashboardPage() {
 
           {/* ══ VRIJDAGMIDDAG SCORECARD ══════════════════════════ */}
           {scorecard && scorecard.lowestTwo.length > 0 && (
-            <div className="rounded-card border border-line p-4 mb-6">
+            <div className="rounded-card border border-accent/25 bg-accent-soft p-4 mb-6">
               <p className="text-[13px] font-bold text-ink mb-0.5">Vrijdagmiddag Scorecard</p>
               <p className="text-[11px] text-ink-soft leading-snug mb-3">Je 2 zwakste non-negotiables deze week — agenda voor je volgende sparring</p>
               <div className="flex gap-3">
                 {scorecard.lowestTwo.map((m) => (
-                  <div key={m.key} className="flex-1 rounded-[12px] bg-surface-sunken p-3 text-center">
-                    <p className="text-[18px] font-bold text-ink">{m.score}<span className="text-[11px] text-ink-soft">/10</span></p>
+                  <div key={m.key} className="flex-1 rounded-[12px] bg-surface-card p-3 text-center">
+                    <p className="text-[18px] font-bold text-accent">{m.score}<span className="text-[11px] text-ink-soft">/10</span></p>
                     <p className="text-[11px] text-ink-soft mt-0.5">{m.label}</p>
                   </div>
                 ))}
@@ -770,31 +798,50 @@ export default function DashboardPage() {
               </div>
 
               <div className="space-y-2.5">
-                {goals.map((goal) => (
-                  <Link
-                    key={goal.id}
-                    href="/goals"
-                    className="block rounded-[14px] border border-line bg-surface-card px-4 py-3.5 hover:border-primary/30 transition-colors"
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <p className="text-[13px] font-semibold text-ink leading-snug flex-1 pr-3">
-                        {goal.title}
-                      </p>
-                      <span className="text-[14px] font-bold text-primary tabular-nums shrink-0">
-                        {goal.progress ?? 0}%
+                {goals.map((goal, i) => {
+                  const tone = [
+                    {
+                      card: 'border-primary/25 bg-primary-muted hover:border-primary/40',
+                      text: 'text-primary',
+                      bar: 'bg-primary',
+                    },
+                    {
+                      card: 'border-accent/25 bg-accent-soft hover:border-accent/40',
+                      text: 'text-accent',
+                      bar: 'bg-accent',
+                    },
+                    {
+                      card: 'border-tertiary/25 bg-tertiary-soft hover:border-tertiary/40',
+                      text: 'text-tertiary',
+                      bar: 'bg-tertiary',
+                    },
+                  ][i % 3];
+                  return (
+                    <Link
+                      key={goal.id}
+                      href="/goals"
+                      className={`block rounded-[14px] border px-4 py-3.5 transition-colors ${tone.card}`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[13px] font-semibold text-ink leading-snug flex-1 pr-3">
+                          {goal.title}
+                        </p>
+                        <span className={`text-[14px] font-bold ${tone.text} tabular-nums shrink-0`}>
+                          {goal.progress ?? 0}%
+                        </span>
+                      </div>
+                      <span className={`inline-block text-[9px] font-bold ${tone.text} bg-surface-card tracking-[0.12em] uppercase mb-2 px-2 py-0.5 rounded-full`}>
+                        {categoryLabel[goal.category] ?? goal.category}
                       </span>
-                    </div>
-                    <p className="text-[9px] font-bold text-ink-soft tracking-[0.15em] uppercase mb-2">
-                      {categoryLabel[goal.category] ?? goal.category}
-                    </p>
-                    <div className="h-1 rounded-full bg-surface-sunken overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all duration-700"
-                        style={{ width: `${Math.max(2, goal.progress ?? 0)}%` }}
-                      />
-                    </div>
-                  </Link>
-                ))}
+                      <div className="h-1 rounded-full bg-surface-card overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${tone.bar} transition-all duration-700`}
+                          style={{ width: `${Math.max(2, goal.progress ?? 0)}%` }}
+                        />
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             </section>
           )}
@@ -802,20 +849,20 @@ export default function DashboardPage() {
           {/* ══ STATS ROW ═══════════════════════════════════════ */}
           <section data-tour="stats" className="mb-6">
             <div className="grid grid-cols-3 gap-2.5">
-              <div className="rounded-[14px] bg-surface-sunken px-3 py-4">
-                <p className="text-[9px] font-bold text-ink-soft uppercase tracking-[0.12em] mb-1.5">Doelen</p>
+              <div className="rounded-[14px] bg-primary-muted px-3 py-4">
+                <p className="text-[9px] font-bold text-primary uppercase tracking-[0.12em] mb-1.5">Doelen</p>
                 <p className="text-[26px] font-bold text-ink leading-none">{stats.activeGoals}</p>
-                <p className="text-[9px] text-ink-soft mt-1">actief</p>
+                <p className="text-[9px] text-primary mt-1">actief</p>
               </div>
-              <div className="rounded-[14px] bg-tertiary-soft border border-[#ffb5a1] px-3 py-4">
+              <div className="rounded-[14px] bg-tertiary-soft px-3 py-4">
                 <p className="text-[9px] font-bold text-tertiary uppercase tracking-[0.12em] mb-1.5">Streak</p>
                 <p className="text-[26px] font-bold text-ink leading-none">{ritualStatuses.streak.currentStreak}</p>
                 <p className="text-[9px] text-tertiary mt-1">dagen</p>
               </div>
-              <div className="rounded-[14px] bg-surface-sunken px-3 py-4">
-                <p className="text-[9px] font-bold text-ink-soft uppercase tracking-[0.12em] mb-1.5">Week</p>
+              <div className="rounded-[14px] bg-accent-soft px-3 py-4">
+                <p className="text-[9px] font-bold text-accent uppercase tracking-[0.12em] mb-1.5">Week</p>
                 <p className="text-[26px] font-bold text-ink leading-none">{stats.weeklyProgress}</p>
-                <p className="text-[9px] text-ink-soft mt-1">procent</p>
+                <p className="text-[9px] text-accent mt-1">procent</p>
               </div>
             </div>
           </section>
@@ -833,10 +880,10 @@ export default function DashboardPage() {
                 {recentWins.map((win) => (
                   <div
                     key={win.id}
-                    className="flex items-center gap-3 px-4 py-3 rounded-[14px] border border-line bg-surface-card"
+                    className="flex items-center gap-3 px-4 py-3 rounded-[14px] border border-tertiary/15 bg-tertiary-soft/40"
                   >
-                    <div className="w-8 h-8 rounded-[10px] bg-primary-muted flex items-center justify-center flex-none">
-                      <Zap size={14} className="text-primary" />
+                    <div className="w-8 h-8 rounded-[10px] bg-tertiary-soft flex items-center justify-center flex-none">
+                      <Zap size={14} className="text-tertiary" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-semibold text-ink truncate">{win.title}</p>
@@ -846,7 +893,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex gap-0.5 shrink-0">
                       {Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < win.impact_level ? 'bg-primary' : 'bg-line'}`} />
+                        <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < win.impact_level ? 'bg-tertiary' : 'bg-line'}`} />
                       ))}
                     </div>
                   </div>
@@ -875,9 +922,9 @@ export default function DashboardPage() {
               </Link>
               <Link
                 href="/dagboek"
-                className="rounded-card border border-line bg-surface-card p-4 flex items-center gap-3 hover:border-primary/30 transition-colors"
+                className="rounded-card border border-tertiary/15 bg-tertiary-soft p-4 flex items-center gap-3 hover:border-tertiary/30 transition-colors"
               >
-                <div className="w-9 h-9 rounded-[10px] bg-tertiary-soft flex items-center justify-center">
+                <div className="w-9 h-9 rounded-[10px] bg-surface-card flex items-center justify-center">
                   <BookHeart size={17} className="text-tertiary" />
                 </div>
                 <div>
