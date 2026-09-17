@@ -186,26 +186,22 @@ export default function SalesPage() {
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute -top-32 -right-32 w-[480px] h-[480px] rounded-full bg-primary-light/60 blur-3xl" />
         <div className="pointer-events-none absolute -top-10 -left-40 w-[380px] h-[380px] rounded-full bg-tertiary-soft/70 blur-3xl" />
-      <div className="relative max-w-5xl mx-auto px-6 pt-20 pb-24 text-center">
-        <div className="inline-flex items-start gap-2 px-3.5 py-1.5 rounded-full border border-primary-light bg-primary-muted mb-8 max-w-[92vw] sm:max-w-none">
+      <div className="relative max-w-5xl mx-auto px-6 pt-8 sm:pt-20 pb-24 text-center flex flex-col">
+        <div className="order-1 inline-flex items-start gap-2 px-3.5 py-1.5 rounded-full border border-primary-light bg-primary-muted mb-4 sm:mb-8 max-w-[92vw] sm:max-w-none">
           <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block mt-[5px] shrink-0" />
           <span className="text-[11px] font-semibold text-primary-dark tracking-wide text-left">
             Voor ondernemers, directeuren en impactmakers die niet langer geleefd willen worden door hun agenda
           </span>
         </div>
 
-        <h1 className="text-[52px] sm:text-[72px] font-bold leading-[1.0] tracking-[-0.03em] mb-6">
+        <h1 className="order-2 text-[38px] sm:text-[72px] font-bold leading-[1.05] sm:leading-[1.0] tracking-[-0.03em] mb-4 sm:mb-6">
           Stop met<br />
           <span className="text-ink-soft line-through decoration-tertiary decoration-4">overleven.</span><br />
           Leid je bedrijf met<br />
           <span className="text-primary">rust en focus.</span>
         </h1>
 
-        <p className="text-[16px] sm:text-[18px] text-ink-soft max-w-xl mx-auto leading-relaxed mb-10">
-          Sparren.app is je dagelijkse executive challenger — een systeem dat je scherp houdt op je doelen, je agenda en je uitstelgedrag, elke dag in slechts 10 minuten.
-        </p>
-
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
+        <div className="order-3 sm:order-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 mb-4 sm:mb-0 sm:mt-0">
           <Link
             href="/reality-check"
             className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-primary text-white font-bold text-[15px] shadow-[0_4px_24px_rgba(81,96,80,0.35)] hover:bg-primary-dark active:scale-[0.98] transition-all"
@@ -221,7 +217,12 @@ export default function SalesPage() {
             <ChevronDown size={15} />
           </a>
         </div>
-        <p className="text-[12px] text-ink-soft mt-5">
+
+        <p className="order-4 sm:order-3 text-[14px] sm:text-[18px] text-ink-soft max-w-xl mx-auto leading-relaxed mb-6 sm:mb-10">
+          Sparren.app is je dagelijkse executive challenger — een systeem dat je scherp houdt op je doelen, je agenda en je uitstelgedrag, elke dag in slechts 10 minuten.
+        </p>
+
+        <p className="order-5 text-[12px] text-ink-soft">
           Gemaakt door en voor ondernemers. Direct inzicht in je tijdlek.
         </p>
       </div>
