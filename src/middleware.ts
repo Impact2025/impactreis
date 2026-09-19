@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isValidAdminSessionToken } from '@/lib/admin-session';
 import { isValidVerifiedGateToken, TURNSTILE_GATE_COOKIE } from '@/lib/verified-gate';
+import { clientIp, rateLimitResponse } from '@/lib/rate-limit';
 
 const protectedPaths = ['/admin'];
 const publicAdminPaths = ['/admin/login'];
@@ -19,6 +20,14 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname === MAGIC_LINK_SEND_PATH && request.method === 'POST') {
+    // Onafhankelijk van de Turnstile-gate hieronder: de gate-cookie is een stateloze HMAC-token
+    // zonder server-side intrekking, dus een script dat 'm rechtstreeks hergebruikt (buiten de
+    // browser om, die de Set-Cookie-verwijdering hieronder wel zou respecteren) kan er binnen de
+    // TTL van 2 minuten alsnog meerdere sends mee doen. Deze rate limit is de echte stop tegen
+    // het scenario waar de gate zelf voor bedoeld was: het Resend-quotum leegtrekken.
+    const limited = await rateLimitResponse(`magic-link-send:${clientIp(request)}`, 5, 60);
+    if (limited) return limited;
+
     // Alleen afdwingen als Turnstile daadwerkelijk geconfigureerd is — anders zou dit iedere
     // login/registratie blokkeren in omgevingen zonder Turnstile-secret (bv. lokale dev).
     if (process.env.TURNSTILE_SECRET_KEY) {
@@ -29,6 +38,12 @@ export async function middleware(request: NextRequest) {
           { status: 403 },
         );
       }
+      // Single-use voor brave clients (browsers respecteren deze Set-Cookie-verwijdering): een
+      // tweede submit binnen dezelfde 2 minuten moet opnieuw door Turnstile, niet doorglijden op
+      // dezelfde cookie.
+      const response = NextResponse.next();
+      response.cookies.delete(TURNSTILE_GATE_COOKIE);
+      return response;
     }
     return NextResponse.next();
   }
