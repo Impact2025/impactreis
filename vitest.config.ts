@@ -11,7 +11,10 @@ export default defineConfig({
     css: true,
     // e2e/ bevat Playwright-specs (eigen `test`-object) — Vitest zou ze anders ook proberen
     // te draaien en crasht daarop ("did not expect test.describe() to be called here").
-    exclude: ['node_modules/**', 'e2e/**'],
+    // tenant-isolation.test.ts draait tegen de ECHTE database (zie "test:integration" in
+    // package.json, vereist --env-file=.env.local) — onder de placeholder-DATABASE_URL uit
+    // src/test/setup.ts zou de beforeAll-hook falen en alle tests laten hangen als "pending".
+    exclude: ['node_modules/**', 'e2e/**', 'src/lib/__tests__/tenant-isolation.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
