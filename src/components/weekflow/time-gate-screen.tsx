@@ -17,35 +17,35 @@ interface TimeGateScreenProps {
  */
 export function TimeGateScreen({ title, message, availableTime }: TimeGateScreenProps) {
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center p-6">
+    <div className="min-h-screen bg-surface-card flex items-center justify-center p-5">
       <div className="max-w-md w-full">
         {/* Icon */}
-        <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-tertiary-soft border-4 border-tertiary mb-4">
-            <Clock size={48} className="text-tertiary" />
+        <div className="mb-6 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-tertiary-soft">
+            <Clock size={28} className="text-tertiary" />
           </div>
         </div>
 
         {/* Content */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-ink mb-3">
+        <div className="text-center mb-6">
+          <h1 className="text-[20px] font-bold text-ink tracking-tight mb-2">
             {title}
           </h1>
-          <p className="text-lg text-ink-soft mb-2">
+          <p className="text-[14px] text-ink-soft mb-2">
             {message}
           </p>
-          <p className="text-2xl font-bold text-tertiary">
+          <p className="text-[16px] font-bold text-tertiary">
             Beschikbaar na {availableTime}
           </p>
         </div>
 
         {/* Current Time */}
-        <div className="bg-surface-card rounded-lg p-4 border border-line mb-6">
+        <div className="rounded-[16px] border border-line p-4 mb-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-ink-soft">
+            <span className="text-[13px] text-ink-soft">
               Huidige tijd:
             </span>
-            <span className="text-lg font-bold text-ink">
+            <span className="text-[15px] font-bold text-ink">
               {new Date().toLocaleTimeString('nl-NL', {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -57,16 +57,16 @@ export function TimeGateScreen({ title, message, availableTime }: TimeGateScreen
         {/* Action Button */}
         <Link
           href="/dashboard"
-          className="flex items-center justify-center gap-2 w-full bg-accent hover:bg-accent/90 text-white py-4 rounded-lg font-bold text-lg transition-all hover:shadow-organic"
+          className="flex items-center justify-center gap-2.5 w-full py-4 bg-surface-inverse text-white text-[15px] font-semibold rounded-[16px] active:scale-[0.98] transition-transform"
         >
-          <ArrowLeft size={20} />
+          <ArrowLeft size={18} />
           Terug naar Dashboard
         </Link>
 
         {/* Tip */}
-        <div className="mt-6 text-center text-sm text-outline">
-          💡 Tip: Gebruik deze tijd om aan je dagdoelen te werken!
-        </div>
+        <p className="mt-5 text-center text-[12px] text-ink-soft">
+          Tip: gebruik deze tijd om aan je dagdoelen te werken.
+        </p>
       </div>
     </div>
   );
