@@ -1,3 +1,8 @@
+-- ⚠️ VEROUDERD (sinds 2026-09-19) — dit bestand mist organization_id, RLS, en alle tabellen die na
+-- de multi-tenant-migratie zijn toegevoegd. Het is nooit meer tegen productie veilig te draaien.
+-- Canonieke bron: src/lib/db/schema.ts (Drizzle) + migrations/manual/*.sql. Controleer drift met
+-- `npm run db:drift`. Zie STATUS.md. Dit bestand blijft staan voor historische context.
+
 -- Database schema for Mijn Ondernemers OS
 
 -- Users table

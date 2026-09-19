@@ -15,6 +15,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "db:schema": "node run-schema.js",
+    "db:drift": "node scripts/check-schema-drift.mjs",
     "db:wins": "node create-wins-tables.js",
     "clean": "rm -rf .next",
     "postinstall": "prisma generate || true",

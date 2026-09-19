@@ -138,6 +138,10 @@ export const ritualSettings = pgTable('ritual_settings', {
   // Laatste ISO-weekdag waarop de weekstart nog ingehaald mag worden.
   weekStartDeadlineWeekday: integer('week_start_deadline_weekday').notNull().default(3),
   meditationsEnabled: boolean('meditations_enabled').notNull().default(true),
+  focusBlock1Start: text('focus_block_1_start').notNull().default('08:30'),
+  focusBlock1DurationMin: integer('focus_block_1_duration_min').notNull().default(90),
+  focusBlock2Start: text('focus_block_2_start').notNull().default('12:30'),
+  focusBlock2DurationMin: integer('focus_block_2_duration_min').notNull().default(90),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -275,6 +279,25 @@ export const coachPredictions = pgTable('coach_predictions', {
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => ({
   dueIdx: index('idx_coach_predictions_due').on(t.userId, t.dueDate),
+}));
+
+// Cache voor de "Jouw volgende stap"-kaart op het dashboard (src/lib/coach.ts:1484+): één
+// voorstel per (user, dag), zodat een pagina-refresh niet telkens een nieuwe LLM-call triggert.
+// Bestond al in productie (raw SQL, coach.ts) maar ontbrak in dit canonieke schema — nu bijgewerkt
+// zodat schema.ts de daadwerkelijke database weerspiegelt.
+export const coachNextSteps = pgTable('coach_next_steps', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  organizationId: integer('organization_id').references(() => organizations.id),
+  date: date('date').notNull(),
+  patternKey: text('pattern_key').notNull(),
+  headline: text('headline').notNull(),
+  message: text('message').notNull(),
+  ctaLabel: text('cta_label').notNull(),
+  ctaHref: text('cta_href').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  userDateIdx: uniqueIndex('coach_next_steps_user_id_date_key').on(t.userId, t.date),
 }));
 
 // Voorstellen voor agenda-tijdblokken (bv. hersteltijd na een drukke dag) die de coach aanmaakt,
