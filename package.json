@@ -17,7 +17,9 @@
     "db:schema": "node run-schema.js",
     "db:wins": "node create-wins-tables.js",
     "clean": "rm -rf .next",
-    "postinstall": "prisma generate || true"
+    "postinstall": "prisma generate || true",
+    "predeploy": "npm run type-check && npm run test && npm run build",
+    "deploy": "node scripts/deploy.mjs"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
