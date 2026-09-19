@@ -18,6 +18,7 @@ import {
 import { normalizeNextActions } from './goal-actions';
 import { getCurrentQuarter, getDayType, getDateDaysAgo } from './weekflow.service';
 import { isCalendarConfiguredFor, listTodayEvents } from './google-calendar';
+import { notifyAdminCronFailure } from './admin-notify';
 import { getRitualStatus } from './ritual-status.service';
 
 export type Technique =
@@ -971,8 +972,12 @@ export interface BridgeOrganization {
  *  organisatie i.p.v. het vroegere ene gedeelde COACH_BRIDGE_TOKEN dat altijd naar de eerste
  *  gebruiker in de hele tabel resolvede (loadSingleUserId — brak zodra er een tweede
  *  organisatie bijkwam, zoals het bestaande demo-account). Hasht het token en zoekt 'm op in
- *  client_bridge_tokens; geeft de eerste user van díe organisatie terug. Fail closed: geen of
- *  onbekend token betekent null, nooit "open by default" of een gok naar de verkeerde klant.
+ *  client_bridge_tokens; client_bridge_tokens is per organisatie, niet per gebruiker, dus dit kan
+ *  vandaag alleen de juiste gebruiker teruggeven zolang elke organisatie er precies één heeft
+ *  (waar) — geen bridge-route stuurt een user-identifier mee om binnen een organisatie te kiezen.
+ *  Fail closed zodra dat niet meer klopt (i.p.v. gokken naar de eerste gebruiker en bridge-data
+ *  stilletjes op de verkeerde persoon schrijven): een organisatie met >1 gebruiker retourneert
+ *  null en waarschuwt de admin, zodat dit opvalt vóórdat het misgaat i.p.v. erna.
  *  Zelfde patroon als ImpactOS' remote/api/_lib.js:resolveBridgeTenant(). */
 export async function resolveBridgeOrganization(
   authorizationHeader: string | null
@@ -989,9 +994,17 @@ export async function resolveBridgeOrganization(
   const organizationId = rows[0].organization_id;
 
   const users = await sql`
-    SELECT id FROM users WHERE organization_id = ${organizationId} ORDER BY id ASC LIMIT 1
+    SELECT id FROM users WHERE organization_id = ${organizationId} ORDER BY id ASC LIMIT 2
   `;
   if (users.length === 0) return null;
+  if (users.length > 1) {
+    console.error(`resolveBridgeOrganization: organisatie ${organizationId} heeft meerdere gebruikers — bridge-token is per organisatie, kan niet bepalen voor wie. Bridge-call geweigerd i.p.v. gegokt.`);
+    notifyAdminCronFailure(
+      'resolveBridgeOrganization',
+      new Error(`Organisatie ${organizationId} heeft meerdere gebruikers; bridge-tokens zijn per organisatie en kunnen niet meer veilig één gebruiker kiezen. ImpactOS-bridge-calls voor deze organisatie falen nu met 401 totdat dit is opgelost.`)
+    ).catch(() => {});
+    return null;
+  }
   return { userId: String(users[0].id), organizationId };
 }
 
