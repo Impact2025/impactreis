@@ -51,4 +51,36 @@ Minimaal nodig — zie `src/lib/db.ts`, `src/lib/resend.ts`, `src/lib/auth.ts` v
 
 Alleen bestanden onder `migrations/manual/*.sql` zijn productie-veilig (zie STATUS.md — de
 Drizzle-gegenereerde `migrations/0000_*.sql` gaat uit van een lege database). Draai een nieuwe manuele
-migratie handmatig tegen productie vóór je de bijbehorende code-deploy doet, niet erna.
+migratie handmatig tegen productie vóór je de bijbehorende code-deploy doet, niet erna. Controleer na
+elke schemawijziging met `npm run db:drift` of `src/lib/db/schema.ts` nog klopt met productie.
+
+## Nog te doen: error-tracking en uptime-monitoring
+
+Twee stukken observability uit het operationele-stevigheid-plan vereisen een account dat niet vanuit
+de agent aangemaakt kan worden. Beide zijn los van elkaar en kosten ~15 minuten:
+
+### Sentry (error-tracking)
+
+Bewust nog niet geïnstalleerd: `@sentry/nextjs` wrapt `next.config.js` op **build-niveau** (niet pas
+bij runtime), dus zonder een echte DSN om het resultaat tegen te testen is de kans op een stille
+build-regressie met Turbopack reëel. Installeer zelf zodra je een Sentry-account + DSN hebt:
+
+```bash
+npx @sentry/wizard@latest -i nextjs
+```
+
+De wizard vraagt om de DSN, wrapt `next.config.js` automatisch en zet `SENTRY_DSN` in `.env.local` en
+Vercel. Draai daarna `npm run build` en `npm run test:e2e` om te bevestigen dat er niets brak, vóórdat
+je naar productie deployt.
+
+### UptimeRobot (of vergelijkbaar)
+
+`/api/health` doet sinds Fase 0 een echte databasecheck (`{"status":"ok","database":"ok"}` bij 200, 503
+bij een databaseprobleem). Zet een gratis monitor op:
+
+1. Account op [uptimerobot.com](https://uptimerobot.com)
+2. New Monitor → HTTP(s) → `https://sparren.app/api/health`, interval 5 min
+3. Alert contact → je eigen e-mailadres
+4. (optioneel) "Keyword monitoring" op `"status":"ok"` zodat een 200 met `database: "unreachable"` ook een alert triggert, niet alleen een non-200
+
+Zonder dit hoor je een productie-storing pas als je zelf de app opent.

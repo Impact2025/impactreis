@@ -41,6 +41,20 @@ Het sterkste onderdeel van de app. Geen "chatbot met system prompt":
 - **Rate limiting** (sinds 2026-09-16, `src/lib/rate-limit.ts` + `rate_limits`-tabel, Postgres-backed, geen Redis nodig): toegepast op alle LLM-aanroepende routes (`coach/chat`, `coach/analyse`, `coach/kikker`, `onboarding/chat`, `coach/bridge/analyse`), op `auth/login`/`auth/register` (brute force) en op publieke lead-gen forms (`reality-check`, `courses/seed`).
 - `/api/debug` gaf voorheen ongeauthenticeerd een `DATABASE_URL`-prefix en of `DEMO_PASSWORD` gezet was terug aan iedereen die de URL kende — gedicht (2026-09-16), retourneert nu 404 in productie.
 
+## Operationele stevigheid (2026-09-19)
+
+- **Deploy-veiligheidsnet**: `npm run deploy` (zie DEPLOYMENT.md) dwingt type-check + tests + build af
+  vóór elke productie-deploy en verifieert erna `/api/health`. CI (`.github/workflows/ci.yml`) draait nu
+  ook op feature-branches — draaide voorheen alleen op `master`, waar nooit naartoe gepusht werd. Git
+  → Vercel triggert geen automatische productie-deploys meer (`vercel.json`).
+- **Cron-falen is zichtbaar**: vier van de zes e-mail-cronroutes (`onboarding-nudge`, `winback`,
+  `weekrapport`, `reality-check-nurture`) mailen de admin bij een onverwachte fout i.p.v. stil een 500
+  in Vercel-logs (`src/lib/cron-guard.ts`). `ochtend-herinnering`/`ochtend-motivatie` volgen zodra de
+  lopende `claimDailyEmail`-wijziging daar landt.
+- **Nog open, vereist een extern account** (zie DEPLOYMENT.md voor exacte stappen): Sentry
+  (error-tracking) en UptimeRobot (uptime-monitoring op `/api/health`). Bewust niet blind geïnstalleerd
+  — Sentry's Next.js-SDK wrapt `next.config.js` op build-niveau, niet te verifiëren zonder een echte DSN.
+
 ## Bekende technische schuld
 
 1. **Schema-drift** (bijgewerkt 2026-09-19): `src/lib/db/schema.ts` is nu de geverifieerde canonieke bron — `npm run db:drift` vergelijkt 'm live tegen productie en rapporteert elk verschil. Bekende, bewuste uitzonderingen staan in dat script (`KNOWN_*`-allowlists): admin-only CRM/financiën-tabellen zijn single-tenant-by-design, `approval_queue` is ontworpen maar nog niet gemigreerd, `organizations.profile_type` is ImpactOS-toekomstwerk. Courses/push-tabellen (`courses`, `push_subscriptions`, ...) staan gewoon in het schema en hebben `organization_id` waar dat hoort — de catalogus-tabellen (`courses`, `course_modules`, `course_lessons`, `course_exercises`) bewust niet, want dat is gedeelde content, geen organisatie-eigendom. `schema.sql` is expliciet gemarkeerd als verouderd. `migrations/0000_multi_tenant_foundation.sql` is drizzle-kit-gegenereerd en **niet veilig om tegen productie te draaien** (gaat uit van een lege database) — alleen de `migrations/manual/*`-bestanden zijn productie-veilig.
