@@ -8,6 +8,7 @@ import {
   realityCheckEmail4,
   type RealityCheckLeadEmailData,
 } from '@/lib/email-templates';
+import { withCronErrorNotification } from '@/lib/cron-guard';
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -64,7 +65,7 @@ async function runStage(
 // "+24u/+48u/+72u sinds afronding"-reeks van maar 3 stappen. Elke stage is idempotent: een lead
 // komt pas in de query zodra de vorige stage al verstuurd is én de huidige nog niet, dus een
 // dubbele cron-run in dezelfde dag verstuurt nooit twee keer dezelfde mail.
-export async function GET(request: NextRequest) {
+export const GET = withCronErrorNotification('reality-check-nurture', async (request: NextRequest) => {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -102,4 +103,4 @@ export async function GET(request: NextRequest) {
   );
 
   return NextResponse.json({ ok: true, email2, email3, email4 });
-}
+});

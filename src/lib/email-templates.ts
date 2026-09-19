@@ -700,6 +700,25 @@ export function adminNewUserEmail(data: { email: string; source: 'magic-link' | 
   return { subject, html: base('Nieuwe gebruiker', subject, body) };
 }
 
+export function adminCronFailureEmail(data: { jobName: string; errorMessage: string; appUrl: string }): { subject: string; html: string } {
+  const subject = `Cron-job "${data.jobName}" gefaald`;
+
+  const body = `
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Een geplande e-mailjob is mislukt.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">
+      Deze job draait normaal onbewaakt via Vercel Cron — deze mail is het enige signaal dat 'm
+      iets tegenhield, dus is de kans reëel dat gebruikers vandaag geen mail van dit type kregen.
+    </p>
+
+    ${section('Job', data.jobName)}
+    ${section('Fout', data.errorMessage)}
+
+    <div style="text-align:center;">${btn('Bekijk logs in Vercel →', 'https://vercel.com/vmunster-2243s-projects/impactreis')}</div>
+  `;
+
+  return { subject, html: base('Cron-job gefaald', subject, body) };
+}
+
 export function adminNewLeadEmail(data: {
   email: string;
   name?: string | null;

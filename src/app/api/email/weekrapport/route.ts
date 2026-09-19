@@ -5,6 +5,7 @@ import { getAuthContext } from '@/lib/auth-context';
 import { weekrapportEmail, WeekrapportData } from '@/lib/email-templates';
 import { getRecipients, recordEmailSent, unsubscribeUrl } from '@/lib/email-recipients';
 import { SPARRINGPARTNER_STYLE, sanitizeAiText } from '@/lib/ai-style';
+import { withCronErrorNotification } from '@/lib/cron-guard';
 
 const EMAIL_TYPE = 'weekly_report';
 
@@ -159,7 +160,7 @@ ${SPARRINGPARTNER_STYLE}`;
 }
 
 // GET — triggered by Vercel cron (every Sunday 07:00 UTC), multi-tenant fan-out
-export async function GET(request: NextRequest) {
+export const GET = withCronErrorNotification('weekrapport', async (request: NextRequest) => {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -182,7 +183,7 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, sent, failed: failures.length, recipients: recipients.length });
-}
+});
 
 // POST — manual trigger via JWT auth (for testing from settings)
 export async function POST(request: NextRequest) {

@@ -3,6 +3,7 @@ import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { sql } from '@/lib/db';
 import { winbackEmail } from '@/lib/email-templates';
 import { recordEmailSent, unsubscribeUrl } from '@/lib/email-recipients';
+import { withCronErrorNotification } from '@/lib/cron-guard';
 
 const STAGES = [3, 10, 30] as const;
 
@@ -10,7 +11,7 @@ const STAGES = [3, 10, 30] as const;
 // één keer ooit per gebruiker (via de 'winback_N' email_sends-rijen) — geen dagelijkse spam
 // zodra iemand eenmaal is afgehaakt, en het stadium "vangt" ook een gemist cron-run alsnog op
 // (>= drempel, niet exact op de dag).
-export async function GET(request: NextRequest) {
+export const GET = withCronErrorNotification('winback', async (request: NextRequest) => {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -58,4 +59,4 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, sent: results });
-}
+});

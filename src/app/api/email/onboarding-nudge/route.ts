@@ -3,13 +3,14 @@ import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { sql } from '@/lib/db';
 import { onboardingNudgeEmail } from '@/lib/email-templates';
 import { recordEmailSent, unsubscribeUrl } from '@/lib/email-recipients';
+import { withCronErrorNotification } from '@/lib/cron-guard';
 
 const EMAIL_TYPE = 'onboarding_nudge';
 
 // Cron, dagelijks: iedereen die zich >24u geleden registreerde maar de AI-intake nog niet heeft
 // afgerond, krijgt precies één keer deze nudge (niet elke dag opnieuw — vandaar de "ooit al
 // verstuurd?"-check i.p.v. de "vandaag al verstuurd?"-check die de andere fan-out routes gebruiken).
-export async function GET(request: NextRequest) {
+export const GET = withCronErrorNotification('onboarding-nudge', async (request: NextRequest) => {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -52,4 +53,4 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, sent, failed: failures.length, candidates: recipients.length });
-}
+});
