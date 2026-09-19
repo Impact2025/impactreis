@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { chooseTechnique, detectProactiveSignal, determineNextStepCandidate, determineToolSuggestion, type CoachContext, type NextStepInput } from '../coach';
+import { chooseTechnique, detectProactiveSignal, determineNextStepCandidate, determineToolSuggestion, mergeTodayContext, type CoachContext, type NextStepInput } from '../coach';
 
 function baseContext(overrides: Partial<CoachContext> = {}): CoachContext {
   return {
@@ -277,5 +277,39 @@ describe('determineToolSuggestion', () => {
   it('wijst naar Controle Cirkel als die relatief langer stil staat, ook als Dagboek ook stil staat', () => {
     const result = determineToolSuggestion({ identityEmpty: false, daysSinceDagboek: 12, daysSinceControleCirkel: 25 });
     expect(result?.ctaHref).toBe('/controle-cirkel');
+  });
+});
+
+describe('mergeTodayContext', () => {
+  // Regressietest voor een bug (code review 2026-09-19): het avondritueel overschreef stilletjes
+  // ctx.today.energyLevel van het ochtendritueel, waardoor de ochtendritueel-gate (loadCoachContext
+  // ~1221, runNextStepAnalysis's hasMorningRitual ~1549) dacht dat het ochtendritueel al was
+  // ingevuld op dagen dat alleen het avondritueel was gedaan.
+  it('ochtend-energie wint van avond-energie als beide rituelen vandaag zijn ingevuld', () => {
+    const result = mergeTodayContext({ energyLevel: 8, intentie: 'Focus' }, { energyLevel: 3 }, false, undefined);
+    expect(result.energyLevel).toBe(8);
+    expect(result.intentie).toBe('Focus');
+  });
+
+  it('valt terug op avond-energie als alleen het avondritueel is ingevuld (geen ochtendritueel)', () => {
+    const result = mergeTodayContext(null, { energyLevel: 3, whatWentWell: 'Klant gebeld' }, false, undefined);
+    expect(result.energyLevel).toBe(3);
+    expect(result.whatWentWell).toBe('Klant gebeld');
+  });
+
+  it('geeft alleen ochtenddata terug als het avondritueel nog niet is ingevuld', () => {
+    const result = mergeTodayContext({ energyLevel: 6, sleepQuality: 7 }, null, false, undefined);
+    expect(result).toEqual({ energyLevel: 6, sleepQuality: 7 });
+  });
+
+  it('past de kikker-override alleen toe als daarom gevraagd wordt, met de weggeklikte taak in de tekst', () => {
+    const result = mergeTodayContext({ energyLevel: 5 }, null, true, 'Bellen met leverancier');
+    expect(result.eveningVerdict).toBe('gevlucht_in_veiligheid');
+    expect(result.eveningVerdictDetail).toContain('Bellen met leverancier');
+  });
+
+  it('gebruikt een generieke kikker-tekst als er geen taaknaam bekend is', () => {
+    const result = mergeTodayContext(null, null, true, null);
+    expect(result.eveningVerdictDetail).toBe('Kikker-sprint weggeklikt zonder resultaat.');
   });
 });

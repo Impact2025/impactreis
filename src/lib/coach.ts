@@ -72,7 +72,10 @@ export interface HoldingContext {
 }
 
 export interface CoachContext {
-  today: { energyLevel?: number; sleepQuality?: number; wakeTime?: string; intentie?: string; dayType?: 'focus' | 'buffer' | 'free' };
+  // Bevat ook het volledige avondritueel (eveningVerdict, whatWentWell, ...) via mergeTodayContext()
+  // — hier alleen de velden getypeerd die de coach-logica zelf leest, de rest komt via de index-
+  // signature door zonder dat elk evening-veld hier apart benoemd hoeft te worden.
+  today: { energyLevel?: number; sleepQuality?: number; wakeTime?: string; intentie?: string; dayType?: 'focus' | 'buffer' | 'free'; [key: string]: unknown };
   yesterday: { energyLevel?: number; sleepQuality?: number } | null;
   streak: number;
   last7Days: DailyLogRow[];
@@ -263,6 +266,29 @@ function parseData(raw: any) {
   return parsed;
 }
 
+/** Merget de geparste ochtend- en avondritueel-data van vandaag tot ctx.today.
+ *
+ *  Avond eerst, ochtend erna: beide rituelen hebben een `energyLevel`-veld, en de ochtend-versie
+ *  is de canonieke dagbaseline waar hasMorningRitual (~1549), de ochtendritueel-gate (~1221) en de
+ *  prompt-samenvatting (ochtend/slaap/intentie) op vertrouwen. Bij de omgekeerde volgorde
+ *  overschreef een avondritueel zonder ochtendritueel stilletjes ctx.today.energyLevel, waardoor
+ *  die gate dacht dat het ochtendritueel al was ingevuld terwijl dat niet zo was. */
+export function mergeTodayContext(
+  morningData: Record<string, unknown> | null,
+  eveningData: Record<string, unknown> | null,
+  applyKikkerOverride: boolean,
+  kikkerDismissedTask: string | null | undefined
+): CoachContext['today'] {
+  return {
+    ...(eveningData ?? {}),
+    ...(morningData ?? {}),
+    ...(applyKikkerOverride ? {
+      eveningVerdict: 'gevlucht_in_veiligheid',
+      eveningVerdictDetail: kikkerDismissedTask ? `Kikker-sprint weggeklikt: ${kikkerDismissedTask}` : 'Kikker-sprint weggeklikt zonder resultaat.',
+    } : {}),
+  };
+}
+
 /** Bouwt de multi-dag context die de coach nodig heeft. Alle cijfers komen uit de echte tabellen,
  *  nooit uit een aanname — de LLM krijgt straks alleen wat hier al gemeten is. */
 export async function loadCoachContext(userId: string, organizationId: number | null = null): Promise<CoachContext> {
@@ -357,14 +383,12 @@ export async function loadCoachContext(userId: string, organizationId: number | 
   };
 
   return {
-    today: {
-      ...(todayMorning ? parseData(todayMorning.data) : {}),
-      ...(todayEvening ? parseData(todayEvening.data) : {}),
-      ...(kikkerDismissed && !todayEvening ? {
-        eveningVerdict: 'gevlucht_in_veiligheid',
-        eveningVerdictDetail: kikkerDismissedTask ? `Kikker-sprint weggeklikt: ${kikkerDismissedTask}` : 'Kikker-sprint weggeklikt zonder resultaat.',
-      } : {}),
-    },
+    today: mergeTodayContext(
+      todayMorning ? parseData(todayMorning.data) : null,
+      todayEvening ? parseData(todayEvening.data) : null,
+      kikkerDismissed && !todayEvening,
+      kikkerDismissedTask
+    ),
     yesterday: yesterdayMorning ? parseData(yesterdayMorning.data) : null,
     streak,
     last7Days: morningRows as DailyLogRow[],
