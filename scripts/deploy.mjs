@@ -27,7 +27,7 @@ try {
 }
 
 console.log('\n=== Deploying to production ===');
-const deployResult = spawnSync('vercel', ['--prod'], { stdio: 'inherit', shell: true });
+const deployResult = spawnSync('vercel --prod', { stdio: 'inherit', shell: true });
 if (deployResult.status !== 0) {
   fail('vercel --prod gaf een non-zero exit code — controleer de output hierboven.');
 }
