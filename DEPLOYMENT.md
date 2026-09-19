@@ -1,368 +1,54 @@
-# Vercel Deployment Guide
+# Deployment
 
-## Prerequisites
+> Dit bestand is herschreven op 2026-09-19 om de vorige, verouderde versie (Express/Vite-architectuur,
+> single-tenant schema) te vervangen. Zie [STATUS.md](./STATUS.md) voor de architectuur — dit bestand
+> gaat alleen over het deploy-proces zelf.
 
-- Vercel account (free tier works)
-- Neon database with connection string
-- GitHub repository (optional but recommended)
+## Hoe je deployt
 
----
-
-## Step 1: Install Dependencies
-
-Run the following command to install all required dependencies:
+Er is precies één geautoriseerde weg naar productie:
 
 ```bash
-npm install
+npm run deploy
 ```
 
-This will install:
-- `@neondatabase/serverless` - Neon PostgreSQL driver
-- `bcrypt` - Password hashing
-- `jsonwebtoken` - JWT authentication
-- `zod` - Schema validation
-- And all TypeScript types
+Dit script (`scripts/deploy.mjs`):
+1. Draait `npm run predeploy` (type-check → tests → build). Stopt de deploy als een van deze faalt.
+2. Deployt via `vercel --prod`.
+3. Poll't `https://sparren.app/api/health` (max 5 pogingen, 3s interval) en faalt zichtbaar als productie niet gezond terugkomt.
 
----
+**Draai nooit kaal `vercel --prod`** — dat slaat alle checks over en was de oorzaak van een kapotte build die eind vorige sessie onopgemerkt richting productie ging.
 
-## Step 2: Environment Variables
+## Git-koppeling
 
-Create a `.env.local` file for local development (already exists):
+Het GitHub-repo (`Impact2025/impactreis`) is gekoppeld aan het Vercel-project, maar `vercel.json` zet
+`git.deploymentEnabled.master = false` — pushes naar `master` triggeren dus **geen** automatische
+deploy. Productie gaat alleen via `npm run deploy`. Pushes naar andere branches (zoals
+`feature/flowpa-integration`) genereren wél automatisch een Vercel preview-deployment, handig om een
+wijziging te bekijken vóór je 'm naar productie promoot.
 
-```env
-DATABASE_URL=your-neon-database-connection-string-here
-JWT_SECRET=your-jwt-secret-generate-with-crypto-randomBytes
-JWT_EXPIRES_IN=7d
-```
-
-**IMPORTANT:** Never commit real credentials to your repository. Use the values from your actual `.env.local` file.
-
----
-
-## Step 3: Database Setup
-
-Your Neon database should have the following tables. If not, run these SQL commands in the Neon console:
-
-```sql
--- Users table
-CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Goals table
-CREATE TABLE IF NOT EXISTS goals (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  type VARCHAR(50) NOT NULL,
-  title TEXT NOT NULL,
-  period VARCHAR(50),
-  completed BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Habits table
-CREATE TABLE IF NOT EXISTS habits (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  name VARCHAR(255) NOT NULL,
-  streak INTEGER DEFAULT 0,
-  last_completed DATE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Daily logs table
-CREATE TABLE IF NOT EXISTS daily_logs (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  type VARCHAR(50) NOT NULL,
-  date_string VARCHAR(20) NOT NULL,
-  data JSONB NOT NULL,
-  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Focus sessions table
-CREATE TABLE IF NOT EXISTS focus_sessions (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  date DATE NOT NULL,
-  start_time VARCHAR(10) NOT NULL,
-  goal TEXT,
-  completed BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Weekly goals table
-CREATE TABLE IF NOT EXISTS weekly_goals (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  week_number VARCHAR(20) NOT NULL,
-  goals JSONB NOT NULL,
-  status VARCHAR(50),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Weekly reviews table
-CREATE TABLE IF NOT EXISTS weekly_reviews (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  week_number VARCHAR(20) NOT NULL,
-  data JSONB NOT NULL,
-  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_goals_user_id ON goals(user_id);
-CREATE INDEX IF NOT EXISTS idx_habits_user_id ON habits(user_id);
-CREATE INDEX IF NOT EXISTS idx_daily_logs_user_id ON daily_logs(user_id);
-CREATE INDEX IF NOT EXISTS idx_focus_sessions_user_id ON focus_sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_weekly_goals_user_id ON weekly_goals(user_id);
-CREATE INDEX IF NOT EXISTS idx_weekly_reviews_user_id ON weekly_reviews(user_id);
-```
-
----
-
-## Step 4: Test Locally
-
-Run the development server:
+## Als de health-check faalt na een deploy
 
 ```bash
-npm run dev
+vercel rollback
 ```
 
-Visit `http://localhost:3000` and test the API routes:
-- Register: `POST http://localhost:3000/api/auth/register`
-- Login: `POST http://localhost:3000/api/auth/login`
-- Other routes require JWT token in Authorization header
+promoot de vorige gezonde deployment terug naar productie. Kijk daarna in de Vercel-dashboard-logs
+(`vercel inspect <deployment-url>`) naar de oorzaak voordat je opnieuw deployt.
 
----
+## Environment variables (productie, Vercel dashboard)
 
-## Step 5: Deploy to Vercel
+Minimaal nodig — zie `src/lib/db.ts`, `src/lib/resend.ts`, `src/lib/auth.ts` voor waar ze gebruikt worden:
 
-### Option A: Deploy via Vercel CLI
+- `DATABASE_URL` — Neon Postgres connection string
+- `JWT_SECRET`
+- `RESEND_API_KEY`, `CRON_SECRET` — voor de e-mail cronjobs (`vercel.json`)
+- `NEXT_PUBLIC_APP_URL` — moet `https://sparren.app` zijn in productie
+- Google Calendar / OpenRouter / overige integratie-keys — zie de betreffende `src/lib/*.ts`-bestanden
+  voor de exacte namen; niet hier dupliceren om drift met de code te voorkomen.
 
-1. Install Vercel CLI:
-```bash
-npm install -g vercel
-```
+## Database migraties
 
-2. Login to Vercel:
-```bash
-vercel login
-```
-
-3. Deploy:
-```bash
-vercel
-```
-
-4. Add environment variables in Vercel dashboard:
-   - Go to your project settings
-   - Navigate to "Environment Variables"
-   - Add:
-     - `DATABASE_URL` = your Neon connection string
-     - `JWT_SECRET` = your JWT secret
-     - `JWT_EXPIRES_IN` = 7d
-
-5. Redeploy:
-```bash
-vercel --prod
-```
-
-### Option B: Deploy via GitHub Integration
-
-1. Push your code to GitHub:
-```bash
-git add .
-git commit -m "Initial commit with complete API backend"
-git push origin main
-```
-
-2. Go to [Vercel Dashboard](https://vercel.com/dashboard)
-
-3. Click "Add New Project"
-
-4. Import your GitHub repository
-
-5. Configure project:
-   - Framework Preset: Next.js
-   - Root Directory: ./
-   - Build Command: `next build`
-   - Output Directory: `.next`
-
-6. Add Environment Variables:
-   - `DATABASE_URL` = your Neon connection string
-   - `JWT_SECRET` = your JWT secret
-   - `JWT_EXPIRES_IN` = 7d
-
-7. Click "Deploy"
-
----
-
-## Step 6: Verify Deployment
-
-After deployment, test your API:
-
-1. Get your Vercel URL (e.g., `https://your-app.vercel.app`)
-
-2. Test registration:
-```bash
-curl -X POST https://your-app.vercel.app/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}'
-```
-
-3. Test login:
-```bash
-curl -X POST https://your-app.vercel.app/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}'
-```
-
-4. Save the token from the response and test authenticated routes:
-```bash
-curl -X GET https://your-app.vercel.app/api/goals \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
-```
-
----
-
-## Project Structure
-
-```
-mijn-ondernemers-os/
-├── src/
-│   ├── app/
-│   │   └── api/
-│   │       ├── auth/
-│   │       │   ├── login/route.ts
-│   │       │   └── register/route.ts
-│   │       ├── goals/
-│   │       │   ├── route.ts
-│   │       │   └── [id]/route.ts
-│   │       ├── habits/
-│   │       │   ├── route.ts
-│   │       │   └── [id]/route.ts
-│   │       ├── logs/
-│   │       │   └── route.ts
-│   │       ├── focus/
-│   │       │   ├── route.ts
-│   │       │   └── [id]/route.ts
-│   │       ├── weekly-goals/
-│   │       │   ├── route.ts
-│   │       │   └── [id]/route.ts
-│   │       └── weekly-reviews/
-│   │           └── route.ts
-│   └── lib/
-│       ├── db.ts              # Database connection
-│       ├── auth.ts            # Authentication helpers
-│       └── schemas/
-│           ├── auth.schema.ts # Auth validation schemas
-│           └── goals.schema.ts # Goals validation schemas
-├── .env                       # Environment variables (DO NOT COMMIT)
-├── .env.local                 # Local environment variables
-├── package.json               # Dependencies
-└── next.config.js             # Next.js configuration
-```
-
----
-
-## API Routes Summary
-
-All routes are available at `/api/*`:
-
-- **Authentication**: `/api/auth/register`, `/api/auth/login`
-- **Goals**: `/api/goals`, `/api/goals/[id]`
-- **Habits**: `/api/habits`, `/api/habits/[id]`
-- **Daily Logs**: `/api/logs`
-- **Focus Sessions**: `/api/focus`, `/api/focus/[id]`
-- **Weekly Goals**: `/api/weekly-goals`, `/api/weekly-goals/[id]`
-- **Weekly Reviews**: `/api/weekly-reviews`
-
-See `API_ROUTES.md` for detailed documentation of each endpoint.
-
----
-
-## Security Checklist
-
-- [x] JWT authentication implemented
-- [x] Password hashing with bcrypt (12 rounds)
-- [x] User ID extracted from token (not URL params)
-- [x] Database queries filtered by user_id
-- [x] Input validation with Zod schemas
-- [x] Proper error handling and status codes
-- [x] Environment variables for secrets
-- [x] SQL injection protection (Neon parameterized queries)
-
----
-
-## Performance Optimization
-
-- [x] Neon serverless PostgreSQL (auto-scaling)
-- [x] Database indexes on user_id columns
-- [x] Limited query results (e.g., 50 most recent logs)
-- [x] Efficient Next.js API routes (serverless functions)
-- [x] No unnecessary database connections
-
----
-
-## Troubleshooting
-
-### Issue: API routes return 404
-**Solution**: Ensure file structure matches Next.js conventions:
-- Files must be named `route.ts`
-- Dynamic routes use `[id]` folder structure
-
-### Issue: Database connection fails
-**Solution**:
-- Verify `DATABASE_URL` in Vercel environment variables
-- Ensure Neon database is active (not paused)
-- Check connection string includes `?sslmode=require`
-
-### Issue: JWT authentication fails
-**Solution**:
-- Verify `JWT_SECRET` is set in environment variables
-- Check token format: `Bearer {token}`
-- Token expires after 7 days, re-login required
-
-### Issue: Build fails on Vercel
-**Solution**:
-- Run `npm install` to ensure all dependencies are installed
-- Check `package.json` has all required dependencies
-- Verify TypeScript types are installed
-
----
-
-## Next Steps
-
-1. Deploy frontend to connect to API
-2. Set up custom domain (optional)
-3. Configure CORS if needed for external clients
-4. Set up monitoring/logging (Vercel Analytics)
-5. Implement rate limiting (Vercel Edge Config)
-6. Add API documentation (Swagger/OpenAPI)
-
----
-
-## Support
-
-For issues or questions:
-1. Check API_ROUTES.md for endpoint documentation
-2. Review Vercel deployment logs
-3. Check Neon database logs
-4. Test locally first before deploying
-
----
-
-## Production Considerations
-
-- Use strong JWT_SECRET (64+ random bytes)
-- Enable CORS only for your frontend domain
-- Set up database backups (Neon automatic)
-- Monitor API usage and errors
-- Implement rate limiting for production
-- Consider adding request logging
-- Set up health check endpoint
+Alleen bestanden onder `migrations/manual/*.sql` zijn productie-veilig (zie STATUS.md — de
+Drizzle-gegenereerde `migrations/0000_*.sql` gaat uit van een lege database). Draai een nieuwe manuele
+migratie handmatig tegen productie vóór je de bijbehorende code-deploy doet, niet erna.
