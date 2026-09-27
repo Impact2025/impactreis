@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { motivatieEmail } from '@/lib/email-templates';
 import { getRecipients, claimDailyEmail, releaseDailyEmail, unsubscribeUrl, emailIdempotencyKey } from '@/lib/email-recipients';
+import { getCoachMode } from '@/lib/coach';
 
 const DAY_NAMES = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
 const EMAIL_TYPE = 'morning_motivation';
@@ -28,7 +29,8 @@ export async function GET(request: NextRequest) {
 
   for (const recipient of recipients) {
     const unsubUrl = recipient.unsubscribeToken ? unsubscribeUrl(recipient.unsubscribeToken, 'morning_motivation') : undefined;
-    const { subject, html } = motivatieEmail(appUrl, isWeekend, dayName, recipient.name, unsubUrl);
+    const coachMode = await getCoachMode(String(recipient.userId));
+    const { subject, html } = motivatieEmail(appUrl, isWeekend, dayName, recipient.name, unsubUrl, coachMode);
 
     // Claim eerst (atomair): een gelijktijdige tweede cron-run krijgt false en slaat over.
     if (!(await claimDailyEmail(recipient.userId, EMAIL_TYPE))) continue;

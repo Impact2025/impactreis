@@ -4,7 +4,8 @@ import { sql } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-context';
 import { sessieAnalyseEmail, streakMilestoneEmail, SessieAnalyseData } from '@/lib/email-templates';
 import { ensurePreferences, wasEmailSent, recordEmailSent, unsubscribeUrl } from '@/lib/email-recipients';
-import { SPARRINGPARTNER_STYLE, sanitizeAiText } from '@/lib/ai-style';
+import { SPARRINGPARTNER_STYLE, RUSTBRENGER_STYLE, sanitizeAiText } from '@/lib/ai-style';
+import { getCoachMode } from '@/lib/coach';
 
 const STREAK_MILESTONES = [7, 14, 30, 60, 90, 180, 365];
 
@@ -90,6 +91,7 @@ export async function POST(request: NextRequest) {
   `;
 
   const streak = getCurrentStreak(allLogs as { date_string: string }[]);
+  const coachMode = await getCoachMode(String(userId));
 
   let yesterdayData: SessieAnalyseData['yesterday'] = null;
   if (yesterdayLogs.length > 0) {
@@ -113,8 +115,13 @@ export async function POST(request: NextRequest) {
       : 'gelijk gebleven'
     : null;
 
-  const prompt = `Je bent De Sparringpartner: een nuchtere business- en persoonlijke-groei coach voor ondernemers.
-Geen ja-knikker, wel een spiegel — je bevestigt niet zomaar, je legt patronen bloot.
+  const personaIntro = coachMode === 'rustbrenger'
+    ? `Je bent de Begrenzende Mentor: een rustige, nuchtere sparringpartner voor iemand die werkt vanuit een maatschappelijke missie.
+Jouw doel is niet dat iemand harder werkt, maar dat diegene het volhoudt — grenzen bewaakt, ruis wegneemt, energie beschermt.`
+    : `Je bent De Sparringpartner: een nuchtere business- en persoonlijke-groei coach voor ondernemers.
+Geen ja-knikker, wel een spiegel — je bevestigt niet zomaar, je legt patronen bloot.`;
+
+  const prompt = `${personaIntro}
 Analyseer de ochtend ritual sessie van vandaag en schrijf een persoonlijke coaching analyse in het Nederlands.
 
 SESSIE VAN VANDAAG (${todayDate}, ${dayName}):
@@ -137,11 +144,13 @@ Schrijf een analyse van 150-200 woorden die:
 1. Begint met een observatie over vandaag's sessie (energie, slaap, intentie)
 2. ${yesterdayData ? 'Verwijst naar de vergelijking met gisteren en wat dat zegt' : 'Moedigt aan om consistent te zijn'}
 3. Een concreet inzicht geeft over de dankbaarheid of intentie van vandaag
-4. Eindigt met één scherpe coaching tip of concrete uitdaging voor morgen
+4. ${coachMode === 'rustbrenger'
+      ? 'Eindigt met één rustige vraag over wat er vandaag mag blijven liggen of wat genoeg is — geen opdracht of uitdaging'
+      : 'Eindigt met één scherpe coaching tip of concrete uitdaging voor morgen'}
 
 Schrijf in de jij-vorm.
 
-${SPARRINGPARTNER_STYLE}`;
+${coachMode === 'rustbrenger' ? RUSTBRENGER_STYLE : SPARRINGPARTNER_STYLE}`;
 
   const aiAnalyse = sanitizeAiText(await openRouterChat(prompt));
 
@@ -157,7 +166,7 @@ ${SPARRINGPARTNER_STYLE}`;
   const unsubToken = await ensurePreferences(userId);
   const unsubUrl = unsubscribeUrl(unsubToken, 'streak_celebration');
 
-  const { subject, html } = sessieAnalyseEmail(emailData, unsubscribeUrl(unsubToken, 'morning_motivation'));
+  const { subject, html } = sessieAnalyseEmail(emailData, unsubscribeUrl(unsubToken, 'morning_motivation'), coachMode);
 
   const { error } = await getResend().emails.send({
     from: FROM_EMAIL,

@@ -3,6 +3,7 @@ import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { sql } from '@/lib/db';
 import { herinneringEmail } from '@/lib/email-templates';
 import { getRecipients, claimDailyEmail, releaseDailyEmail, unsubscribeUrl, emailIdempotencyKey } from '@/lib/email-recipients';
+import { getCoachMode } from '@/lib/coach';
 
 const EMAIL_TYPE = 'morning_reminder';
 
@@ -63,7 +64,8 @@ export async function GET(request: NextRequest) {
     }
 
     const unsubUrl = recipient.unsubscribeToken ? unsubscribeUrl(recipient.unsubscribeToken, 'morning_reminder') : undefined;
-    const { subject, html } = herinneringEmail(appUrl, isWeekend, unsubUrl);
+    const coachMode = await getCoachMode(String(recipient.userId));
+    const { subject, html } = herinneringEmail(appUrl, isWeekend, unsubUrl, coachMode);
 
     if (!(await claimDailyEmail(recipient.userId, EMAIL_TYPE))) continue;
 

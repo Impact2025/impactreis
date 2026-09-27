@@ -1,3 +1,5 @@
+import type { CoachMode } from './onboarding';
+
 // Korte, on-brand affirmaties voor de rituelen-mails (motivatie/herinnering/sessie-analyse/
 // streak/weekrapport) — bewust generiek en professioneel i.p.v. de vroegere persoonlijk-aan-
 // Vincent geschreven quote, want deze mails gaan nu naar alle Sparren.app-klanten. Niet gebruikt op
@@ -9,10 +11,20 @@ const QUOTES = [
   'Leiderschap begint bij de agenda die je jezelf toestaat.',
 ];
 
-function pickQuote(seed: string): string {
+// Rustbrenger-tegenhanger van QUOTES: geen prestatie- of leiderschapstaal, in lijn met het
+// Begrenzende-Mentor-persona (anti-martelaarschap, grenzen, geen druk) uit coach.ts.
+const RUSTBRENGER_QUOTES = [
+  'Rust is geen beloning voor hard werken — het is wat het mogelijk maakt.',
+  'Je hoeft niet alles te dragen. Alleen wat vandaag echt van jou is.',
+  'Grenzen bewaken is geen egoïsme — het is hoe je het volhoudt.',
+  'Wat je laat liggen, mag blijven liggen.',
+];
+
+function pickQuote(seed: string, mode: CoachMode = 'commercial'): string {
+  const list = mode === 'rustbrenger' ? RUSTBRENGER_QUOTES : QUOTES;
   let hash = 0;
   for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  return QUOTES[hash % QUOTES.length];
+  return list[hash % list.length];
 }
 
 interface BaseOptions {
@@ -20,12 +32,14 @@ interface BaseOptions {
   quote?: boolean;
   /** Footer-link "afmelden voor dit type e-mail" — weggelaten op transactionele mails. */
   unsubscribeUrl?: string;
+  /** Coach-modus van de ontvanger — bepaalt welke quote-set de affirmatie-band gebruikt. */
+  mode?: CoachMode;
 }
 
 function base(title: string, preview: string, body: string, opts: BaseOptions = {}): string {
   const quoteBlock = opts.quote ? `
       <tr><td style="background:#7D8C7B;padding:20px 36px;">
-        <p style="margin:0;font-size:13px;color:#fff;font-style:italic;line-height:1.6;">"${pickQuote(title)}"</p>
+        <p style="margin:0;font-size:13px;color:#fff;font-style:italic;line-height:1.6;">"${pickQuote(title, opts.mode)}"</p>
       </td></tr>` : '';
 
   const unsubscribeLine = opts.unsubscribeUrl
@@ -107,7 +121,49 @@ function firstName(name?: string | null, fallback?: string): string {
   return trimmed || fallback || 'daar';
 }
 
-export function motivatieEmail(appUrl: string, isWeekend: boolean, dayName: string, name?: string | null, unsubscribeUrl?: string): { subject: string; html: string } {
+function motivatieEmailRustbrenger(appUrl: string, isWeekend: boolean, dayName: string, name?: string | null, unsubscribeUrl?: string): { subject: string; html: string } {
+  const greetingName = firstName(name, dayName);
+  const subject = isWeekend
+    ? `Goedemorgen ${greetingName} — even landen voor de nieuwe week`
+    : `Goedemorgen ${greetingName} — hoe staat je batterij vandaag?`;
+
+  const body = isWeekend ? `
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Het weekend is er. Een goed moment om terug te kijken, niet om te presteren.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">Een korte weekterugblik helpt je zien wat wél mocht en wat je volgende week bewust laat liggen.</p>
+
+    ${section('Dit doe je vandaag', `
+      ${tick()} &nbsp;Terugblikken op wat deze week wél lukte<br/>
+      ${tick()} &nbsp;Eerlijk kijken naar je energie, niet naar je output<br/>
+      ${tick()} &nbsp;Bepalen wat volgende week bewust blijft liggen
+    `)}
+
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 28px;">Geen druk om dit perfect te doen. Tien minuten is genoeg.</p>
+
+    <div style="text-align:center;">${btn('Start week review →', `${appUrl}/weekly-review`)}</div>
+  ` : `
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Voordat de dag begint: hoe staat je batterij?</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">Niet elke dag hoeft groen te zijn. Weten waar je staat is genoeg om er bewust mee te beginnen.</p>
+
+    ${section('Je ochtend van vandaag', `
+      ${tick()} &nbsp;Batterij — eerlijk, niet gewenst<br/>
+      ${tick()} &nbsp;Je Ene Zaak — het enige dat vandaag echt telt<br/>
+      ${tick()} &nbsp;Niet-doen-lijst — wat je bewust laat liggen
+    `)}
+
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 28px;">Vijf minuten, geen meer dan dat.</p>
+
+    <div style="text-align:center;">${btn('Start ochtend ritual →', `${appUrl}/morning`)}</div>
+  `;
+
+  return {
+    subject,
+    html: base(isWeekend ? `Week review — ${greetingName}` : `Goedemorgen, ${greetingName}`, subject, body, { quote: true, unsubscribeUrl, mode: 'rustbrenger' }),
+  };
+}
+
+export function motivatieEmail(appUrl: string, isWeekend: boolean, dayName: string, name?: string | null, unsubscribeUrl?: string, mode: CoachMode = 'commercial'): { subject: string; html: string } {
+  if (mode === 'rustbrenger') return motivatieEmailRustbrenger(appUrl, isWeekend, dayName, name, unsubscribeUrl);
+
   const greetingName = firstName(name, dayName);
   const subject = isWeekend
     ? `Goedemorgen ${greetingName}! Tijd voor jouw week review`
@@ -151,7 +207,43 @@ export function motivatieEmail(appUrl: string, isWeekend: boolean, dayName: stri
 
 // ─── Template 2: 08:30 Herinnering ───────────────────────────────────────────
 
-export function herinneringEmail(appUrl: string, isWeekend: boolean, unsubscribeUrl?: string): { subject: string; html: string } {
+function herinneringEmailRustbrenger(appUrl: string, isWeekend: boolean, unsubscribeUrl?: string): { subject: string; html: string } {
+  const subject = isWeekend
+    ? `Je week review staat er nog — geen haast`
+    : `Je ochtend ritual wacht nog — vijf minuten is genoeg`;
+
+  const body = isWeekend ? `
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Het weekend is nog niet voorbij. Geen druk, wel een uitnodiging.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">Je week review staat nog open. Als het nu niet past, mag het ook blijven liggen — maar een kort moment terugkijken helpt je rustiger aan volgende week beginnen.</p>
+
+    ${section('Waarom nu', `
+      ${tick()} &nbsp;Je sluit de week bewust af, in plaats van door te lopen<br/>
+      ${tick()} &nbsp;Je ziet wat je energie gaf en wat het kostte<br/>
+      ${tick()} &nbsp;Je start volgende week met een reële speelruimte
+    `, '#fff8e1')}
+
+    <div style="text-align:center;margin-top:24px;">${btn('Doe nu mijn week review →', `${appUrl}/weekly-review`)}</div>
+  ` : `
+    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Je dag is al begonnen — dit kan nog steeds.</p>
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">Geen ochtend is hetzelfde. Als je batterij vandaag laag is, is dat ook een geldig antwoord.</p>
+
+    ${section('Snel beginnen', `
+      ${tick()} &nbsp;Kan in een paar minuten als je haast hebt<br/>
+      ${tick()} &nbsp;Batterij checken is al genoeg om bewust te starten<br/>
+      ${tick()} &nbsp;Eén ding kiezen dat vandaag echt telt
+    `, '#f0fdf4')}
+
+    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 28px;">Geen prestatie nodig. Alleen een moment om te landen.</p>
+
+    <div style="text-align:center;">${btn('Start nu →', `${appUrl}/morning`)}</div>
+  `;
+
+  return { subject, html: base('Even een reminder van jezelf', subject, body, { quote: true, unsubscribeUrl, mode: 'rustbrenger' }) };
+}
+
+export function herinneringEmail(appUrl: string, isWeekend: boolean, unsubscribeUrl?: string, mode: CoachMode = 'commercial'): { subject: string; html: string } {
+  if (mode === 'rustbrenger') return herinneringEmailRustbrenger(appUrl, isWeekend, unsubscribeUrl);
+
   const subject = isWeekend
     ? `Je week review — nog niet te laat!`
     : `Je ochtend ritual wacht nog — 5 minuten maakt het verschil`;
@@ -208,22 +300,31 @@ export interface SessieAnalyseData {
   aiAnalyse: string;
 }
 
-export function sessieAnalyseEmail(data: SessieAnalyseData, unsubscribeUrl?: string): { subject: string; html: string } {
-  const subject = `Sessie analyse ${data.dayName} ${data.todayDate} — jij deed het weer!`;
+export function sessieAnalyseEmail(data: SessieAnalyseData, unsubscribeUrl?: string, mode: CoachMode = 'commercial'): { subject: string; html: string } {
+  const isRustbrenger = mode === 'rustbrenger';
+  const subject = isRustbrenger
+    ? `Je sessie van ${data.dayName} ${data.todayDate}`
+    : `Sessie analyse ${data.dayName} ${data.todayDate} — jij deed het weer!`;
 
   const energyDiff = data.yesterday ? data.today.energyLevel - data.yesterday.energyLevel : 0;
   const sleepDiff = data.yesterday ? data.today.sleepQuality - data.yesterday.sleepQuality : 0;
 
+  // Rustbrenger: geen rood/groen prestatie-signaal op een lagere batterij — alleen richting,
+  // neutraal van kleur. Commercieel: groen omhoog, rood omlaag (bestaand gedrag).
   const diffBadge = (diff: number) => {
-    if (diff > 0) return `<span style="color:#7D8C7B;font-weight:700;">▲ +${diff}</span>`;
-    if (diff < 0) return `<span style="color:#ef4444;font-weight:700;">▼ ${diff}</span>`;
+    if (diff > 0) return `<span style="color:${isRustbrenger ? '#747872' : '#7D8C7B'};font-weight:700;">▲ +${diff}</span>`;
+    if (diff < 0) return `<span style="color:${isRustbrenger ? '#747872' : '#ef4444'};font-weight:700;">▼ ${diff}</span>`;
     return `<span style="color:#747872;">= gelijk</span>`;
   };
 
   const streakBadge = data.streak >= 3
-    ? `<div style="background:#fff8e1;border-radius:10px;padding:12px 16px;text-align:center;margin-bottom:20px;">
-        <p style="margin:0;font-size:13px;color:#92400e;"><strong>${data.streak} dagen streak</strong> — je bouwt iets moois!</p>
-       </div>`
+    ? isRustbrenger
+      ? `<div style="background:#f4f3f1;border-radius:10px;padding:12px 16px;text-align:center;margin-bottom:20px;">
+          <p style="margin:0;font-size:13px;color:#2f312f;"><strong>${data.streak} dagen op rij.</strong> Geen druk om dit vol te houden — alleen erkenning voor wat er al is.</p>
+         </div>`
+      : `<div style="background:#fff8e1;border-radius:10px;padding:12px 16px;text-align:center;margin-bottom:20px;">
+          <p style="margin:0;font-size:13px;color:#92400e;"><strong>${data.streak} dagen streak</strong> — je bouwt iets moois!</p>
+         </div>`
     : '';
 
   const gratitudeLine = data.today.dankbaarheid
@@ -231,13 +332,14 @@ export function sessieAnalyseEmail(data: SessieAnalyseData, unsubscribeUrl?: str
     .map(d => `<li style="margin-bottom:4px;">${d}</li>`)
     .join('');
 
+  const energyLabel = isRustbrenger ? 'Batterij vandaag' : 'Energie vandaag';
   const compareSection = data.yesterday ? `
     <div style="background:#f4f3f1;border-radius:12px;padding:20px;margin-bottom:16px;">
       <p style="margin:0 0 12px;font-size:11px;color:#747872;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Vergelijking met gisteren</p>
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
           <td style="width:50%;padding-right:8px;">
-            ${score('Energie vandaag', data.today.energyLevel)}
+            ${score(energyLabel, data.today.energyLevel)}
             <p style="margin:4px 0 0;font-size:12px;color:#747872;">t.o.v. gisteren ${diffBadge(energyDiff)}</p>
           </td>
           <td style="width:50%;padding-left:8px;">
@@ -249,19 +351,29 @@ export function sessieAnalyseEmail(data: SessieAnalyseData, unsubscribeUrl?: str
     </div>
   ` : `
     <div style="margin-bottom:16px;">
-      ${score('Energie niveau', data.today.energyLevel)}
+      ${score(isRustbrenger ? 'Batterij' : 'Energie niveau', data.today.energyLevel)}
       ${score('Slaap kwaliteit', data.today.sleepQuality)}
     </div>
   `;
 
+  const intro = isRustbrenger
+    ? `<p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 6px;">Je hebt je ritueel gedaan. Dat is genoeg.</p>
+       <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">Hieronder een korte reflectie op vandaag.</p>`
+    : `<p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 6px;">Je hebt je ritual gedaan. Dat telt.</p>
+       <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">Hieronder je persoonlijke analyse van vandaag.</p>`;
+
+  const analyseLabel = isRustbrenger ? 'Reflectie van je mentor' : 'AI Coaching Analyse';
+  const closing = isRustbrenger
+    ? `<p style="font-size:13px;color:#747872;text-align:center;margin:0;">Tot morgen — of niet, als je dat vandaag nodig hebt.</p>`
+    : `<p style="font-size:13px;color:#747872;text-align:center;margin:0;">Tot morgenochtend — je weet wat je moet doen.</p>`;
+
   const body = `
     ${streakBadge}
-    <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 6px;">Je hebt je ritual gedaan. Dat telt.</p>
-    <p style="font-size:14px;color:#444842;line-height:1.7;margin:0 0 24px;">Hieronder je persoonlijke analyse van vandaag.</p>
+    ${intro}
 
     ${compareSection}
 
-    ${section('Jouw intentie voor vandaag', data.today.intentie || '—')}
+    ${section(isRustbrenger ? 'Je Ene Zaak vandaag' : 'Jouw intentie voor vandaag', data.today.intentie || '—')}
 
     <div style="background:#f4f3f1;border-radius:12px;padding:20px;margin-bottom:16px;">
       <p style="margin:0 0 10px;font-size:11px;color:#747872;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Dankbaarheid</p>
@@ -272,14 +384,14 @@ export function sessieAnalyseEmail(data: SessieAnalyseData, unsubscribeUrl?: str
 
     <!-- AI Analyse -->
     <div style="background:#2f312f;border-radius:12px;padding:24px;margin-bottom:16px;">
-      <p style="margin:0 0 12px;font-size:11px;color:#7D8C7B;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">AI Coaching Analyse</p>
+      <p style="margin:0 0 12px;font-size:11px;color:#7D8C7B;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">${analyseLabel}</p>
       <div style="font-size:14px;color:#e8e8ec;line-height:1.8;">${data.aiAnalyse.replace(/\n/g, '<br/>')}</div>
     </div>
 
-    <p style="font-size:13px;color:#747872;text-align:center;margin:0;">Tot morgenochtend — je weet wat je moet doen.</p>
+    ${closing}
   `;
 
-  return { subject, html: base(`Sessie analyse — ${data.dayName}`, subject, body, { unsubscribeUrl }) };
+  return { subject, html: base(`Sessie analyse — ${data.dayName}`, subject, body, { unsubscribeUrl, mode }) };
 }
 
 // ─── Template 5: Weekrapport ─────────────────────────────────────────────────
