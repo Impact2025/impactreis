@@ -16,6 +16,8 @@ import { useSpeechRecognition } from '@/hooks/use-speech';
 import { TIME_WASTER_OPTIONS } from '@/lib/onboarding';
 import { FOCUS_CATEGORY_OPTIONS, getFocusBlockSlots } from '@/lib/focus-blocks';
 import { queryKeys } from '@/lib/query-client';
+import { useCoachMode } from '@/hooks/useCoachMode';
+import { RustbrengerMorning } from '@/components/rustbrenger/RustbrengerMorning';
 
 type Step = 'dagtype' | 'centering' | 'intentie' | 'focusblokken' | 'status' | 'dankbaarheid' | 'affirmatie' | 'done';
 type DayType = 'focus' | 'buffer' | 'free';
@@ -103,7 +105,20 @@ interface MorningData {
   focusBlok2: FocusBlok;
 }
 
+// Kiest per coach-modus het ritueel: rustbrenger krijgt de korte batterij-variant.
 export default function MorningPage() {
+  const { mode, loading } = useCoachMode();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-surface-card flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+  return mode === 'rustbrenger' ? <RustbrengerMorning /> : <CommercialMorningPage />;
+}
+
+function CommercialMorningPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);

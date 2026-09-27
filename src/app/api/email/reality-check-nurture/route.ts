@@ -9,6 +9,7 @@ import {
   type RealityCheckLeadEmailData,
 } from '@/lib/email-templates';
 import { withCronErrorNotification } from '@/lib/cron-guard';
+import { emailIdempotencyKey } from '@/lib/email-recipients';
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -41,6 +42,7 @@ function buildData(lead: Lead, appUrl: string): RealityCheckLeadEmailData {
 async function runStage(
   leads: Lead[],
   appUrl: string,
+  stageKey: string,
   build: (data: RealityCheckLeadEmailData) => { subject: string; html: string },
   markSent: (id: number) => Promise<unknown>
 ): Promise<{ sent: number; failed: number }> {
@@ -49,7 +51,10 @@ async function runStage(
   for (const lead of leads) {
     try {
       const { subject, html } = build(buildData(lead, appUrl));
-      const { error } = await getResend().emails.send({ from: FROM_EMAIL, to: lead.email, subject, html });
+      const { error } = await getResend().emails.send(
+        { from: FROM_EMAIL, to: lead.email, subject, html },
+        { idempotencyKey: emailIdempotencyKey(stageKey, lead.id, 'once') }
+      );
       if (error) throw new Error(JSON.stringify(error));
       await markSent(lead.id);
       sent++;
@@ -92,13 +97,13 @@ export const GET = withCronErrorNotification('reality-check-nurture', async (req
       AND created_at <= NOW() - INTERVAL '72 hours'
   `) as unknown as Lead[];
 
-  const email2 = await runStage(stage2Leads, appUrl, realityCheckEmail2, (id) =>
+  const email2 = await runStage(stage2Leads, appUrl, 'reality_check_email2', realityCheckEmail2, (id) =>
     sql`UPDATE reality_check_leads SET email2_sent_at = NOW() WHERE id = ${id}`
   );
-  const email3 = await runStage(stage3Leads, appUrl, realityCheckEmail3, (id) =>
+  const email3 = await runStage(stage3Leads, appUrl, 'reality_check_email3', realityCheckEmail3, (id) =>
     sql`UPDATE reality_check_leads SET email3_sent_at = NOW() WHERE id = ${id}`
   );
-  const email4 = await runStage(stage4Leads, appUrl, realityCheckEmail4, (id) =>
+  const email4 = await runStage(stage4Leads, appUrl, 'reality_check_email4', realityCheckEmail4, (id) =>
     sql`UPDATE reality_check_leads SET email4_sent_at = NOW() WHERE id = ${id}`
   );
 

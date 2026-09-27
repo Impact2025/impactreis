@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   onboardingProfileSchema,
+  switchProfileMode,
   COACH_PERSONAS,
   INDUSTRY_OPTIONS,
   TEAM_SIZE_OPTIONS,
@@ -61,37 +62,37 @@ describe('onboardingProfileSchema', () => {
   it('accepteert elke waarde uit elke chip-optie-lijst (UI en schema mogen niet uit de pas lopen)', () => {
     for (const industry of INDUSTRY_OPTIONS.map((o) => o.value)) {
       const profile = buildValidProfile();
-      profile.businessDna.industry = industry;
+      profile.businessDna!.industry = industry;
       expect(onboardingProfileSchema.safeParse(profile).success, `industry: ${industry}`).toBe(true);
     }
     for (const teamSize of TEAM_SIZE_OPTIONS.map((o) => o.value)) {
       const profile = buildValidProfile();
-      profile.businessDna.teamSize = teamSize;
+      profile.businessDna!.teamSize = teamSize;
       expect(onboardingProfileSchema.safeParse(profile).success, `teamSize: ${teamSize}`).toBe(true);
     }
     for (const businessModel of BUSINESS_MODEL_OPTIONS.map((o) => o.value)) {
       const profile = buildValidProfile();
-      profile.businessDna.businessModel = businessModel;
+      profile.businessDna!.businessModel = businessModel;
       expect(onboardingProfileSchema.safeParse(profile).success, `businessModel: ${businessModel}`).toBe(true);
     }
     for (const avoidanceBehavior of AVOIDANCE_BEHAVIOR_OPTIONS.map((o) => o.value)) {
       const profile = buildValidProfile();
-      profile.businessDna.avoidanceBehavior = avoidanceBehavior;
+      profile.businessDna!.avoidanceBehavior = avoidanceBehavior;
       expect(onboardingProfileSchema.safeParse(profile).success, `avoidanceBehavior: ${avoidanceBehavior}`).toBe(true);
     }
     for (const quarterlyLeverageGoal of LEVERAGE_GOAL_OPTIONS.map((o) => o.value)) {
       const profile = buildValidProfile();
-      profile.businessDna.quarterlyLeverageGoal = quarterlyLeverageGoal;
+      profile.businessDna!.quarterlyLeverageGoal = quarterlyLeverageGoal;
       expect(onboardingProfileSchema.safeParse(profile).success, `leverageGoal: ${quarterlyLeverageGoal}`).toBe(true);
     }
   });
 
   it('staat tot 3 tijdvreters toe, maar niet meer (de wizard begrenst dit al in de UI)', () => {
     const profile = buildValidProfile();
-    profile.businessDna.topTimeWasters = TIME_WASTER_OPTIONS.slice(0, 3).map((o) => o.value);
+    profile.businessDna!.topTimeWasters = TIME_WASTER_OPTIONS.slice(0, 3).map((o) => o.value);
     expect(onboardingProfileSchema.safeParse(profile).success).toBe(true);
 
-    profile.businessDna.topTimeWasters = TIME_WASTER_OPTIONS.slice(0, 4).map((o) => o.value);
+    profile.businessDna!.topTimeWasters = TIME_WASTER_OPTIONS.slice(0, 4).map((o) => o.value);
     expect(onboardingProfileSchema.safeParse(profile).success).toBe(false);
   });
 
@@ -105,5 +106,60 @@ describe('onboardingProfileSchema', () => {
     const profile = buildValidProfile();
     profile.consequenceModule = { description: '' };
     expect(onboardingProfileSchema.safeParse(profile).success).toBe(false);
+  });
+});
+
+describe('onboardingProfileSchema (rustbrenger)', () => {
+  function rustbrengerProfile(): UserOnboardingProfile {
+    const base = buildValidProfile();
+    delete base.businessDna;
+    delete base.consequenceModule;
+    return {
+      ...base,
+      mode: 'rustbrenger',
+      coachProfile: { ...base.coachProfile, toneSeverity: 'gentle_mentor' },
+      rustbrenger: {
+        energyLeaks: ['bureaucratische_ruis'],
+        missionAnchor: 'Jongeren een eerlijke kans geven',
+        breakpointSignal: 'slecht_slapen',
+        laptopClosedTime: '18:00',
+      },
+    };
+  }
+
+  it('accepteert een rustbrenger-profiel zonder businessDna', () => {
+    expect(onboardingProfileSchema.safeParse(rustbrengerProfile()).success).toBe(true);
+  });
+
+  it('weigert rustbrenger-modus zonder rustbrenger-blok', () => {
+    const profile = rustbrengerProfile();
+    delete profile.rustbrenger;
+    expect(onboardingProfileSchema.safeParse(profile).success).toBe(false);
+  });
+
+  it('weigert commercial-modus zonder businessDna, ook als mode expliciet is gezet', () => {
+    const profile = buildValidProfile();
+    profile.mode = 'commercial';
+    delete profile.businessDna;
+    expect(onboardingProfileSchema.safeParse(profile).success).toBe(false);
+  });
+});
+
+describe('switchProfileMode', () => {
+  it('geeft null als de doelmodus nog geen gegevens heeft', () => {
+    expect(switchProfileMode(buildValidProfile(), 'rustbrenger')).toBeNull();
+  });
+
+  it('wisselt naar rustbrenger als dat blok er is, behoudt businessDna en past de toon aan', () => {
+    const profile = buildValidProfile();
+    profile.rustbrenger = { energyLeaks: ['financiele_stress'], missionAnchor: 'Missie', breakpointSignal: 'kort_lontje', laptopClosedTime: '19:00' };
+    const switched = switchProfileMode(profile, 'rustbrenger')!;
+    expect(switched.mode).toBe('rustbrenger');
+    expect(switched.coachProfile.toneSeverity).toBe('gentle_mentor');
+    expect(switched.businessDna).toBeDefined();
+    expect(onboardingProfileSchema.safeParse(switched).success).toBe(true);
+    const back = switchProfileMode(switched, 'commercial')!;
+    expect(back.coachProfile.toneSeverity).toBe('high_challenger');
+    expect(onboardingProfileSchema.safeParse(back).success).toBe(true);
   });
 });

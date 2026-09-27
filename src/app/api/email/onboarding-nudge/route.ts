@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { sql } from '@/lib/db';
 import { onboardingNudgeEmail } from '@/lib/email-templates';
-import { recordEmailSent, unsubscribeUrl } from '@/lib/email-recipients';
+import { recordEmailSent, unsubscribeUrl, emailIdempotencyKey } from '@/lib/email-recipients';
 import { withCronErrorNotification } from '@/lib/cron-guard';
 
 const EMAIL_TYPE = 'onboarding_nudge';
@@ -42,7 +42,10 @@ export const GET = withCronErrorNotification('onboarding-nudge', async (request:
     const { subject, html } = onboardingNudgeEmail(appUrl, unsubUrl);
 
     try {
-      const { error } = await getResend().emails.send({ from: FROM_EMAIL, to: email, subject, html });
+      const { error } = await getResend().emails.send(
+        { from: FROM_EMAIL, to: email, subject, html },
+        { idempotencyKey: emailIdempotencyKey(EMAIL_TYPE, userId, 'once') }
+      );
       if (error) throw new Error(JSON.stringify(error));
       await recordEmailSent(userId, EMAIL_TYPE);
       sent++;

@@ -64,19 +64,50 @@ export const consequenceModuleSchema = z.object({
   deepening: z.array(z.object({ question: z.string(), answer: z.string() })).max(2).optional(),
 });
 
+function enumValuesOf<T extends readonly { value: string }[]>(opts: T) {
+  return opts.map((o) => o.value) as [T[number]['value'], ...T[number]['value'][]];
+}
+const enumValues = enumValuesOf;
+
+// Rustbrenger-editie (zie PLAN_RUSTBRENGER.md): voor sociaal ondernemers waar commerciele
+// prestatiedruk averechts werkt. `commercial` is de default en de enige modus van bestaande profielen.
+export const COACH_MODES = ['commercial', 'rustbrenger'] as const;
+export type CoachMode = (typeof COACH_MODES)[number];
+
+export const ENERGY_LEAK_OPTIONS = [
+  { value: 'bureaucratische_ruis', label: 'Bureaucratische ruis (subsidies, verantwoording, administratie)' },
+  { value: 'emotionele_belasting', label: 'Emotionele belasting van de mensen of het doel waar ik voor werk' },
+  { value: 'financiele_stress', label: 'Financiele stress en onzekerheid over continuiteit' },
+] as const;
+
+export const BREAKPOINT_SIGNAL_OPTIONS = [
+  { value: 'slecht_slapen', label: 'Ik slaap slecht of pieker in bed' },
+  { value: 'kort_lontje', label: 'Ik word kortaf of prikkelbaar naar mensen om me heen' },
+  { value: 'niet_meer_uitzetten', label: 'Ik kan mijn hoofd niet meer uitzetten na werktijd' },
+  { value: 'alles_zwaar', label: 'Kleine taken voelen ineens zwaar' },
+] as const;
+
+export const CLOSING_TIME_OPTIONS = ['17:00', '18:00', '19:00', '20:00'] as const;
+
+export const rustbrengerProfileSchema = z.object({
+  energyLeaks: z.array(z.enum(enumValuesOf(ENERGY_LEAK_OPTIONS))).min(1).max(3),
+  missionAnchor: z.string().min(1).max(300),
+  breakpointSignal: z.enum(enumValuesOf(BREAKPOINT_SIGNAL_OPTIONS)),
+  // Grenscontract: vaste tijd waarop de laptop dicht gaat. Zachte afspraak, geen harde blokkade.
+  laptopClosedTime: z.enum(CLOSING_TIME_OPTIONS),
+});
+
 export const COACH_PERSONAS = {
   male: { defaultName: 'Marcus', voiceId: 'marcus_dutch_deep', description: 'Diepe, rustige, gezaghebbende toon — stoïcijns en direct.' },
   female: { defaultName: 'Sarah', voiceId: 'sarah_dutch_sharp', description: 'Heldere, scherpe, doortastende toon — no-nonsense en to the point.' },
 } as const;
 
-const enumValues = <T extends readonly { value: string }[]>(opts: T) =>
-  opts.map((o) => o.value) as [T[number]['value'], ...T[number]['value'][]];
 
 export const coachProfileSchema = z.object({
   gender: z.enum(['male', 'female']),
   displayName: z.string().min(1).max(40),
   voiceId: z.string(),
-  toneSeverity: z.literal('high_challenger'),
+  toneSeverity: z.enum(['high_challenger', 'gentle_mentor']),
 });
 
 export const businessDnaSchema = z.object({
@@ -124,16 +155,44 @@ export const onboardingProfileSchema = z.object({
     deliveryChannel: z.enum(['in_app', 'pwa_push', 'whatsapp']),
     coachingTone: z.enum(['direct_and_challenging', 'empathic_and_reflective', 'pragmatic_action_focused']),
   }).optional(),
+  // Ontbreekt bij profielen van voor de Rustbrenger-editie: dat betekent `commercial`.
+  mode: z.enum(COACH_MODES).optional(),
   coachProfile: coachProfileSchema,
-  businessDna: businessDnaSchema,
+  // Verplicht in commercial-modus, afwezig in rustbrenger-modus (zie superRefine hieronder).
+  businessDna: businessDnaSchema.optional(),
+  rustbrenger: rustbrengerProfileSchema.optional(),
   // Optioneel in het schema (backward-compatible met profielen van vóór de Consequentie-Module),
   // maar de wizard zelf staat niet toe deze stap over te slaan.
   consequenceModule: consequenceModuleSchema.optional(),
+}).superRefine((profile, ctx) => {
+  if (profile.mode === 'rustbrenger') {
+    if (!profile.rustbrenger) ctx.addIssue({ code: 'custom', path: ['rustbrenger'], message: 'rustbrenger-profiel is verplicht in rustbrenger-modus' });
+  } else if (!profile.businessDna) {
+    ctx.addIssue({ code: 'custom', path: ['businessDna'], message: 'businessDna is verplicht in commercial-modus' });
+  }
 });
+
+export function getProfileMode(profile: { mode?: CoachMode } | null | undefined): CoachMode {
+  return profile?.mode === 'rustbrenger' ? 'rustbrenger' : 'commercial';
+}
+
+/** Wisselt de coach-modus van een bestaand profiel (omkeerbaar vanuit Instellingen). Bewaart beide
+ *  blokken (businessDna en rustbrenger) zodat terugwisselen geen gegevens kwijtraakt. Geeft null
+ *  als het profiel nog geen gegevens voor de doelmodus heeft: dan moet de intake opnieuw. */
+export function switchProfileMode(profile: UserOnboardingProfile, target: CoachMode): UserOnboardingProfile | null {
+  if (target === 'rustbrenger' && !profile.rustbrenger) return null;
+  if (target === 'commercial' && !profile.businessDna) return null;
+  return {
+    ...profile,
+    mode: target,
+    coachProfile: { ...profile.coachProfile, toneSeverity: target === 'rustbrenger' ? 'gentle_mentor' : 'high_challenger' },
+  };
+}
 
 export type UserOnboardingProfile = z.infer<typeof onboardingProfileSchema>;
 export type CoachProfile = z.infer<typeof coachProfileSchema>;
 export type BusinessDna = z.infer<typeof businessDnaSchema>;
+export type RustbrengerProfile = z.infer<typeof rustbrengerProfileSchema>;
 export type ConsequenceModule = z.infer<typeof consequenceModuleSchema>;
 
 export function labelFor<T extends readonly { value: string; label: string }[]>(opts: T, value: string): string {

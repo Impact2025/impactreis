@@ -3,7 +3,7 @@ import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { sql } from '@/lib/db';
 import { getAuthContext } from '@/lib/auth-context';
 import { weekrapportEmail, WeekrapportData } from '@/lib/email-templates';
-import { getRecipients, recordEmailSent, unsubscribeUrl } from '@/lib/email-recipients';
+import { getRecipients, recordEmailSent, unsubscribeUrl, emailIdempotencyKey } from '@/lib/email-recipients';
 import { SPARRINGPARTNER_STYLE, sanitizeAiText } from '@/lib/ai-style';
 import { withCronErrorNotification } from '@/lib/cron-guard';
 
@@ -149,12 +149,10 @@ ${SPARRINGPARTNER_STYLE}`;
 
   const { subject, html } = weekrapportEmail(emailData, appUrl, unsubUrl);
 
-  const { error } = await getResend().emails.send({
-    from: FROM_EMAIL,
-    to: toEmail,
-    subject,
-    html,
-  });
+  const { error } = await getResend().emails.send(
+    { from: FROM_EMAIL, to: toEmail, subject, html },
+    { idempotencyKey: emailIdempotencyKey(EMAIL_TYPE, userId) }
+  );
 
   if (error) throw new Error(JSON.stringify(error));
 }

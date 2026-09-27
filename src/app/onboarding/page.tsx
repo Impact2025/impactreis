@@ -14,6 +14,11 @@ import {
   AVOIDANCE_BEHAVIOR_OPTIONS,
   LEVERAGE_GOAL_OPTIONS,
   CONSEQUENCE_PRESETS,
+  ENERGY_LEAK_OPTIONS,
+  BREAKPOINT_SIGNAL_OPTIONS,
+  CLOSING_TIME_OPTIONS,
+  type CoachMode,
+  type BusinessDna,
   labelFor,
   type UserOnboardingProfile,
 } from '@/lib/onboarding';
@@ -21,7 +26,8 @@ import { ChipButton, CardOption, CheckRow, WeekdayPicker } from '@/components/ui
 import { DEFAULT_RITUAL_SETTINGS } from '@/lib/weekflow.service';
 import { DEFAULT_PREFERENCES, isNotificationSupported, requestPermission, savePreferences, scheduleAllNotifications } from '@/lib/notifications.service';
 
-const TOTAL_STEPS = 8;
+const COMMERCIAL_STEPS = 8;
+const RUSTBRENGER_STEPS = 7;
 
 const STEP_LABELS = [
   'je challenger',
@@ -31,6 +37,16 @@ const STEP_LABELS = [
   'je vluchtgedrag',
   'je kwartaalhefboom',
   'de consequentie',
+  'je ritme',
+];
+
+const RUSTBRENGER_STEP_LABELS = [
+  'je pad en je mentor',
+  'je naam',
+  'je energielekken',
+  'je missie',
+  'je breekpunt',
+  'je grenscontract',
   'je ritme',
 ];
 
@@ -83,6 +99,24 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Kies je pad: `commercial` (default, ongewijzigde flow) of `rustbrenger` (beschermende mentor,
+  // zie PLAN_RUSTBRENGER.md). Rustbrenger vervangt stap 3-7 door vier eigen stappen (7 totaal).
+  const [mode, setMode] = useState<CoachMode>('commercial');
+  const [energyLeaks, setEnergyLeaks] = useState<string[]>([]);
+  const [missionAnchor, setMissionAnchor] = useState('');
+  const [breakpointSignal, setBreakpointSignal] = useState<string | null>(null);
+  const [laptopClosedTime, setLaptopClosedTime] = useState<string | null>(null);
+  const totalSteps = mode === 'rustbrenger' ? RUSTBRENGER_STEPS : COMMERCIAL_STEPS;
+  // Logische stap voor rendering/validatie: in rustbrenger-modus wijzen stap 3-6 naar eigen
+  // schermen en is de laatste stap (7) het gedeelde ritme-scherm (view 8).
+  const view: number | 'rb-leaks' | 'rb-mission' | 'rb-breakpoint' | 'rb-boundary' =
+    mode !== 'rustbrenger' ? step
+    : step === 3 ? 'rb-leaks'
+    : step === 4 ? 'rb-mission'
+    : step === 5 ? 'rb-breakpoint'
+    : step === 6 ? 'rb-boundary'
+    : step === 7 ? 8
+    : step;
   const [gender, setGender] = useState<Gender | null>(null);
   // De eigen naam van de ondernemer — apart van `displayName` hieronder (de naam van de
   // AI-coach-persona). Zonder dit veld viel het dashboard terug op het e-mailadres-prefix
@@ -244,7 +278,7 @@ export default function OnboardingPage() {
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.completed) { router.push('/dashboard'); return; }
+          if (data.completed && !new URLSearchParams(window.location.search).has('opnieuw')) { router.push('/dashboard'); return; }
         }
       } catch {
         // kon status niet ophalen — laat gewoon de wizard zien
@@ -276,8 +310,16 @@ export default function OnboardingPage() {
     if (permission !== 'granted') setNotifOptIn(false);
   };
 
+  const toggleEnergyLeak = (value: string) => {
+    setEnergyLeaks((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : prev.length >= 3 ? prev : [...prev, value]));
+  };
+
   const canProceed = (): boolean => {
-    switch (step) {
+    switch (view) {
+      case 'rb-leaks': return energyLeaks.length > 0;
+      case 'rb-mission': return missionAnchor.trim().length > 0;
+      case 'rb-breakpoint': return breakpointSignal !== null;
+      case 'rb-boundary': return laptopClosedTime !== null;
       case 1: return userName.trim().length > 0 && gender !== null;
       case 2: return displayName.trim().length > 0;
       case 3: return industry !== null && teamSize !== null && businessModel !== null;
@@ -291,6 +333,7 @@ export default function OnboardingPage() {
   };
 
   const submit = async () => {
+    if (mode === 'rustbrenger') return submitRustbrenger();
     if (!userName.trim() || !gender || !displayName.trim() || !industry || !teamSize || !businessModel || !avoidanceBehavior || !leverageGoal || !painfulConsequence.trim()) return;
     setSubmitting(true);
     setError(null);
@@ -303,12 +346,12 @@ export default function OnboardingPage() {
         toneSeverity: 'high_challenger',
       },
       businessDna: {
-        industry: industry as UserOnboardingProfile['businessDna']['industry'],
-        teamSize: teamSize as UserOnboardingProfile['businessDna']['teamSize'],
-        businessModel: businessModel as UserOnboardingProfile['businessDna']['businessModel'],
-        topTimeWasters: topTimeWasters as UserOnboardingProfile['businessDna']['topTimeWasters'],
-        avoidanceBehavior: avoidanceBehavior as UserOnboardingProfile['businessDna']['avoidanceBehavior'],
-        quarterlyLeverageGoal: leverageGoal as UserOnboardingProfile['businessDna']['quarterlyLeverageGoal'],
+        industry: industry as BusinessDna['industry'],
+        teamSize: teamSize as BusinessDna['teamSize'],
+        businessModel: businessModel as BusinessDna['businessModel'],
+        topTimeWasters: topTimeWasters as BusinessDna['topTimeWasters'],
+        avoidanceBehavior: avoidanceBehavior as BusinessDna['avoidanceBehavior'],
+        quarterlyLeverageGoal: leverageGoal as BusinessDna['quarterlyLeverageGoal'],
       },
       consequenceModule: {
         description: painfulConsequence.trim(),
@@ -328,6 +371,46 @@ export default function OnboardingPage() {
       },
     };
 
+    await saveProfile(profile);
+  };
+
+  const submitRustbrenger = async () => {
+    if (!userName.trim() || !gender || !displayName.trim() || energyLeaks.length === 0 || !missionAnchor.trim() || !breakpointSignal || !laptopClosedTime) return;
+    setSubmitting(true);
+    setError(null);
+    type Rb = NonNullable<UserOnboardingProfile['rustbrenger']>;
+    const restGoal = LEVERAGE_GOAL_OPTIONS.find((o) => o.value === 'rust_focus');
+    const profile: UserOnboardingProfile = {
+      mode: 'rustbrenger',
+      coachProfile: {
+        gender,
+        displayName: displayName.trim(),
+        voiceId: COACH_PERSONAS[gender].voiceId,
+        toneSeverity: 'gentle_mentor',
+      },
+      rustbrenger: {
+        energyLeaks: energyLeaks as Rb['energyLeaks'],
+        missionAnchor: missionAnchor.trim(),
+        breakpointSignal: breakpointSignal as Rb['breakpointSignal'],
+        laptopClosedTime: laptopClosedTime as Rb['laptopClosedTime'],
+      },
+      assistantPreferences: {
+        morningBriefingTime: '08:00',
+        eveningReviewTime: laptopClosedTime,
+        deliveryChannel: 'in_app',
+        coachingTone: 'empathic_and_reflective',
+      },
+      impactProfile: {
+        missionStatement: missionAnchor.trim(),
+        targetBeneficiaries: '',
+        quarterlyLeverageGoal: restGoal?.label ?? '',
+        targetDeadline: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      },
+    };
+    await saveProfile(profile);
+  };
+
+  const saveProfile = async (profile: UserOnboardingProfile) => {
     try {
       const token = AuthService.getToken();
       const res = await fetch('/api/onboarding/complete', {
@@ -366,16 +449,16 @@ export default function OnboardingPage() {
           <Image src="/logo.png" alt="Sparren.app logo" width={36} height={36} className="rounded-full" priority />
           <div className="flex-1">
             <p className="text-[14px] font-semibold text-ink">Sparren.app</p>
-            <p className="text-[11px] text-ink-soft">Stap {step} van {TOTAL_STEPS} — {STEP_LABELS[step - 1]}</p>
+            <p className="text-[11px] text-ink-soft">Stap {step} van {totalSteps} — {(mode === 'rustbrenger' ? RUSTBRENGER_STEP_LABELS : STEP_LABELS)[step - 1]}</p>
           </div>
         </div>
         <div className="max-w-lg mx-auto mt-3 h-1 bg-surface-sunken rounded-full overflow-hidden">
-          <div className="h-full bg-primary transition-all duration-300" style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} />
+          <div className="h-full bg-primary transition-all duration-300" style={{ width: `${(step / totalSteps) * 100}%` }} />
         </div>
       </div>
 
       <div className="flex-1 max-w-lg mx-auto w-full px-5 py-6 space-y-5 overflow-y-auto">
-        {step === 1 && (
+        {view === 1 && (
           <div className="space-y-4">
             <div>
               <h2 className="text-[18px] font-semibold text-ink">Wat is je naam?</h2>
@@ -391,7 +474,23 @@ export default function OnboardingPage() {
               autoFocus
             />
             <div className="pt-2">
-              <h2 className="text-[18px] font-semibold text-ink">Kies je challenger</h2>
+              <h2 className="text-[18px] font-semibold text-ink">Kies je pad</h2>
+              <p className="text-[13px] text-ink-soft mt-1">Je kunt dit later altijd wijzigen in Instellingen.</p>
+            </div>
+            <CardOption
+              selected={mode === 'commercial'}
+              onClick={() => setMode('commercial')}
+              title="Commercieel"
+              description="Scherpe challenger die je dwingt tot executie, hefbomen en meer marge."
+            />
+            <CardOption
+              selected={mode === 'rustbrenger'}
+              onClick={() => setMode('rustbrenger')}
+              title="Rustbrenger"
+              description="Voor sociaal ondernemers: een rustige mentor die je grenzen bewaakt en ruis wegneemt, zonder prestatiedruk."
+            />
+            <div className="pt-2">
+              <h2 className="text-[18px] font-semibold text-ink">{mode === 'rustbrenger' ? 'Kies je mentor' : 'Kies je challenger'}</h2>
               <p className="text-[13px] text-ink-soft mt-1">Gebaseerd op 25+ jaar ondernemerservaring en de hefboommethodiek. Welke stem dwingt jou tot de beste executie?</p>
             </div>
             <CardOption
@@ -409,10 +508,10 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {step === 2 && gender && (
+        {view === 2 && gender && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-[18px] font-semibold text-ink">Naam van je challenger</h2>
+              <h2 className="text-[18px] font-semibold text-ink">{mode === 'rustbrenger' ? 'Naam van je mentor' : 'Naam van je challenger'}</h2>
               <p className="text-[13px] text-ink-soft mt-1">Standaard {COACH_PERSONAS[gender].defaultName}, maar noem 'm zoals je wilt — bijvoorbeeld Coach, of de naam van een oude mentor.</p>
             </div>
             <input
@@ -427,7 +526,66 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {step === 3 && (
+        {view === 'rb-leaks' && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-[18px] font-semibold text-ink">Waar lekt je energie?</h2>
+              <p className="text-[13px] text-ink-soft mt-1">Kies maximaal 3. Dit is waar je mentor je in gaat ontlasten.</p>
+            </div>
+            <div className="space-y-2">
+              {ENERGY_LEAK_OPTIONS.map((o) => (
+                <CheckRow key={o.value} selected={energyLeaks.includes(o.value)} onClick={() => toggleEnergyLeak(o.value)}>{o.label}</CheckRow>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {view === 'rb-mission' && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-[18px] font-semibold text-ink">Waarvoor doe je dit?</h2>
+              <p className="text-[13px] text-ink-soft mt-1">Een zin over je missie. Je mentor gebruikt dit om je eraan te herinneren waarom rust geen luxe is.</p>
+            </div>
+            <input
+              type="text"
+              value={missionAnchor}
+              onChange={(e) => setMissionAnchor(e.target.value)}
+              placeholder="Bijvoorbeeld: jongeren een eerlijke kans geven"
+              maxLength={300}
+              className="w-full px-4 py-3 rounded-[14px] bg-surface-sunken border border-transparent text-[15px] outline-none focus:border-primary focus:bg-white transition-all"
+            />
+          </div>
+        )}
+
+        {view === 'rb-breakpoint' && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-[18px] font-semibold text-ink">Wat is je eerste signaal?</h2>
+              <p className="text-[13px] text-ink-soft mt-1">Wat merk je als eerste als je over je grens gaat?</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {BREAKPOINT_SIGNAL_OPTIONS.map((o) => (
+                <ChipButton key={o.value} selected={breakpointSignal === o.value} onClick={() => setBreakpointSignal(o.value)}>{o.label}</ChipButton>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {view === 'rb-boundary' && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-[18px] font-semibold text-ink">Je grenscontract</h2>
+              <p className="text-[13px] text-ink-soft mt-1">Op welk uur gaat de laptop dicht? Een afspraak met jezelf, geen regel. Je kunt hem altijd omzeilen.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {CLOSING_TIME_OPTIONS.map((t) => (
+                <ChipButton key={t} selected={laptopClosedTime === t} onClick={() => setLaptopClosedTime(t)}>{t}</ChipButton>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {view === 3 && (
           <div className="space-y-5">
             <div>
               <h2 className="text-[18px] font-semibold text-ink">Bedrijfsmodel & omvang</h2>
@@ -460,7 +618,7 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {step === 4 && (
+        {view === 4 && (
           <div className="space-y-4">
             <div>
               <h2 className="text-[18px] font-semibold text-ink">Je top-3 tijdvreters</h2>
@@ -479,7 +637,7 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {step === 5 && (
+        {view === 5 && (
           <div className="space-y-4">
             <div>
               <h2 className="text-[18px] font-semibold text-ink">Persoonlijk vluchtgedrag</h2>
@@ -493,7 +651,7 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {step === 6 && (
+        {view === 6 && (
           <div className="space-y-4">
             <div>
               <h2 className="text-[18px] font-semibold text-ink">De kwartaalhefboom</h2>
@@ -507,7 +665,7 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {step === 7 && (
+        {view === 7 && (
           <div className="space-y-4">
             <div>
               <h2 className="text-[18px] font-semibold text-ink">De Pijnlijke Consequentie</h2>
@@ -602,7 +760,7 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {step === 8 && (() => {
+        {view === 8 && (() => {
           const advice = scheduleAdvice(topTimeWasters, avoidanceBehavior, leverageGoal);
           return (
             <div className="space-y-5">
@@ -717,7 +875,7 @@ export default function OnboardingPage() {
               <ArrowLeft size={17} className="text-ink" />
             </button>
           )}
-          {step < TOTAL_STEPS ? (
+          {step < totalSteps ? (
             <button
               type="button"
               onClick={() => canProceed() && setStep((s) => s + 1)}

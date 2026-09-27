@@ -14,6 +14,8 @@ import { getCurrentQuarter, getCurrentWeekNumber, getToday } from '@/lib/weekflo
 import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { queryKeys } from '@/lib/query-client';
 import { BottomNav } from '@/components/ui/bottom-nav';
+import { useCoachMode } from '@/hooks/useCoachMode';
+import { RustbrengerWeeklyStart } from '@/components/rustbrenger/RustbrengerWeeklyStart';
 
 interface WeeklyStartData {
   weekNumber: number;
@@ -41,6 +43,18 @@ const FOCUS_LABELS: Record<string, string> = {
 };
 
 export default function WeeklyStartPage() {
+  const { mode, loading } = useCoachMode();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-surface-card flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+  return mode === 'rustbrenger' ? <RustbrengerWeeklyStart /> : <CommercialWeeklyStart />;
+}
+
+function CommercialWeeklyStart() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { settings } = useRitualStatus();

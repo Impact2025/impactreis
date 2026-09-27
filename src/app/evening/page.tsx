@@ -13,6 +13,8 @@ import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { buildRecoveryProposalUrl } from '@/lib/calendar-proposal';
 import { queryKeys } from '@/lib/query-client';
 import { BottomNav } from '@/components/ui/bottom-nav';
+import { useCoachMode } from '@/hooks/useCoachMode';
+import { RustbrengerEvening } from '@/components/rustbrenger/RustbrengerEvening';
 
 type EveningVerdict = 'waarde_verkocht' | 'gered_door_operatie' | 'gevlucht_in_veiligheid';
 
@@ -668,6 +670,18 @@ function EveningContent() {
   );
 }
 
+function EveningModeSwitch() {
+  const { mode, loading } = useCoachMode();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-surface-card flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+  return mode === 'rustbrenger' ? <RustbrengerEvening /> : <EveningContent />;
+}
+
 export default function EveningPage() {
   return (
     <Suspense fallback={
@@ -675,7 +689,7 @@ export default function EveningPage() {
         <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     }>
-      <EveningContent />
+      <EveningModeSwitch />
     </Suspense>
   );
 }

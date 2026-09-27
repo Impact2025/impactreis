@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { ArrowLeft, Plus, X, CheckCircle2, Circle, ChevronDown, ChevronUp } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import { BottomNav } from '@/components/ui/bottom-nav';
+import { useCoachMode } from '@/hooks/useCoachMode';
+import { EmergencyButton } from '@/components/rustbrenger/ReferralCards';
 
 type FlowStep = 'probleem' | 'analyse' | 'actie' | 'loslaten' | 'opgeslagen';
 
@@ -28,6 +30,7 @@ function stepIndex(step: FlowStep): number {
 }
 
 export default function ControleCircelPage() {
+  const { mode: coachMode } = useCoachMode();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -224,6 +227,7 @@ export default function ControleCircelPage() {
       </div>
 
       <div className="max-w-lg mx-auto px-5 pt-5 space-y-4">
+        {coachMode === 'rustbrenger' && <EmergencyButton />}
         {/* Saved banner */}
         {step === 'opgeslagen' && (
           <div className="rounded-[16px] bg-primary/10 border border-primary/20 p-4 flex items-center gap-3">

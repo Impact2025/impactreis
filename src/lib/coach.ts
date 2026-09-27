@@ -12,7 +12,11 @@ import {
   TIME_WASTER_OPTIONS,
   LEVERAGE_GOAL_OPTIONS,
   INDUSTRY_OPTIONS,
+  ENERGY_LEAK_OPTIONS,
+  BREAKPOINT_SIGNAL_OPTIONS,
+  getProfileMode,
   labelFor,
+  type CoachMode,
   type UserOnboardingProfile,
 } from './onboarding';
 import { normalizeNextActions } from './goal-actions';
@@ -100,6 +104,9 @@ export interface CoachContext {
    *  oude AIPA-intake heeft (of nooit `coachProfile.toneSeverity: 'high_challenger'` koos), dan
    *  valt de prompt terug op de bestaande "Sparringpartner"-persona hieronder. */
   challenger: ChallengerProfile | null;
+  /** Rustbrenger-editie: gevuld in plaats van `challenger` als de ondernemer voor die modus koos.
+   *  Optioneel zodat bestaande fixtures/callers `commercial` blijven. */
+  rustbrenger?: RustbrengerCoachProfile | null;
   /** Openstaande 80/20-hefboomtaak van dit kwartaal — zelfde bron/logica als runNextStepAnalysis
    *  (zie sql-query daar), maar nu ook zichtbaar voor de reflectie-analyse en de chat, die dit
    *  voorheen niet zagen ondanks dat het dashboard het wél toont. */
@@ -132,13 +139,49 @@ export interface ChallengerProfile {
   painfulConsequence: string | null;
 }
 
+export interface RustbrengerCoachProfile {
+  displayName: string;
+  gender: 'male' | 'female';
+  energyLeakLabels: string[];
+  missionAnchor: string;
+  breakpointLabel: string;
+  laptopClosedTime: string;
+}
+
+async function loadOnboardingProfile(userId: string): Promise<UserOnboardingProfile | null> {
+  const rows = await sql`SELECT profile FROM onboarding_profiles WHERE user_id = ${userId} AND completed = TRUE LIMIT 1`;
+  return (rows as { profile: UserOnboardingProfile | null }[])[0]?.profile ?? null;
+}
+
+/** Coach-modus van een gebruiker. Geen (voltooid) profiel of geen `mode` = `commercial`, zodat
+ *  bestaande gebruikers ongewijzigd blijven. */
+export async function getCoachMode(userId: string): Promise<CoachMode> {
+  return getProfileMode(await loadOnboardingProfile(userId));
+}
+
+/** Rustbrenger-tegenhanger van loadChallengerProfile: null tenzij mode 'rustbrenger' en het
+ *  rustbrenger-blok compleet is. */
+export async function loadRustbrengerProfile(userId: string): Promise<RustbrengerCoachProfile | null> {
+  const profile = await loadOnboardingProfile(userId);
+  if (getProfileMode(profile) !== 'rustbrenger' || !profile?.rustbrenger || !profile.coachProfile) return null;
+  const { coachProfile, rustbrenger } = profile;
+  return {
+    displayName: coachProfile.displayName,
+    gender: coachProfile.gender,
+    energyLeakLabels: rustbrenger.energyLeaks.map((l) => labelFor(ENERGY_LEAK_OPTIONS, l)),
+    missionAnchor: rustbrenger.missionAnchor,
+    breakpointLabel: labelFor(BREAKPOINT_SIGNAL_OPTIONS, rustbrenger.breakpointSignal),
+    laptopClosedTime: rustbrenger.laptopClosedTime,
+  };
+}
+
 /** Haalt de Impact Coach-persona en het Bedrijfs-DNA op uit de tap-first onboarding-wizard.
  *  Geeft null terug zolang toneSeverity niet 'high_challenger' is — dat is de enige modus die
  *  de wizard vandaag oplevert, maar deze check houdt de deur open voor mildere varianten later. */
 export async function loadChallengerProfile(userId: string): Promise<ChallengerProfile | null> {
   const rows = await sql`SELECT profile FROM onboarding_profiles WHERE user_id = ${userId} AND completed = TRUE LIMIT 1`;
   const profile = (rows as { profile: UserOnboardingProfile | null }[])[0]?.profile;
-  if (!profile?.coachProfile || !profile.businessDna || profile.coachProfile.toneSeverity !== 'high_challenger') return null;
+  if (!profile?.coachProfile || !profile.businessDna || getProfileMode(profile) !== 'commercial' || profile.coachProfile.toneSeverity !== 'high_challenger') return null;
   const { coachProfile, businessDna } = profile;
   return {
     displayName: coachProfile.displayName,
@@ -302,7 +345,7 @@ export async function loadCoachContext(userId: string, organizationId: number | 
 
   const [
     morningRows, allMorningDates, energyRows, lessonRows, contextRows, holding, challenger, identityStatements,
-    goalRows, winRows, winsThisWeekRows, focusRows,
+    goalRows, winRows, winsThisWeekRows, focusRows, rustbrenger,
   ] = await Promise.all([
     sql`SELECT date_string, type, data FROM daily_logs
         WHERE user_id = ${userId} AND date_string IN (${today}, ${yesterday})`,
@@ -329,6 +372,7 @@ export async function loadCoachContext(userId: string, organizationId: number | 
     sql`SELECT COUNT(*)::int AS count FROM wins WHERE user_id = ${userId} AND date >= ${sevenDaysAgo}`,
     sql`SELECT duration_minutes FROM focus_sessions
         WHERE user_id = ${userId} AND date = ${today} AND completed = TRUE`,
+    loadRustbrengerProfile(userId),
   ]);
 
   const todayMorning = (morningRows as DailyLogRow[]).find((r) => r.date_string === today && r.type === 'morning');
@@ -400,6 +444,7 @@ export async function loadCoachContext(userId: string, organizationId: number | 
     identity,
     identityStatements: identityStatements as ActiveIdentityStatement[],
     challenger: challenger as ChallengerProfile | null,
+    rustbrenger: rustbrenger as RustbrengerCoachProfile | null,
     openLeverageTask,
     openRocksCount,
     recentWins: (winRows as { title: string; category: string; date: string }[]),
@@ -473,6 +518,18 @@ export function chooseTechnique(ctx: CoachContext): { technique: Technique; reas
   const energyDrop = ctx.yesterday?.energyLevel != null && ctx.today.energyLevel != null
     ? ctx.today.energyLevel - ctx.yesterday.energyLevel
     : 0;
+
+  // Rustbrenger: nooit cgt/grow/mi (die duwen of confronteren). Alleen ACT, systemisch of
+  // oplossingsgericht (schaalvragen), met lage energie of hoge stress als voorrang.
+  if (ctx.rustbrenger) {
+    if ((ctx.today.energyLevel ?? 10) <= 4 || energyDrop <= -3) {
+      return { technique: 'oplossingsgericht', reason: 'Rustbrenger: lage energie of scherpe daling — schaalvraag, geen advies of doorduwen.' };
+    }
+    if (ctx.userContext.current_stress_level >= 7) {
+      return { technique: 'systemisch', reason: 'Rustbrenger: hoge stress — kijk naar wat er om de ondernemer heen speelt en wat kan blijven liggen.' };
+    }
+    return { technique: 'act', reason: 'Rustbrenger: standaard ACT — ruimte voor ongemak, kleine stap vanuit eigen waarden.' };
+  }
 
   const costCount = ctx.recentEnergyLog.filter((e) => e.direction === 'cost').length;
   const gainCount = ctx.recentEnergyLog.filter((e) => e.direction === 'gain').length;
@@ -648,6 +705,32 @@ GELEERDE PATRONEN OVER ${identity.addressName ? identity.addressName.toUpperCase
 ${lessonsBlock}
 ${identityBlock}${holdingBlock(ctx.holding)}`;
 
+  if (ctx.rustbrenger) {
+    const rb = ctx.rustbrenger;
+    return `Jij bent ${rb.displayName}, de Begrenzende Mentor van ${object}: een rustige, nuchtere sparringpartner voor iemand die werkt vanuit een maatschappelijke missie.
+Jouw doel is NIET om ${object} harder te laten werken. Jouw doel is dat ${object} het vol kan houden: grenzen bewaken, ruis weghalen, energie beschermen.
+
+JOUW KARAKTER:
+- Rustig, nuchter en warm zonder zoetsappig te zijn. Kort: maximaal 3 zinnen.
+- Anti-martelaarschap: zorgen voor anderen is geen reden om jezelf leeg te laten lopen. Zeg dat als het past, zonder te preken.
+- Radicale vereenvoudiging: help schrappen, parkeren of laten liggen. Voeg geen taken toe.
+- Nuchtere empathie: erken wat zwaar is, zonder het groter te maken of te bagatelliseren.
+- Geen druk, geen straffen, geen "kikker", geen tariefdiscussies, geen confrontatie over uitstelgedrag.
+
+Belangrijke grens: je diagnosticeert of behandelt nooit psychische of medische klachten. Zie je aanhoudende uitputting, slaapproblemen, angst of somberheid die langer dan een paar dagen duurt (of een lage energie meerdere dagen achter elkaar), benoem dat rustig en verwijs door naar de huisarts of bedrijfsarts. Bij acute nood: 113. Coach dan niet verder met een techniek.
+
+CONTEXT VAN DEZE ONDERNEMER:
+- Missie-anker: "${rb.missionAnchor}".
+- Grootste energielekken: ${rb.energyLeakLabels.join('; ')}.
+- Eerste signaal dat de grens bereikt is: ${rb.breakpointLabel}.
+- Afgesproken laptop-dicht-tijd: ${rb.laptopClosedTime} (een afspraak met zichzelf, geen regel; noem het zacht als het laat is).
+
+(Gekozen coachingslens op de achtergrond, gebruik dit alleen om je vraag zachter en scherper te maken, noem de techniek zelf nooit: ${TECHNIQUE_LABELS[technique]} — ${instructions[technique]})
+
+${sessionBlock}
+Schrijf een reactie van maximaal 3 zinnen in het Nederlands, in de jij-vorm. Geen opsomming, geen advies om meer te doen. Eindig met precies één rustige vraag aan ${object}, bij voorkeur over wat er mag blijven liggen of wat vandaag voldoende is.`;
+  }
+
   if (challenger) {
     const trigger = detectChallengerTrigger(ctx);
     return `Jij bent ${challenger.displayName}, de exclusieve executive AI-challenger van ${object}.
@@ -760,6 +843,16 @@ ${conversation}
 
 Reageer nu op het laatste bericht van ${object}.`;
     }
+  }
+
+  const rustbrenger = userId ? await loadRustbrengerProfile(userId) : null;
+  if (rustbrenger) {
+    return `Jij bent ${rustbrenger.displayName}, de Begrenzende Mentor van ${object}. Rustig, nuchter, warm, maximaal 3 zinnen. Geen druk, geen extra taken; help schrappen en grenzen bewaken. Missie-anker van ${object}: "${rustbrenger.missionAnchor}". Stel je diagnose nooit zelf: bij aanhoudende uitputting, slaapproblemen of somberheid verwijs je rustig naar de huisarts of bedrijfsarts, bij acute nood naar 113. Gebruik de jij-vorm.
+
+CONVERSATIEGESCHIEDENIS:
+${conversation}
+
+${messages.length > 0 ? `Reageer nu op het laatste bericht van ${object}.` : 'Start het gesprek.'}`;
   }
 
   if (challenger) {
@@ -1325,6 +1418,9 @@ export interface NextStepCandidate {
 }
 
 export interface NextStepInput {
+  /** Is vandaag een werkdag volgens de ritueel-instellingen van de user (settings.workDays)?
+   *  Op een vrije dag bestaat er geen ochtendritueel-verplichting en is de Week Review de logische stap. */
+  isWorkDay: boolean;
   hasMorningRitual: boolean;
   proactiveSignal: ProactiveSignal;
   weeklyStartOpen: boolean;
@@ -1343,7 +1439,7 @@ export interface NextStepInput {
 /** Puur functioneel en dus triviaal te testen zonder database — zelfde stijl als
  *  detectProactiveSignal. Eerste match wint, altijd een geldig eindpunt (nooit null). */
 export function determineNextStepCandidate(input: NextStepInput): NextStepCandidate {
-  if (!input.hasMorningRitual) {
+  if (input.isWorkDay && !input.hasMorningRitual) {
     return {
       key: 'geen-ochtendritueel',
       headline: 'Begin met je ochtendritueel',
@@ -1359,6 +1455,16 @@ export function determineNextStepCandidate(input: NextStepInput): NextStepCandid
       factLine: input.proactiveSignal.message,
       ctaLabel: 'Bespreek met Sparren',
       ctaHref: '/coach',
+    };
+  }
+  // Vrije dag: de week afsluiten gaat voor losse taken/afspraken (die horen bij werkdagen).
+  if (!input.isWorkDay && input.weeklyReviewOpen) {
+    return {
+      key: 'weekreview-open',
+      headline: 'Sluit je week af',
+      factLine: 'Het is een vrije dag en deze week is nog niet afgesloten met een Week Review — reflectie is wat een week tot leerstof maakt in plaats van alleen tijd die voorbijging.',
+      ctaLabel: 'Naar Week Review',
+      ctaHref: '/weekly-review',
     };
   }
   if (input.weeklyStartOpen) {
@@ -1569,6 +1675,7 @@ export async function runNextStepAnalysis(userId: string, organizationId: number
   });
 
   const candidate = determineNextStepCandidate({
+    isWorkDay: getDayType(ritualStatus.settings) !== 'weekend',
     hasMorningRitual: ctx.today.energyLevel != null,
     proactiveSignal,
     weeklyStartOpen,

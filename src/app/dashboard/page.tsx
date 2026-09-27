@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
-  Bell, Sunrise, Moon, CalendarDays, TrendingUp,
+  Settings, Sunrise, Moon, CalendarDays, TrendingUp,
   ChevronRight, Zap, Fingerprint, Sparkles, BookHeart, AlertCircle, X, Mountain, Flame, Compass,
 } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
@@ -329,11 +329,11 @@ export default function DashboardPage() {
               </button>
               <button
                 onClick={() => router.push('/settings')}
-                aria-label="Instellingen en notificaties"
-                title="Instellingen en notificaties"
+                aria-label="Instellingen"
+                title="Instellingen"
                 className="w-9 h-9 rounded-full bg-surface-sunken flex items-center justify-center text-ink-soft hover:text-ink transition-colors"
               >
-                <Bell size={16} />
+                <Settings size={16} />
               </button>
             </div>
           </div>

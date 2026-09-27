@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext } from '@/lib/auth-context';
 import { db } from '@/lib/db/client';
 import { onboardingProfiles } from '@/lib/db/schema';
-import { businessDnaSchema, type UserOnboardingProfile } from '@/lib/onboarding';
+import { businessDnaSchema, COACH_MODES, switchProfileMode, type UserOnboardingProfile } from '@/lib/onboarding';
 import { eq } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
@@ -41,6 +41,27 @@ export async function PATCH(request: NextRequest) {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
+  }
+
+  // Coach-modus wisselen (commercial <-> rustbrenger): { mode }. Los van het Bedrijfs-DNA-pad hieronder.
+  const requestedMode = (body as { mode?: unknown } | null)?.mode;
+  if (requestedMode !== undefined) {
+    if (typeof requestedMode !== 'string' || !(COACH_MODES as readonly string[]).includes(requestedMode)) {
+      return NextResponse.json({ error: 'Ongeldige modus' }, { status: 400 });
+    }
+    const rows = await db.select().from(onboardingProfiles)
+      .where(eq(onboardingProfiles.userId, authCtx.userId)).limit(1);
+    if (rows.length === 0 || !rows[0].completed || !rows[0].profile) {
+      return NextResponse.json({ error: 'Rond eerst de intake af' }, { status: 400 });
+    }
+    const switched = switchProfileMode(rows[0].profile as UserOnboardingProfile, requestedMode as (typeof COACH_MODES)[number]);
+    if (!switched) {
+      return NextResponse.json({ error: 'Voor deze modus is de intake opnieuw nodig', needsIntake: true }, { status: 409 });
+    }
+    await db.update(onboardingProfiles)
+      .set({ profile: switched, updatedAt: new Date() })
+      .where(eq(onboardingProfiles.userId, authCtx.userId));
+    return NextResponse.json({ mode: requestedMode });
   }
 
   const result = businessDnaSchema.safeParse(body);

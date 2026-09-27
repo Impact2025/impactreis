@@ -14,6 +14,9 @@ import { Celebration } from '@/components/robbins/celebration';
 import { BottomNav } from '@/components/ui/bottom-nav';
 import { getFocusBlockSlots, focusCategoryLabel, isWithinBlock } from '@/lib/focus-blocks';
 import { getToday, DEFAULT_RITUAL_SETTINGS } from '@/lib/weekflow.service';
+import { useCoachMode } from '@/hooks/useCoachMode';
+import { BreathingBreak } from '@/components/rustbrenger/BreathingBreak';
+import { EmergencyButton } from '@/components/rustbrenger/ReferralCards';
 
 interface PlannedFocusBlock {
   start: string;
@@ -41,6 +44,8 @@ const powerQuestions = [
 ];
 
 export default function FocusPage() {
+  const { mode: coachMode } = useCoachMode();
+  const isRustbrenger = coachMode === 'rustbrenger';
   // Standaard 90 min — zelfde default als de focusblokken in Instellingen/Ochtendritueel
   // (DEFAULT_RITUAL_SETTINGS.focusBlock1DurationMin). Wordt hieronder overschreven zodra de
   // echte ritual-settings of een actief gepland blok bekend zijn.
@@ -271,6 +276,22 @@ export default function FocusPage() {
     );
   }
 
+  // Rustbrenger: dwingende pauze (gedimd scherm, box-breathing) in plaats van de bewegingspauze.
+  // Elk tweede blok krijgt een lange pauze van 20 minuten, anders 5.
+  if (showMovementBreak && isRustbrenger) {
+    return (
+      <BreathingBreak
+        minutes={completedSessions > 0 && completedSessions % 2 === 0 ? 20 : 5}
+        onDone={() => {
+          setShowMovementBreak(false);
+          setCurrentSession('work');
+          setTimeLeft(workMinutes * 60);
+          setShowGoalInput(true);
+        }}
+      />
+    );
+  }
+
   if (showMovementBreak) {
     return (
       <div className="min-h-screen bg-surface-sunken flex items-center justify-center p-6 pb-28">
@@ -320,6 +341,12 @@ export default function FocusPage() {
           </button>
         </div>
       </header>
+
+      {isRustbrenger && (
+        <div className="max-w-lg mx-auto px-5 pt-4">
+          <EmergencyButton />
+        </div>
+      )}
 
       {/* Power Question Modal */}
       {showPowerQuestion && (

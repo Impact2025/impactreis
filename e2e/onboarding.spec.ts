@@ -86,4 +86,65 @@ test.describe('Onboarding-wizard', () => {
       }
     }
   });
+
+  test('Rustbrenger-pad: 7 stappen zonder consequentie-module, slaat profiel zonder businessDna op', async ({ page, demoSession }) => {
+    const userId = demoSession.user.id;
+    const [existing] = await sql`SELECT * FROM onboarding_profiles WHERE user_id = ${userId}`;
+    const [existingUser] = await sql`SELECT name FROM users WHERE id = ${userId}`;
+
+    try {
+      await sql`UPDATE onboarding_profiles SET completed = false WHERE user_id = ${userId}`;
+
+      await page.goto('/onboarding');
+      await expect(page.getByText('Stap 1 van 8')).toBeVisible({ timeout: 10000 });
+      await page.getByPlaceholder('Voornaam').fill('E2E Rust');
+      await page.getByRole('button', { name: /^Rustbrenger/ }).click();
+      await expect(page.getByText('Stap 1 van 7')).toBeVisible();
+      await page.getByRole('button', { name: /Sarah — Vrouwelijk/ }).click();
+      await page.getByRole('button', { name: 'Volgende' }).click();
+
+      await expect(page.getByText('Stap 2 van 7')).toBeVisible();
+      await page.getByPlaceholder('Sarah').fill('Sarah');
+      await page.getByRole('button', { name: 'Volgende' }).click();
+
+      await expect(page.getByText('Stap 3 van 7')).toBeVisible();
+      await page.getByRole('button', { name: /Bureaucratische ruis/ }).click();
+      await page.getByRole('button', { name: 'Volgende' }).click();
+
+      await expect(page.getByText('Stap 4 van 7')).toBeVisible();
+      await page.getByPlaceholder(/jongeren een eerlijke kans/).fill('Jongeren een eerlijke kans geven');
+      await page.getByRole('button', { name: 'Volgende' }).click();
+
+      await expect(page.getByText('Stap 5 van 7')).toBeVisible();
+      await page.getByRole('button', { name: /slaap slecht/ }).click();
+      await page.getByRole('button', { name: 'Volgende' }).click();
+
+      await expect(page.getByText('Stap 6 van 7')).toBeVisible();
+      await page.getByRole('button', { name: '18:00' }).click();
+      await page.getByRole('button', { name: 'Volgende' }).click();
+
+      await expect(page.getByText('Stap 7 van 7')).toBeVisible();
+      await page.getByRole('button', { name: 'Start met dit ritme' }).click();
+
+      await page.waitForURL('**/dashboard', { timeout: 15000 });
+
+      const [saved] = await sql`SELECT completed, profile FROM onboarding_profiles WHERE user_id = ${userId}`;
+      expect(saved.completed).toBe(true);
+      expect(saved.profile.mode).toBe('rustbrenger');
+      expect(saved.profile.coachProfile.toneSeverity).toBe('gentle_mentor');
+      expect(saved.profile.businessDna).toBeUndefined();
+      expect(saved.profile.rustbrenger.laptopClosedTime).toBe('18:00');
+    } finally {
+      await sql`UPDATE users SET name = ${existingUser?.name ?? null} WHERE id = ${userId}`;
+      if (existing) {
+        await sql`
+          UPDATE onboarding_profiles
+          SET completed = ${existing.completed}, profile = ${JSON.stringify(existing.profile)}, conversation = ${JSON.stringify(existing.conversation)}
+          WHERE user_id = ${userId}
+        `;
+      } else {
+        await sql`DELETE FROM onboarding_profiles WHERE user_id = ${userId}`;
+      }
+    }
+  });
 });

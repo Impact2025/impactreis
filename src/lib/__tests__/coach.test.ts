@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { chooseTechnique, detectProactiveSignal, determineNextStepCandidate, determineToolSuggestion, mergeTodayContext, type CoachContext, type NextStepInput } from '../coach';
+import { buildCoachPrompt, chooseTechnique, detectProactiveSignal, determineNextStepCandidate, determineToolSuggestion, mergeTodayContext, type CoachContext, type NextStepInput } from '../coach';
 
 function baseContext(overrides: Partial<CoachContext> = {}): CoachContext {
   return {
@@ -31,6 +31,46 @@ function baseContext(overrides: Partial<CoachContext> = {}): CoachContext {
     ...overrides,
   };
 }
+
+const rustbrengerProfile = {
+  displayName: 'Rustig',
+  gender: 'female' as const,
+  energyLeakLabels: ['Bureaucratische ruis'],
+  missionAnchor: 'Jongeren een eerlijke kans geven',
+  breakpointLabel: 'Ik slaap slecht of pieker in bed',
+  laptopClosedTime: '18:00',
+};
+
+describe('chooseTechnique (rustbrenger)', () => {
+  it('kiest nooit cgt/grow/mi, ook niet bij een scherpe energieval of kosten-patroon', () => {
+    const drop = baseContext({ rustbrenger: rustbrengerProfile, today: { energyLevel: 6 }, yesterday: { energyLevel: 9 } });
+    const costly = baseContext({
+      rustbrenger: rustbrengerProfile,
+      today: { energyLevel: 6 },
+      recentEnergyLog: ['a', 'b', 'c'].map((activity) => ({ date_string: '2026-08-24', activity, category: null, direction: 'cost' as const })),
+    });
+    for (const ctx of [drop, costly, baseContext({ rustbrenger: rustbrengerProfile })]) {
+      expect(['cgt', 'grow', 'mi']).not.toContain(chooseTechnique(ctx).technique);
+    }
+  });
+
+  it('kiest oplossingsgericht (schaalvraag) bij lage energie en ACT als standaard', () => {
+    expect(chooseTechnique(baseContext({ rustbrenger: rustbrengerProfile, today: { energyLevel: 3 } })).technique).toBe('oplossingsgericht');
+    expect(chooseTechnique(baseContext({ rustbrenger: rustbrengerProfile, today: { energyLevel: 7 } })).technique).toBe('act');
+  });
+});
+
+describe('buildCoachPrompt (rustbrenger)', () => {
+  it('gebruikt de Begrenzende Mentor, verwijst door bij aanhoudende klachten en bevat geen challenger-taal', () => {
+    const ctx = baseContext({ rustbrenger: rustbrengerProfile });
+    const prompt = buildCoachPrompt(ctx, chooseTechnique(ctx).technique);
+    expect(prompt).toContain('Begrenzende Mentor');
+    expect(prompt).toContain('huisarts of bedrijfsarts');
+    expect(prompt).toContain('113');
+    expect(prompt).not.toContain('CHALLENGER_MODE_ACTIVE');
+    expect(prompt).not.toContain('FOCUS OP DE KIKKER');
+  });
+});
 
 describe('chooseTechnique', () => {
   it('kiest oplossingsgericht bij lage energie ondanks een lopende streak', () => {
@@ -139,6 +179,7 @@ describe('detectProactiveSignal', () => {
 describe('determineNextStepCandidate', () => {
   function baseInput(overrides: Partial<NextStepInput> = {}): NextStepInput {
     return {
+      isWorkDay: true,
       hasMorningRitual: true,
       proactiveSignal: { signal: false, patternKey: '', message: '' },
       weeklyStartOpen: false,
@@ -153,6 +194,16 @@ describe('determineNextStepCandidate', () => {
       ...overrides,
     };
   }
+
+  it('vrije dag: geen ochtendritueel-verwijt, Week Review als die open staat', () => {
+    const result = determineNextStepCandidate(baseInput({ isWorkDay: false, hasMorningRitual: false, weeklyReviewOpen: true }));
+    expect(result.key).toBe('weekreview-open');
+  });
+
+  it('vrije dag zonder open Week Review: nooit geen-ochtendritueel', () => {
+    const result = determineNextStepCandidate(baseInput({ isWorkDay: false, hasMorningRitual: false }));
+    expect(result.key).not.toBe('geen-ochtendritueel');
+  });
 
   it('wijst naar het ochtendritueel als dat nog niet is ingevuld, ongeacht andere signalen', () => {
     const result = determineNextStepCandidate(baseInput({

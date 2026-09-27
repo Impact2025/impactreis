@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { sql } from '@/lib/db';
 import { herinneringEmail } from '@/lib/email-templates';
-import { getRecipients, recordEmailSent, unsubscribeUrl } from '@/lib/email-recipients';
+import { getRecipients, claimDailyEmail, releaseDailyEmail, unsubscribeUrl, emailIdempotencyKey } from '@/lib/email-recipients';
 
 const EMAIL_TYPE = 'morning_reminder';
 
@@ -65,12 +65,17 @@ export async function GET(request: NextRequest) {
     const unsubUrl = recipient.unsubscribeToken ? unsubscribeUrl(recipient.unsubscribeToken, 'morning_reminder') : undefined;
     const { subject, html } = herinneringEmail(appUrl, isWeekend, unsubUrl);
 
+    if (!(await claimDailyEmail(recipient.userId, EMAIL_TYPE))) continue;
+
     try {
-      const { error } = await getResend().emails.send({ from: FROM_EMAIL, to: recipient.email, subject, html });
+      const { error } = await getResend().emails.send(
+        { from: FROM_EMAIL, to: recipient.email, subject, html },
+        { idempotencyKey: emailIdempotencyKey(EMAIL_TYPE, recipient.userId) }
+      );
       if (error) throw new Error(JSON.stringify(error));
-      await recordEmailSent(recipient.userId, EMAIL_TYPE);
       sent++;
     } catch (err) {
+      await releaseDailyEmail(recipient.userId, EMAIL_TYPE);
       console.error(`ochtend-herinnering: send failed for user ${recipient.userId}:`, err);
       failures.push(recipient.email);
     }

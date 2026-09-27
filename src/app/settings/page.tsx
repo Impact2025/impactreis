@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Download, Check, Mail, Loader2, Dna } from 'lucide-react';
+import { ArrowLeft, Download, Check, Mail, Loader2, Dna, ChevronDown, Bell, CalendarClock, Smartphone } from 'lucide-react';
 import { AuthService } from '@/lib/auth';
 import {
   getPreferences,
@@ -27,6 +27,8 @@ import {
   AVOIDANCE_BEHAVIOR_OPTIONS,
   LEVERAGE_GOAL_OPTIONS,
   type BusinessDna,
+  type CoachMode,
+  getProfileMode,
 } from '@/lib/onboarding';
 
 const COMMON_TIMEZONES = [
@@ -61,6 +63,34 @@ const EMAIL_PREF_LABELS: { key: keyof EmailPreferences; title: string; desc: str
   { key: 'winback', title: 'Terugkom-mails', desc: 'Als je een tijdje inactief bent geweest' },
 ];
 
+function SettingsSection({
+  title, summary, icon, saving, defaultOpen = false, children,
+}: {
+  title: string; summary?: string; icon: React.ReactNode; saving?: boolean; defaultOpen?: boolean; children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className="rounded-[16px] border border-line bg-surface-card overflow-hidden">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="w-full px-4 py-4 flex items-center gap-3 text-left active:bg-surface-sunken transition-colors"
+      >
+        <span className="w-9 h-9 rounded-full bg-surface-sunken flex items-center justify-center text-ink-soft shrink-0">{icon}</span>
+        <span className="flex-1 min-w-0">
+          <span className="flex items-center gap-2 text-[15px] font-bold text-ink">
+            {title}
+            {saving && <Loader2 size={11} className="animate-spin text-ink-soft" />}
+          </span>
+          {summary && <span className="block text-[12px] text-ink-soft mt-0.5 truncate">{summary}</span>}
+        </span>
+        <ChevronDown size={18} className={`text-ink-soft shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="px-4 pb-4 space-y-3">{children}</div>}
+    </section>
+  );
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -84,11 +114,16 @@ export default function SettingsPage() {
   const [ritualSettingsSaving, setRitualSettingsSaving] = useState(false);
   const [isPWAInstalled, setIsPWAInstalled] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [coachMode, setCoachMode] = useState<CoachMode>('commercial');
+  const [modeSaving, setModeSaving] = useState(false);
+  const [modeError, setModeError] = useState<string | null>(null);
+  const [modeNeedsIntake, setModeNeedsIntake] = useState(false);
   const [dna, setDna] = useState<BusinessDna | null>(null);
   const [dnaOnboardingDone, setDnaOnboardingDone] = useState(true);
   const [dnaLoading, setDnaLoading] = useState(true);
   const [dnaSaving, setDnaSaving] = useState(false);
   const [dnaError, setDnaError] = useState<string | null>(null);
+  const [dnaEditing, setDnaEditing] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -122,6 +157,7 @@ export default function SettingsPage() {
         .then(data => {
           setDnaOnboardingDone(!!data?.completed);
           if (data?.profile?.businessDna) setDna(data.profile.businessDna);
+          setCoachMode(getProfileMode(data?.profile));
         })
         .catch(() => {})
         .finally(() => setDnaLoading(false));
@@ -225,6 +261,32 @@ export default function SettingsPage() {
     handleSaveRitualSettings({ ...ritualSettings, workDays: workDays.sort((a, b) => a - b) });
   };
 
+  const handleSwitchMode = async (target: CoachMode) => {
+    if (target === coachMode || modeSaving) return;
+    setModeSaving(true);
+    setModeError(null);
+    setModeNeedsIntake(false);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/onboarding/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ mode: target }),
+      });
+      if (res.ok) {
+        setCoachMode(target);
+      } else if (res.status === 409) {
+        setModeNeedsIntake(true);
+      } else {
+        setModeError('Wisselen mislukt. Probeer het opnieuw.');
+      }
+    } catch {
+      setModeError('Wisselen mislukt. Probeer het opnieuw.');
+    } finally {
+      setModeSaving(false);
+    }
+  };
+
   const handleSaveDna = async (next: BusinessDna) => {
     const previous = dna;
     setDna(next);
@@ -295,13 +357,43 @@ export default function SettingsPage() {
       </header>
 
       <div className="max-w-lg mx-auto px-5 py-6 space-y-7">
+        {/* Coach-modus */}
+        <SettingsSection
+          title="Coach-modus"
+          icon={<Dna size={16} />}
+          saving={modeSaving}
+          summary={coachMode === 'rustbrenger' ? 'Rustbrenger' : 'Commercieel'}
+        >
+          <CardOption
+            selected={coachMode === 'commercial'}
+            onClick={() => handleSwitchMode('commercial')}
+            title="Commercieel"
+            description="Scherpe challenger die je dwingt tot executie, hefbomen en meer marge."
+          />
+          <CardOption
+            selected={coachMode === 'rustbrenger'}
+            onClick={() => handleSwitchMode('rustbrenger')}
+            title="Rustbrenger"
+            description="Rustige mentor die je grenzen bewaakt en ruis wegneemt, zonder prestatiedruk."
+          />
+          {modeNeedsIntake && (
+            <div className="rounded-[16px] border border-line bg-white px-5 py-4 space-y-2">
+              <p className="text-[13px] text-ink-soft">Voor deze modus heb ik een paar antwoorden van je nodig die er nog niet zijn.</p>
+              <Link href="/onboarding?opnieuw=1" className="inline-block text-[13px] font-semibold text-primary">
+                Doorloop de intake opnieuw →
+              </Link>
+            </div>
+          )}
+          {modeError && <p className="text-[13px] text-red-600">{modeError}</p>}
+        </SettingsSection>
+
         {/* Bedrijfs-DNA */}
-        <section>
-          <h2 className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-3 flex items-center gap-2">
-            <Dna size={12} />
-            Bedrijfs-DNA
-            {dnaSaving && <Loader2 size={11} className="animate-spin text-ink-soft" />}
-          </h2>
+        <SettingsSection
+          title="Bedrijfs-DNA"
+          icon={<Dna size={16} />}
+          saving={dnaSaving}
+          summary={dna ? [INDUSTRY_OPTIONS.find((o) => o.value === dna.industry)?.label, TEAM_SIZE_OPTIONS.find((o) => o.value === dna.teamSize)?.label].filter(Boolean).join(' · ') : 'Intake nog niet afgerond'}
+        >
           {dnaLoading ? (
             <div className="rounded-[16px] border border-line bg-white px-5 py-4 text-[13px] text-ink-soft">
               Laden...
@@ -312,6 +404,27 @@ export default function SettingsPage() {
               <Link href="/onboarding" className="inline-block text-[13px] font-semibold text-primary">
                 Start de intake →
               </Link>
+            </div>
+          ) : !dnaEditing ? (
+            <div className="rounded-[16px] border border-line bg-white divide-y divide-line overflow-hidden">
+              {[
+                ['Sector', INDUSTRY_OPTIONS.find((o) => o.value === dna.industry)?.label],
+                ['Teamgrootte', TEAM_SIZE_OPTIONS.find((o) => o.value === dna.teamSize)?.label],
+                ['Verdienmodel', BUSINESS_MODEL_OPTIONS.find((o) => o.value === dna.businessModel)?.label],
+                ['Top-3 tijdvreters', dna.topTimeWasters.map((v) => TIME_WASTER_OPTIONS.find((o) => o.value === v)?.label).filter(Boolean).join(', ')],
+                ['Vluchtgedrag', AVOIDANCE_BEHAVIOR_OPTIONS.find((o) => o.value === dna.avoidanceBehavior)?.label],
+                ['Kwartaalhefboom', LEVERAGE_GOAL_OPTIONS.find((o) => o.value === dna.quarterlyLeverageGoal)?.label],
+              ].map(([label, value]) => (
+                <div key={label} className="px-5 py-3">
+                  <p className="text-[11px] font-medium text-ink-soft uppercase tracking-wider">{label}</p>
+                  <p className="text-[14px] text-ink mt-0.5">{value || '-'}</p>
+                </div>
+              ))}
+              <div className="px-5 py-3">
+                <button onClick={() => setDnaEditing(true)} className="text-[13px] font-semibold text-primary">
+                  Wijzig
+                </button>
+              </div>
             </div>
           ) : (
             <div className="rounded-[16px] border border-line bg-white divide-y divide-line overflow-hidden">
@@ -382,15 +495,21 @@ export default function SettingsPage() {
               {dnaError && (
                 <div className="px-5 py-3 text-[13px] font-medium text-red-500">{dnaError}</div>
               )}
+              <div className="px-5 py-3">
+                <button onClick={() => setDnaEditing(false)} className="text-[13px] font-semibold text-primary">
+                  Klaar
+                </button>
+              </div>
             </div>
           )}
-        </section>
+        </SettingsSection>
 
         {/* Notifications */}
-        <section>
-          <h2 className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-3">
-            Notificaties
-          </h2>
+        <SettingsSection
+          title="Pushmeldingen"
+          icon={<Bell size={16} />}
+          summary={!notifSupported ? 'Niet beschikbaar' : notifPermission === 'denied' ? 'Geblokkeerd in browser' : notifPermission === 'default' ? 'Uit' : preferences.enabled ? `Aan · ${preferences.morningTime} en ${preferences.eveningTime}` : 'Uit'}
+        >
           <div className="rounded-[16px] border border-line bg-white divide-y divide-line overflow-hidden">
             {!notifSupported ? (
               <div className="px-5 py-4 text-[13px] text-ink-soft">
@@ -428,7 +547,10 @@ export default function SettingsPage() {
                 {preferences.enabled && (
                   <>
                     <div className="px-5 py-4 flex items-center justify-between">
-                      <span className="text-[14px] text-ink">Ochtend reminder</span>
+                      <div>
+                        <p className="text-[14px] text-ink">Ochtend reminder</p>
+                        <p className="text-[12px] text-ink-soft mt-0.5">Wanneer je de melding krijgt</p>
+                      </div>
                       <input
                         type="time"
                         value={preferences.morningTime}
@@ -437,7 +559,10 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div className="px-5 py-4 flex items-center justify-between">
-                      <span className="text-[14px] text-ink">Avond reminder</span>
+                      <div>
+                        <p className="text-[14px] text-ink">Avond reminder</p>
+                        <p className="text-[12px] text-ink-soft mt-0.5">Wanneer je de melding krijgt</p>
+                      </div>
                       <input
                         type="time"
                         value={preferences.eveningTime}
@@ -450,14 +575,15 @@ export default function SettingsPage() {
               </>
             )}
           </div>
-        </section>
+        </SettingsSection>
 
         {/* Ritueel-instellingen */}
-        <section>
-          <h2 className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-3 flex items-center gap-2">
-            Ritueel-instellingen
-            {ritualSettingsSaving && <Loader2 size={11} className="animate-spin text-ink-soft" />}
-          </h2>
+        <SettingsSection
+          title="Ritme en rituelen"
+          icon={<CalendarClock size={16} />}
+          saving={ritualSettingsSaving}
+          summary={`${ritualSettings.workDays.length} werkdagen · ${ritualSettings.timezone.split('/').pop()?.replace('_', ' ')}`}
+        >
           <div className="rounded-[16px] border border-line bg-white divide-y divide-line overflow-hidden">
             <div className="px-5 py-4">
               <p className="text-[14px] font-medium text-ink mb-2">Tijdzone</p>
@@ -484,7 +610,7 @@ export default function SettingsPage() {
             <div className="px-5 py-4 flex items-center justify-between">
               <div>
                 <p className="text-[14px] font-medium text-ink">Avondritueel opent om</p>
-                <p className="text-[12px] text-ink-soft mt-0.5">Vóór dit uur toont de app een wachtscherm</p>
+                <p className="text-[12px] text-ink-soft mt-0.5">Het ritueel zelf, los van je reminder-tijd. Ervoor toont de app een wachtscherm</p>
               </div>
               <select
                 value={ritualSettings.eveningRitualOpensHour}
@@ -559,13 +685,85 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
-        </section>
+        </SettingsSection>
 
-        {/* Install */}
-        <section>
-          <h2 className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-3">
-            Installeren
-          </h2>
+        {/* E-mail */}
+        <SettingsSection
+          title="E-mail"
+          icon={<Mail size={16} />}
+          summary={emailPrefs ? `${Object.values(emailPrefs).filter(Boolean).length} van ${EMAIL_PREF_LABELS.length} mails aan` : undefined}
+        >
+          <div className="rounded-[16px] border border-line bg-white divide-y divide-line overflow-hidden">
+            {!emailPrefs ? (
+              <div className="px-5 py-4 text-[13px] text-ink-soft">Voorkeuren laden...</div>
+            ) : (
+              EMAIL_PREF_LABELS.map(({ key, title, desc }) => (
+                <div key={key} className="px-5 py-4 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[14px] text-ink">{title}</p>
+                    <p className="text-[12px] text-ink-soft mt-0.5">{desc}</p>
+                  </div>
+                  <button
+                    onClick={() => handleToggleEmailPref(key)}
+                    disabled={emailPrefsSaving === key}
+                    aria-label={title}
+                    className={`relative w-11 h-6 rounded-full transition-colors shrink-0 disabled:opacity-60 ${
+                      emailPrefs[key] ? 'bg-primary' : 'bg-line'
+                    }`}
+                  >
+                    <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                      emailPrefs[key] ? 'translate-x-5' : ''
+                    }`} />
+                  </button>
+                </div>
+              ))
+            )}
+            <div className="px-5 py-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[14px] font-medium text-ink">Weekrapport nu ontvangen</p>
+                <p className="text-[12px] text-ink-soft mt-0.5">Rituelen, energie, focusblokken, wins</p>
+              </div>
+              <button
+                onClick={() => handleSendEmail('weekrapport')}
+                disabled={emailSending !== null}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-surface-inverse text-white text-[13px] font-semibold rounded-[10px] active:scale-95 transition-transform disabled:opacity-50 shrink-0"
+              >
+                {emailSending === 'weekrapport'
+                  ? <Loader2 size={14} className="animate-spin" />
+                  : <Mail size={14} />}
+                Stuur nu
+              </button>
+            </div>
+            {emailResult && (
+              <div className={`px-5 py-3 text-[13px] font-medium ${emailResult.ok ? 'text-primary' : 'text-red-500'}`}>
+                {emailResult.ok
+                  ? 'Weekrapport verstuurd naar je inbox'
+                  : 'Versturen mislukt, probeer het later opnieuw'}
+              </div>
+            )}
+          </div>
+        </SettingsSection>
+
+        {/* App */}
+        <SettingsSection
+          title="App en voortgang"
+          icon={<Smartphone size={16} />}
+          summary={`${isPWAInstalled ? 'Geinstalleerd' : 'Niet geinstalleerd'} · streak ${streakData.currentStreak}`}
+        >
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-[14px] bg-surface-sunken p-4 text-center">
+              <p className="text-[22px] font-bold text-ink">{streakData.currentStreak}</p>
+              <p className="text-[11px] text-ink-soft mt-0.5">streak</p>
+            </div>
+            <div className="rounded-[14px] bg-tertiary-soft border border-tertiary-soft p-4 text-center">
+              <p className="text-[22px] font-bold text-tertiary">{streakData.longestStreak}</p>
+              <p className="text-[11px] text-tertiary mt-0.5">record</p>
+            </div>
+            <div className="rounded-[14px] bg-surface-sunken p-4 text-center">
+              <p className="text-[22px] font-bold text-ink">{streakData.totalDaysCompleted}</p>
+              <p className="text-[11px] text-ink-soft mt-0.5">dagen</p>
+            </div>
+          </div>
           <div className="rounded-[16px] border border-line bg-white overflow-hidden">
             {isPWAInstalled ? (
               <div className="px-5 py-4 flex items-center gap-2 text-[14px] text-primary font-medium">
@@ -592,92 +790,8 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
-        </section>
+        </SettingsSection>
 
-        {/* Stats */}
-        <section>
-          <h2 className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-3">
-            Statistieken
-          </h2>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-[14px] bg-surface-sunken p-4 text-center">
-              <p className="text-[22px] font-bold text-ink">{streakData.currentStreak}</p>
-              <p className="text-[11px] text-ink-soft mt-0.5">streak</p>
-            </div>
-            <div className="rounded-[14px] bg-tertiary-soft border border-tertiary-soft p-4 text-center">
-              <p className="text-[22px] font-bold text-tertiary">{streakData.longestStreak}</p>
-              <p className="text-[11px] text-tertiary mt-0.5">record</p>
-            </div>
-            <div className="rounded-[14px] bg-surface-sunken p-4 text-center">
-              <p className="text-[22px] font-bold text-ink">{streakData.totalDaysCompleted}</p>
-              <p className="text-[11px] text-ink-soft mt-0.5">dagen</p>
-            </div>
-          </div>
-        </section>
-
-        {/* E-mail rapporten */}
-        <section>
-          <h2 className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-3">
-            E-mail Rapporten
-          </h2>
-          <div className="rounded-[16px] border border-line bg-white divide-y divide-line overflow-hidden">
-            <div className="px-5 py-4 flex items-center justify-between">
-              <div>
-                <p className="text-[14px] font-medium text-ink">Weekrapport</p>
-                <p className="text-[12px] text-ink-soft mt-0.5">Rituelen, energie, focusblokken, wins</p>
-              </div>
-              <button
-                onClick={() => handleSendEmail('weekrapport')}
-                disabled={emailSending !== null}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-surface-inverse text-white text-[13px] font-semibold rounded-[10px] active:scale-95 transition-transform disabled:opacity-50"
-              >
-                {emailSending === 'weekrapport'
-                  ? <Loader2 size={14} className="animate-spin" />
-                  : <Mail size={14} />}
-                Stuur nu
-              </button>
-            </div>
-            {emailResult && (
-              <div className={`px-5 py-3 text-[13px] font-medium ${emailResult.ok ? 'text-primary' : 'text-red-500'}`}>
-                {emailResult.ok
-                  ? `✓ Weekrapport verstuurd naar je inbox`
-                  : `✗ Versturen mislukt — check Vercel logs`}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* E-mailvoorkeuren */}
-        <section>
-          <h2 className="text-[11px] font-bold text-ink-soft uppercase tracking-[0.18em] mb-3">
-            E-mailvoorkeuren
-          </h2>
-          <div className="rounded-[16px] border border-line bg-white divide-y divide-line overflow-hidden">
-            {!emailPrefs ? (
-              <div className="px-5 py-4 text-[13px] text-ink-soft">Voorkeuren laden...</div>
-            ) : (
-              EMAIL_PREF_LABELS.map(({ key, title, desc }) => (
-                <div key={key} className="px-5 py-4 flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-[14px] text-ink">{title}</p>
-                    <p className="text-[12px] text-ink-soft mt-0.5">{desc}</p>
-                  </div>
-                  <button
-                    onClick={() => handleToggleEmailPref(key)}
-                    disabled={emailPrefsSaving === key}
-                    className={`relative w-11 h-6 rounded-full transition-colors shrink-0 disabled:opacity-60 ${
-                      emailPrefs[key] ? 'bg-primary' : 'bg-line'
-                    }`}
-                  >
-                    <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                      emailPrefs[key] ? 'translate-x-5' : ''
-                    }`} />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
 
         {/* Account */}
         <section>

@@ -33,6 +33,8 @@ import { api } from '@/lib/api';
 import { getCurrentQuarter, getCurrentWeekNumber, getWeekStart, getWeekEnd } from '@/lib/weekflow.service';
 import { useRitualStatus } from '@/hooks/useRitualStatus';
 import { BottomNav } from '@/components/ui/bottom-nav';
+import { useCoachMode } from '@/hooks/useCoachMode';
+import { RustbrengerWeeklyReview } from '@/components/rustbrenger/RustbrengerWeeklyReview';
 
 type RockStatus = 'on-track' | 'at-risk' | 'done';
 
@@ -103,6 +105,18 @@ interface PreviousWeekComparison {
 }
 
 export default function WeeklyReviewPage() {
+  const { mode, loading } = useCoachMode();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-surface-card flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+  return mode === 'rustbrenger' ? <RustbrengerWeeklyReview /> : <CommercialWeeklyReview />;
+}
+
+function CommercialWeeklyReview() {
   const router = useRouter();
   const { settings } = useRitualStatus();
   const [loading, setLoading] = useState(true);

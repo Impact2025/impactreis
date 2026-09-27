@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { motivatieEmail } from '@/lib/email-templates';
-import { getRecipients, recordEmailSent, unsubscribeUrl } from '@/lib/email-recipients';
+import { getRecipients, claimDailyEmail, releaseDailyEmail, unsubscribeUrl, emailIdempotencyKey } from '@/lib/email-recipients';
 
 const DAY_NAMES = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
 const EMAIL_TYPE = 'morning_motivation';
@@ -28,14 +28,20 @@ export async function GET(request: NextRequest) {
 
   for (const recipient of recipients) {
     const unsubUrl = recipient.unsubscribeToken ? unsubscribeUrl(recipient.unsubscribeToken, 'morning_motivation') : undefined;
-    const { subject, html } = motivatieEmail(appUrl, isWeekend, dayName, unsubUrl);
+    const { subject, html } = motivatieEmail(appUrl, isWeekend, dayName, recipient.name, unsubUrl);
+
+    // Claim eerst (atomair): een gelijktijdige tweede cron-run krijgt false en slaat over.
+    if (!(await claimDailyEmail(recipient.userId, EMAIL_TYPE))) continue;
 
     try {
-      const { error } = await getResend().emails.send({ from: FROM_EMAIL, to: recipient.email, subject, html });
+      const { error } = await getResend().emails.send(
+        { from: FROM_EMAIL, to: recipient.email, subject, html },
+        { idempotencyKey: emailIdempotencyKey(EMAIL_TYPE, recipient.userId) }
+      );
       if (error) throw new Error(JSON.stringify(error));
-      await recordEmailSent(recipient.userId, EMAIL_TYPE);
       sent++;
     } catch (err) {
+      await releaseDailyEmail(recipient.userId, EMAIL_TYPE);
       console.error(`ochtend-motivatie: send failed for user ${recipient.userId}:`, err);
       failures.push(recipient.email);
     }

@@ -21,6 +21,7 @@ export type EmailPrefColumn =
 export interface EmailRecipient {
   userId: number;
   email: string;
+  name: string | null;
   unsubscribeToken: string | null;
 }
 
@@ -38,7 +39,7 @@ export async function getRecipients(
   emailType: string
 ): Promise<EmailRecipient[]> {
   const rows = await sql(
-    `SELECT u.id AS user_id, u.email, ep.unsubscribe_token
+    `SELECT u.id AS user_id, u.email, u.name, ep.unsubscribe_token
      FROM users u
      LEFT JOIN email_preferences ep ON ep.user_id = u.id
      WHERE COALESCE(ep.${prefColumn}, TRUE) = TRUE
@@ -53,6 +54,7 @@ export async function getRecipients(
   return rows.map(r => ({
     userId: r.user_id as number,
     email: r.email as string,
+    name: (r.name as string | null) ?? null,
     unsubscribeToken: (r.unsubscribe_token as string | null) ?? null,
   }));
 }
@@ -65,6 +67,28 @@ export async function recordEmailSent(
   await sql`
     INSERT INTO email_sends (user_id, email_type, meta)
     VALUES (${userId}, ${emailType}, ${meta ? JSON.stringify(meta) : null})
+  `;
+}
+
+/**
+ * Atomische claim voor dagelijkse mails (unieke index uq_email_sends_daily, migratie 0020).
+ * Returnt false als een andere (gelijktijdige) run vandaag al geclaimd heeft — dan niet versturen.
+ * Bij een mislukte send: releaseDailyEmail() zodat een retry mogelijk blijft.
+ */
+export async function claimDailyEmail(userId: number, emailType: string): Promise<boolean> {
+  const rows = await sql`
+    INSERT INTO email_sends (user_id, email_type)
+    VALUES (${userId}, ${emailType})
+    ON CONFLICT DO NOTHING
+    RETURNING id
+  `;
+  return rows.length > 0;
+}
+
+export async function releaseDailyEmail(userId: number, emailType: string): Promise<void> {
+  await sql`
+    DELETE FROM email_sends
+    WHERE user_id = ${userId} AND email_type = ${emailType} AND sent_at::date = CURRENT_DATE
   `;
 }
 
@@ -106,4 +130,14 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://sparren.app';
 
 export function unsubscribeUrl(token: string, category: EmailPrefColumn): string {
   return `${APP_URL}/api/email/unsubscribe?token=${encodeURIComponent(token)}&type=${encodeURIComponent(category)}`;
+}
+
+/**
+ * Idempotency key voor Resend (`Idempotency-Key`-header): voorkomt dat een netwerk-retry van de
+ * SDK zelf (of een dubbele cron-invocatie) dezelfde mail twee keer laat *afleveren*. De
+ * DB-claim/NOT-EXISTS-checks dekken alleen "hebben we een rij geschreven", niet "heeft Resend
+ * ook echt maar één keer verzonden" — vandaar deze losse, stabiele sleutel per verzendpoging.
+ */
+export function emailIdempotencyKey(emailType: string, userId: number, date: string = new Date().toISOString().split('T')[0]): string {
+  return `${emailType}:${userId}:${date}`;
 }

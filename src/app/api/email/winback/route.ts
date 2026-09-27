@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { sql } from '@/lib/db';
 import { winbackEmail } from '@/lib/email-templates';
-import { recordEmailSent, unsubscribeUrl } from '@/lib/email-recipients';
+import { recordEmailSent, unsubscribeUrl, emailIdempotencyKey } from '@/lib/email-recipients';
 import { withCronErrorNotification } from '@/lib/cron-guard';
 
 const STAGES = [3, 10, 30] as const;
@@ -47,7 +47,10 @@ export const GET = withCronErrorNotification('winback', async (request: NextRequ
       const { subject, html } = winbackEmail(stage, appUrl, unsubUrl);
 
       try {
-        const { error } = await getResend().emails.send({ from: FROM_EMAIL, to: email, subject, html });
+        const { error } = await getResend().emails.send(
+          { from: FROM_EMAIL, to: email, subject, html },
+          { idempotencyKey: emailIdempotencyKey(emailType, userId, 'once') }
+        );
         if (error) throw new Error(JSON.stringify(error));
         await recordEmailSent(userId, emailType);
         sent++;

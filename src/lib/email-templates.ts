@@ -102,10 +102,16 @@ function score(label: string, value: number, max = 10): string {
 
 // ─── Template 1: 06:00 Ochtend Motivatie ─────────────────────────────────────
 
-export function motivatieEmail(appUrl: string, isWeekend: boolean, dayName: string, unsubscribeUrl?: string): { subject: string; html: string } {
+function firstName(name?: string | null, fallback?: string): string {
+  const trimmed = name?.trim().split(/\s+/)[0];
+  return trimmed || fallback || 'daar';
+}
+
+export function motivatieEmail(appUrl: string, isWeekend: boolean, dayName: string, name?: string | null, unsubscribeUrl?: string): { subject: string; html: string } {
+  const greetingName = firstName(name, dayName);
   const subject = isWeekend
-    ? `Goedemorgen ${dayName}! Tijd voor jouw week review`
-    : `Goedemorgen ${dayName}! Jouw sterkste moment begint nu`;
+    ? `Goedemorgen ${greetingName}! Tijd voor jouw week review`
+    : `Goedemorgen ${greetingName}! Jouw sterkste moment begint nu`;
 
   const body = isWeekend ? `
     <p style="font-size:17px;font-weight:600;color:#2f312f;margin:0 0 8px;">Het weekend is er — en jij verdient een moment van reflectie.</p>
@@ -139,7 +145,7 @@ export function motivatieEmail(appUrl: string, isWeekend: boolean, dayName: stri
 
   return {
     subject,
-    html: base(isWeekend ? `Week Review — ${dayName}` : `Goedemorgen, ${dayName}!`, subject, body, { quote: true, unsubscribeUrl }),
+    html: base(isWeekend ? `Week Review — ${greetingName}` : `Goedemorgen, ${greetingName}!`, subject, body, { quote: true, unsubscribeUrl }),
   };
 }
 
